@@ -14,12 +14,77 @@ local ICON = {
     Zap      = "rbxassetid://7733771628",
     Settings = "rbxassetid://7734053495",
     Logo     = "rbxassetid://102609928046926",
+    Banner   = "rbxassetid://138968189462646",
 }
+
+local TweenService = game:GetService("TweenService")
 
 local function GetHolder()
     return (gethui and gethui()) or game:GetService("CoreGui")
 end
 
+-- ============================================================
+--  WELCOME INTRO ANIMATION (Bulat Besar -> UI Muncul -> Hilang)
+-- ============================================================
+local function ShowWelcomeIntro()
+    local holder = GetHolder()
+    
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "NoMercyWelcome"
+    gui.ResetOnSpawn = false
+    gui.IgnoreGuiInset = true
+    gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+    gui.Parent = holder
+    if syn and syn.protect_gui then pcall(syn.protect_gui, gui) end
+
+    local img = Instance.new("ImageLabel")
+    img.Size = UDim2.fromOffset(0, 0)
+    img.Position = UDim2.new(0.5, 0, 0.5, 0)
+    img.AnchorPoint = Vector2.new(0.5, 0.5)
+    img.Image = ICON.Logo
+    img.BackgroundTransparency = 1
+    img.ZIndex = 999
+    img.Parent = gui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = img
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(120, 110, 255)
+    stroke.Thickness = 4
+    stroke.Transparency = 1
+    stroke.Parent = img
+
+    -- Pop-up membesar
+    local tweenIn = TweenService:Create(img, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.fromOffset(180, 180)
+    })
+    local strokeIn = TweenService:Create(stroke, TweenInfo.new(0.4), { Transparency = 0 })
+    
+    tweenIn:Play()
+    strokeIn:Play()
+    tweenIn.Completed:Wait()
+
+    task.wait(1.2)
+
+    -- Shrink dan Menghilang
+    local tweenOut = TweenService:Create(img, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        Size = UDim2.fromOffset(0, 0)
+    })
+    local strokeOut = TweenService:Create(stroke, TweenInfo.new(0.3), { Transparency = 1 })
+    
+    tweenOut:Play()
+    strokeOut:Play()
+    tweenOut.Completed:Wait()
+
+    gui:Destroy()
+end
+
+-- Jalankan Welcome Intro
+ShowWelcomeIntro()
+
+-- Load Orion UI Library
 local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Marpiii/UiLib/refs/heads/main/source.lua"))()
 
 -- Forward declaration: dipanggil CloseCallback (tombol X)
@@ -30,11 +95,8 @@ local Window = OrionLib:MakeWindow({
     HidePremium = false,
     SaveConfig = true,
     ConfigFolder = "NoMercyViolence",
-    IntroEnabled = true,
-    IntroText = "NO MERCY",
-    IntroIcon = ICON.Logo,
+    IntroEnabled = false, -- Intro bawaan di-disable karena sudah menggunakan Custom Welcome Intro
     Icon = ICON.Logo,
-    -- Tombol X bawaan: langsung hide window lalu panggil ini
     CloseCallback = function()
         if onCloseRequest then onCloseRequest() end
     end,
@@ -116,7 +178,6 @@ local function closeUI()
     makeBubble()
 end
 
--- Kembalikan window (untuk "Tidak" pada tombol X)
 local function showUI()
     local main = FindMainWindow()
     if main then
@@ -126,7 +187,6 @@ end
 
 -- ============================================================
 --  DIALOG KONFIRMASI (Ya / Tidak)
---  fromCloseBtn = true jika dipicu tombol X (window sudah auto-hide)
 -- ============================================================
 local function confirmClose(fromCloseBtn)
     if fromCloseBtn then
@@ -237,7 +297,6 @@ local function confirmClose(fromCloseBtn)
     end)
 end
 
--- Dipanggil dari CloseCallback (tombol X bawaan Orion)
 onCloseRequest = function()
     confirmClose(true)
 end
@@ -255,9 +314,42 @@ local SpeedTab    = Window:MakeTab({ Name = "Speed", Icon = ICON.Zap, PremiumOnl
 local SettingsTab = Window:MakeTab({ Name = "Pengaturan", Icon = ICON.Settings, PremiumOnly = false })
 
 -- ============================================================
---  INFO
+--  INFO (Dengan Banner Foto No Mercy)
 -- ============================================================
 local InfoSec = InfoTab:AddSection({ Name = "Tentang" })
+
+-- Pembuatan Custom Banner Frame
+task.spawn(function()
+    task.wait(0.2)
+    local main = FindMainWindow()
+    if main then
+        local tabContainer = main:FindFirstChild("TabContainer", true) or main:FindFirstChild("Content", true)
+        if tabContainer then
+            local bannerFrame = Instance.new("Frame")
+            bannerFrame.Name = "NoMercyBannerFrame"
+            bannerFrame.Size = UDim2.new(0.96, 0, 0, 120)
+            bannerFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+            bannerFrame.BorderSizePixel = 0
+            bannerFrame.Parent = tabContainer:FindFirstChild("Info") or tabContainer
+
+            local bannerCorner = Instance.new("UICorner")
+            bannerCorner.CornerRadius = UDim.new(0, 8)
+            bannerCorner.Parent = bannerFrame
+
+            local bannerImg = Instance.new("ImageLabel")
+            bannerImg.Size = UDim2.new(1, 0, 1, 0)
+            bannerImg.Image = ICON.Banner
+            bannerImg.BackgroundTransparency = 1
+            bannerImg.ScaleType = Enum.ScaleType.Crop
+            bannerImg.Parent = bannerFrame
+
+            local imgCorner = Instance.new("UICorner")
+            imgCorner.CornerRadius = UDim.new(0, 8)
+            imgCorner.Parent = bannerImg
+        end
+    end
+end)
+
 InfoSec:AddLabel("NO MERCY — Violence District")
 InfoSec:AddLabel("Game: Bola Pedang (Blade Ball)")
 InfoSec:AddButton({
@@ -341,4 +433,4 @@ SettingsSec:AddButton({
 -- ============================================================
 OrionLib:MakeNotification({ Name = "NO MERCY", Content = "Violence District dimuat!", Image = ICON.Logo, Time = 4 })
 
-print("[NO MERCY] Violence District loaded — Orion UI (hide/show bubble)")
+print("[NO MERCY] Violence District loaded — Orion UI")
