@@ -1,10 +1,23 @@
 --[[
-    NO MERCY x ZIAAN HUB — VIOLENCE DISTRICT  v3.5 (FLUENT UI)
+    NO MERCY x ZIAAN HUB — VIOLENCE DISTRICT  v4.0 (FLUENT UI)
     Game: Violence District (Roblox)
     Author: Sobing4413 | Discord: https://discord.gg/CnNqEVFxh6
 
+    v4.0: TAB KILLER LENGKAP — semua fitur killer di-port dari Ziaan Hub:
+          + Auto Attack (range + threshold HP survivor)
+          + Double Tap (serangan ganda anti-miss)
+          + Auto Kick Pallet (Destroy-Global + PalletBreakCommit)
+          + Auto Kick Generator (BreakGenEvent + BreakGenCommit)
+          + Block All Vaults (VaultEvent spam)
+          + Anti Blind (hook namecall Flashlight.GotBlinded)
+          + Silent Aim Veil / Spear (FOV, predict, gravity, target part,
+            intercept Spearthrow, FOV circle + highlight + tracer)
+          + Custom Masked (ganti mask killer via Activatepower)
+          Semua dijadwalkan lewat PerfMgr (bukan Heartbeat per-frame) supaya ringan.
     v3.6: Android Lite + fallback loader UI dan optimasi startup
     v3.5: ESP Killer/Player dan Generator memakai renderer Ziaan Hub v3
+          -> ESP/visual objek (Pumpkin, Window, Pallet, Gate, Hook, Generator)
+             TETAP memakai renderer Highlight+Label punya No Mercy (tidak diganti).
     v3.0: UI dipindah ke Fluent UI Library (dawid-scripts/Fluent)
     + bubble button logo ninja + SaveManager/InterfaceManager
     + MENU TELEPORT lengkap (generator, gate, hook, pallet, window,
@@ -366,41 +379,100 @@ function SafeLoad(url, label, cacheName)
 end
 end
 
--- Beberapa executor Android gagal mengikuti redirect URL release GitHub.
--- Coba release dulu, lalu fallback ke source raw agar UI tetap muncul.
-local Fluent = SafeLoad("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua", "Fluent UI", "fluent")
-if not Fluent then
-    Fluent = SafeLoad("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/main.lua", "Fluent UI fallback", "fluent_fallback")
-end
-if not Fluent then
+-- Orion/MarV dari animation_mercy lebih ringan dan lebih cocok untuk Android.
+local OrionLib = SafeLoad("https://raw.githubusercontent.com/Marpiii/UiLib/refs/heads/main/source.lua", "Orion UI", "orion")
+if not OrionLib then
     game:GetService("StarterGui"):SetCore("SendNotification", {
         Title = "NO MERCY", Text = "Gagal load UI, coba execute ulang", Duration = 6 })
     return
 end
 
--- SaveManager & InterfaceManager di-load di BACKGROUND (tidak memblokir UI).
-local SaveManager, InterfaceManager
-local addonsReady = false
-if isMobile then
-    -- Addon config tidak diperlukan di HP; hindari dua request dan ratusan UI item.
-    addonsReady = true
-else
-    task.spawn(function()
-        SaveManager      = SafeLoad("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua", "SaveManager", "savemgr")
-        InterfaceManager = SafeLoad("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua", "InterfaceManager", "intfmgr")
-        addonsReady = true
+-- Adapter kecil agar seluruh fitur No Mercy yang sudah ada bisa memakai API Orion.
+local Fluent = {}
+function Fluent:Notify(data)
+    pcall(function()
+        OrionLib:MakeNotification({
+            Name = data.Title or "NO MERCY",
+            Content = data.Content or "",
+            Image = "rbxassetid://102609928046926",
+            Time = data.Duration or 3,
+        })
     end)
 end
 
-local Window = Fluent:CreateWindow({
-    Title = "NO MERCY",
-    SubTitle = "Violence District | Android Lite v3.6",
-    TabWidth = 125,
-    Size = UDim2.fromOffset(470, 380),
-    Acrylic = false,
-    Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftControl,
+local function wrapControl(control, callback)
+    local proxy = {}
+    function proxy:OnChanged(callback)
+        self._callback = callback
+        return self
+    end
+    return proxy
+end
+
+local function wrapTab(tab)
+    local out = {}
+    function out:AddSection(value)
+        local name = type(value) == "table" and (value.Name or value.Title) or value
+        return tab:AddSection({ Name = tostring(name or "Menu") })
+    end
+    function out:AddParagraph(data) return tab:AddParagraph({ Name = data.Title, Content = data.Content }) end
+    function out:AddButton(data)
+        return tab:AddButton({ Name = data.Title, Callback = data.Callback })
+    end
+    function out:AddToggle(id, data)
+        local proxy
+        local control = tab:AddToggle({
+            Name = data.Title, Default = data.Default,
+            Callback = function(value) if proxy and proxy._callback then proxy._callback(value) end end,
+        })
+        proxy = wrapControl(control)
+        return proxy
+    end
+    function out:AddDropdown(id, data)
+        local proxy
+        local control = tab:AddDropdown({
+            Name = data.Title, Options = data.Values or {}, Default = data.Default,
+            Callback = function(value) if proxy and proxy._callback then proxy._callback(value) end end,
+        })
+        proxy = wrapControl(control)
+        return proxy
+    end
+    function out:AddSlider(id, data)
+        local proxy
+        local control = tab:AddSlider({
+            Name = data.Title, Min = data.Min, Max = data.Max,
+            Default = data.Default, Increment = data.Rounding or 1,
+            Callback = function(value) if proxy and proxy._callback then proxy._callback(value) end end,
+        })
+        proxy = wrapControl(control)
+        return proxy
+    end
+    function out:AddInput(id, data)
+        local proxy
+        local control = tab:AddTextbox({
+            Name = data.Title, Default = data.Default or "",
+            Callback = function(value) if proxy and proxy._callback then proxy._callback(value) end end,
+        })
+        proxy = wrapControl(control)
+        return proxy
+    end
+    function out:AddColorPicker(data)
+        return wrapControl(tab:AddDropdown({ Name = data.Name, Options = { "Default" }, Default = "Default" }))
+    end
+    return out
+end
+
+local Window = {}
+local OrionWindow = OrionLib:MakeWindow({
+    Name = "NO MERCY — VIOLENCE DISTRICT",
+    HidePremium = true, SaveConfig = false, IntroEnabled = false,
+    Icon = "rbxassetid://102609928046926",
 })
+function Window:AddTab(data)
+    return wrapTab(OrionWindow:MakeTab({ Name = data.Title, Icon = data.Icon, PremiumOnly = false }))
+end
+function Window:SelectTab(index) pcall(function() OrionWindow:SelectTab(index) end) end
+function Window:Destroy() pcall(function() OrionWindow:Destroy() end) end
 
 -- Bubble logo dihapus untuk mengurangi GUI instance dan pemakaian memori Android.
 local BubbleGui, BubbleBtn = nil, nil
@@ -578,6 +650,31 @@ local Settings = {
         AutoGenerator = false, GeneratorMode = "great", AutoLeaveGenerator = false,
         LeaveDistance = 15, LeaveKeybind = Enum.KeyCode.Q,
         AutoAttack = false, AttackRange = 10,
+    },
+    -- ===== KILLER FEATURES (di-port dari Ziaan Hub v1.4.7) =====
+    Killer = {
+        -- General Killer
+        AutoAttack       = false,   -- serang otomatis survivor di dekat
+        AttackRange      = 12,      -- jangkauan serang (studs)
+        AttackMinHealthPct = 0.25,  -- jangan serang survivor yang hampir mati
+        DoubleTap        = false,   -- serangan ganda
+        DestroyPallets   = false,   -- auto hancurkan pallet terdekat
+        AutoBreakGene    = false,   -- auto tendang generator
+        BlockVaults      = false,   -- blok semua vault
+        AntiBlind        = false,   -- anti flashlight blind
+        CustomMasked     = "Richard",
+        -- Silent Aim Veil / Spear
+        Veil = {
+            Enabled                 = false,
+            ShowFOV                 = true,
+            FOV                     = 150,
+            SpearSpeed              = 165,
+            Gravity                 = nil,   -- diisi runtime = workspace.Gravity*0.5
+            MaxDist                 = 200,
+            AutoPredict             = false,
+            TargetPart              = "Torso",
+            HorizontalPredictFactor = 2.8,
+        },
     },
     Teleportation = {
         TeleportOffset = 3, SafeTeleport = true, TeleportDelay = 0.1,
@@ -901,6 +998,577 @@ local function DisableAutoAttack()
     end
     Notify("Auto Attack", "Disabled", 2)
 end
+
+-- ===== BAGIAN 12B : KILLER FEATURES (di-port dari Ziaan Hub v1.4.7) =====
+-- Semua fitur killer (Auto Attack v2, Double Tap, Destroy Pallets, Break Gen,
+-- Block Vaults, Anti Blind, Silent Aim Veil/Spear, Custom Masked) dipindah ke
+-- sini dan diadaptasi ke infrastruktur No Mercy (RemoteCache, SafeCall, PerfMgr,
+-- GetRoot, IsKiller, Notify, Settings.Killer). ESP/visual objek (Pumpkin,
+-- Window, Pallet, Gate, Hook, Generator) TETAP memakai renderer Highlight+Label
+-- punya No Mercy di BAGIAN 13 — tidak diganti.
+
+local Killer = Settings.Killer
+
+-- Cache map ringan khusus kebutuhan killer (Block Vaults fallback + Silent Aim
+-- tidak butuh cache, tapi Block Vaults pakai daftar window kalau folder Vault
+-- tidak ada). Tidak mengganggu MapCache yang sudah dipakai ESP/Teleport.
+local KillerMapCache = { Windows = {} }
+local killerMapLastScan = 0
+local function KillerScanMap()
+    local now = osclock()
+    if now - killerMapLastScan < 2 then return end
+    killerMapLastScan = now
+    KillerMapCache.Windows = {}
+    SafeCall(function()
+        local map = Workspace:FindFirstChild("Map")
+        if not map then return end
+        for _, obj in ipairs(map:GetDescendants()) do
+            if obj:IsA("Model") and obj.Name == "Window" then
+                local part = obj:FindFirstChildWhichIsA("BasePart", true)
+                if part then insert(KillerMapCache.Windows, { model = obj, part = part }) end
+            elseif obj:IsA("BasePart") then
+                if obj.Name == "VaultTrigger" or (obj.Name == "VaultPoint" and obj.Parent and obj.Parent.Name == "VaultTrigger") then
+                    insert(KillerMapCache.Windows, { model = obj.Parent, part = obj })
+                end
+            end
+        end
+    end)
+end
+
+-- ---------- ROLE / TEAM HELPERS ----------
+local function GetRole()
+    if not LocalPlayer.Team then return "Unknown" end
+    local name = LocalPlayer.Team.Name
+    if name == "Killer" then return "Killer" end
+    if name == "Survivors" then return "Survivor" end
+    return "Lobby"
+end
+local function IsKillerPlayer(player)
+    return player and player.Team and player.Team.Name == "Killer"
+end
+local function IsSurvivorPlayer(player)
+    return player and player.Team and player.Team.Name == "Survivors"
+end
+
+-- Cek apakah killer sedang dalam kondisi "sibuk" (stun/carry/pursuit/action)
+-- supaya auto-pallet/auto-gen tidak nembak saat tidak bisa beraksi.
+local function KillerIsBusy()
+    local char = LocalPlayer.Character
+    if not char then return true end
+    local stunned   = char:GetAttribute("IsStunned")   or char:GetAttribute("isStunned")
+    local immobile  = char:GetAttribute("Immobile")    or char:GetAttribute("immobile")
+    local carrying  = char:GetAttribute("IsCarrying")  or char:GetAttribute("isCarrying")
+    local pursuit   = char:GetAttribute("Pursuit")     or char:GetAttribute("pursuit")
+    local ci        = char:FindFirstChild("CheckInterractable")
+    local action    = ci and (ci:GetAttribute("action") or ci:GetAttribute("Action"))
+    return not not (stunned or immobile or carrying or pursuit or action)
+end
+
+-- ---------- AUTO ATTACK v2 (dari Ziaan Hub, pakai threshold HP) ----------
+-- Berbeda dari AutoAttack lama di Gameplay tab: versi ini mengecek HP survivor
+-- (pct > 0.25) supaya tidak "membunuh" survivor yang sudah hampir mati (berguna
+-- kalau mau hook, bukan sacrifice). Pakai PerfMgr interval 0.1s.
+local function KillerAutoAttack()
+    if not Killer.AutoAttack or GetRole() ~= "Killer" then return end
+    local root = GetRoot()
+    if not root then return end
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and IsSurvivorPlayer(player) and player.Character then
+            local tRoot = player.Character:FindFirstChild("HumanoidRootPart")
+            local tHum  = player.Character:FindFirstChildOfClass("Humanoid")
+            if tRoot and tHum and tHum.MaxHealth > 0 then
+                local pct = tHum.Health / tHum.MaxHealth
+                if pct > (Killer.AttackMinHealthPct or 0.25)
+                   and (tRoot.Position - root.Position).Magnitude <= Killer.AttackRange then
+                    SafeCall(function()
+                        local b = RemoteCache.Get("Attacks", "BasicAttack")
+                        if b then b:FireServer(false) end
+                    end)
+                    break
+                end
+            end
+        end
+    end
+end
+PerfMgr.Add("killerAutoAttack", 0.1, function() SafeCall(KillerAutoAttack) end)
+
+-- ---------- DOUBLE TAP ----------
+local killerLastDoubleTap = 0
+local function KillerDoubleTap()
+    if not Killer.DoubleTap or GetRole() ~= "Killer" then return end
+    if osclock() - killerLastDoubleTap < 0.5 then return end
+    SafeCall(function()
+        local ba = RemoteCache.Get("Attacks", "BasicAttack")
+        if ba then
+            ba:FireServer(false)
+            task.wait(0.05)
+            ba:FireServer(false)
+            killerLastDoubleTap = osclock()
+        end
+    end)
+end
+PerfMgr.Add("killerDoubleTap", 0.2, function() SafeCall(KillerDoubleTap) end)
+
+-- ---------- DESTROY ALL PALLETS ----------
+local killerIsBreakingPallet = false
+local function KillerDestroyPallets()
+    if not Killer.DestroyPallets or GetRole() ~= "Killer" then return end
+    if killerIsBreakingPallet then return end
+    if KillerIsBusy() then return end
+    local root = GetRoot()
+    if not root then return end
+
+    local CollectionService = game:GetService("CollectionService")
+    local pts = CollectionService:GetTagged("PalletPointSlide")
+    local nearest, minDist = nil, 6
+    for _, p in ipairs(pts) do
+        if p:IsA("BasePart") and not CollectionService:HasTag(p, "doing action") then
+            local d = (p.Position - root.Position).Magnitude
+            if d < minDist then minDist = d; nearest = p end
+        end
+    end
+
+    if nearest then
+        killerIsBreakingPallet = true
+        task.spawn(function()
+            SafeCall(function()
+                local j = RemoteCache.Get("Pallet", "Jason")
+                if j then
+                    local dg      = j:FindFirstChild("Destroy-Global")
+                    local commit  = j:FindFirstChild("PalletBreakCommit")
+                    if dg and dg:IsA("RemoteEvent")      then dg:FireServer(nearest) end
+                    if commit and commit:IsA("RemoteEvent") then commit:FireServer(nearest) end
+                end
+            end)
+            task.wait(0.2)
+            local char = LocalPlayer.Character
+            local startTime = osclock()
+            while char and char.Parent and (char:GetAttribute("Immobile") or char:GetAttribute("immobile")) do
+                if osclock() - startTime > 3 then break end
+                task.wait(0.1)
+            end
+            killerIsBreakingPallet = false
+        end)
+    end
+end
+PerfMgr.Add("killerDestroyPallets", 0.25, function() SafeCall(KillerDestroyPallets) end)
+
+-- ---------- AUTO BREAK GENERATOR (Auto Kick Gen) ----------
+getgenv().NoMercy_IsBreakingGenerator = false
+local function KillerAutoBreakGene()
+    if not Killer.AutoBreakGene or GetRole() ~= "Killer" then return end
+    if getgenv().NoMercy_IsBreakingGenerator then return end
+    if KillerIsBusy() then return end
+    local root = GetRoot()
+    if not root then return end
+
+    local CollectionService = game:GetService("CollectionService")
+    local pts = CollectionService:GetTagged("GeneratorPoint")
+    local nearest, minDist = nil, 6
+    for _, p in ipairs(pts) do
+        if p:IsA("BasePart") and not CollectionService:HasTag(p, "doing action") then
+            local genModel = p.Parent
+            if genModel then
+                local progress  = genModel:GetAttribute("RepairProgress")  or genModel:GetAttribute("repairProgress")  or 0
+                local kickcount = genModel:GetAttribute("kickcount")       or genModel:GetAttribute("KickCount")       or 0
+                if progress > 0 and progress < 100 and kickcount <= 7 then
+                    local d = (p.Position - root.Position).Magnitude
+                    if d < minDist then minDist = d; nearest = p end
+                end
+            end
+        end
+    end
+
+    if nearest then
+        getgenv().NoMercy_IsBreakingGenerator = true
+        task.spawn(function()
+            SafeCall(function()
+                local g = RemoteCache.Get("Generator")
+                if g then
+                    local event  = g:FindFirstChild("BreakGenEvent")
+                    local commit = g:FindFirstChild("BreakGenCommit")
+                    if event  and event:IsA("RemoteEvent")  then event:FireServer(nearest) end
+                    if commit and commit:IsA("RemoteEvent") then commit:FireServer(nearest) end
+                end
+            end)
+            task.wait(0.2)
+            local char = LocalPlayer.Character
+            local startTime = osclock()
+            while char and char.Parent and (char:GetAttribute("Immobile") or char:GetAttribute("immobile")) do
+                if osclock() - startTime > 3 then break end
+                task.wait(0.1)
+            end
+            task.wait(0.3)
+            getgenv().NoMercy_IsBreakingGenerator = false
+        end)
+    end
+end
+PerfMgr.Add("killerAutoBreakGene", 0.3, function() SafeCall(KillerAutoBreakGene) end)
+
+-- ---------- BLOCK ALL VAULTS ----------
+getgenv().NoMercy_LastVaultBlockTime = 0
+local function KillerBlockVaults()
+    if not Killer.BlockVaults or GetRole() ~= "Killer" then return end
+    local now = tick()
+    if now - getgenv().NoMercy_LastVaultBlockTime < 1.5 then return end
+    getgenv().NoMercy_LastVaultBlockTime = now
+    SafeCall(function()
+        local vaultEvent = RemoteCache.Get("Window", "VaultEvent")
+        if not vaultEvent then return end
+        local map = Workspace:FindFirstChild("Map")
+        local vaultsFolder = map and map:FindFirstChild("Vaults")
+        if vaultsFolder then
+            for _, vault in ipairs(vaultsFolder:GetChildren()) do
+                for _, part in ipairs(vault:GetChildren()) do
+                    if part:IsA("BasePart") then pcall(function() vaultEvent:FireServer(part, true) end) end
+                end
+            end
+        else
+            -- fallback: pakai cache window killer
+            KillerScanMap()
+            for _, win in ipairs(KillerMapCache.Windows) do
+                local window = win.model
+                if window and window.Parent then
+                    for _, child in ipairs(window:GetDescendants()) do
+                        if child:IsA("BasePart") then pcall(function() vaultEvent:FireServer(child, true) end) end
+                    end
+                end
+            end
+        end
+    end)
+end
+PerfMgr.Add("killerBlockVaults", 1.5, function() SafeCall(KillerBlockVaults) end)
+
+-- ---------- ANTI BLIND (hook namecall Flashlight.GotBlinded) ----------
+local killerAntiBlindHooked = false
+local function SetupKillerAntiBlind()
+    if killerAntiBlindHooked then return end
+    SafeCall(function()
+        local gb = RemoteCache.Get("Items", "Flashlight", "GotBlinded")
+        if not (gb and gb:IsA("RemoteEvent")) then return end
+        local ok, mt = pcall(function() return getrawmetatable(game) end)
+        if not (ok and mt and setreadonly) then return end
+        pcall(function()
+            setreadonly(mt, false)
+            local old = mt.__namecall
+            mt.__namecall = newcclosure(function(self, ...)
+                if not checkcaller() and Killer.AntiBlind and self == gb then
+                    local method = getnamecallmethod()
+                    if method == "FireServer" and GetRole() == "Killer" then
+                        return nil
+                    end
+                end
+                return old(self, ...)
+            end)
+            setreadonly(mt, true)
+            killerAntiBlindHooked = true
+        end)
+    end)
+end
+
+-- ---------- CUSTOM MASKED ----------
+local function KillerApplyCustomMasked(maskName)
+    local selected = maskName or Killer.CustomMasked or "Richard"
+    if type(selected) == "table" then selected = selected[1] end
+    if type(selected) ~= "string" or selected == "" then selected = "Richard" end
+    local ok = SafeCall(function()
+        local activate = RemoteCache.Get("Killers", "Masked", "Activatepower")
+        if activate and activate:IsA("RemoteEvent") then
+            activate:FireServer(selected)
+            return true
+        end
+        return false
+    end)
+    if ok then Notify("Custom Masked", "Mask diterapkan: " .. tostring(selected), 3)
+    else Notify("Custom Masked", "Gagal — remote Masked.Activatepower tidak ditemukan", 3) end
+end
+
+-- ---------- SILENT AIM VEIL / SPEAR ----------
+-- Sistem spear (Veil) killer: intercept FireServer "Spearthrow" supaya lempar
+-- manual diblok, lalu lempar otomatis ke survivor terdekat dalam FOV dengan
+-- prediksi kecepatan + gravity drop. Pakai Drawing API (PC) untuk FOV circle +
+-- tracer, Highlight untuk target.
+local VeilConfig = Killer.Veil
+if VeilConfig.Gravity == nil then VeilConfig.Gravity = math.floor((workspace.Gravity or 196) * 0.5) end
+
+local VeilState = {
+    chargingSpear    = false,
+    touchInput       = nil,
+    attackCooldown   = false,
+    passiveCooldown  = false,
+    remoteHooked     = false,
+    lastPredictedPos = nil,
+}
+local VeilVelocityCache = {}
+local VeilDraw = {}
+
+local drawingAvailable = (typeof(Drawing) == "table") and (Drawing.new ~= nil)
+if drawingAvailable then
+    SafeCall(function()
+        VeilDraw.FOVCircle = Drawing.new("Circle")
+        VeilDraw.FOVCircle.Color     = Color3.fromRGB(180, 180, 180)
+        VeilDraw.FOVCircle.Thickness = 1.5
+        VeilDraw.FOVCircle.Filled    = false
+        VeilDraw.FOVCircle.Visible   = false
+
+        VeilDraw.Tracer = Drawing.new("Circle")
+        VeilDraw.Tracer.Thickness = 2
+        VeilDraw.Tracer.Radius    = 5
+        VeilDraw.Tracer.Color     = Color3.fromRGB(180, 180, 180)
+        VeilDraw.Tracer.Filled    = true
+        VeilDraw.Tracer.Visible   = false
+    end)
+end
+SafeCall(function()
+    VeilDraw.Highlight = Instance.new("Highlight")
+    VeilDraw.Highlight.Name                = "NoMercy_VeilTarget"
+    VeilDraw.Highlight.FillColor           = Color3.fromRGB(255, 0, 0)
+    VeilDraw.Highlight.OutlineColor        = Color3.fromRGB(255, 255, 255)
+    VeilDraw.Highlight.FillTransparency    = 0.5
+    VeilDraw.Highlight.OutlineTransparency = 0
+end)
+
+local function VeilGetRealVelocity(part, playerName)
+    if not part then return Vector3.zero end
+    local currentPos = part.Position
+    local currentTime = tick()
+    if not VeilVelocityCache[playerName] then
+        VeilVelocityCache[playerName] = { lastPos = currentPos, lastTime = currentTime, velocity = Vector3.zero }
+        return Vector3.zero
+    end
+    local cache = VeilVelocityCache[playerName]
+    local dt = currentTime - cache.lastTime
+    if dt > 0.01 then
+        local rawVelocity = (currentPos - cache.lastPos) / dt
+        if rawVelocity.Magnitude < 100 then
+            cache.velocity = cache.velocity:Lerp(rawVelocity, 0.4)
+        end
+    end
+    cache.lastPos = currentPos
+    cache.lastTime = currentTime
+    return cache.velocity
+end
+
+local function VeilGetTargetPart(char)
+    if VeilConfig.TargetPart == "Head" then
+        return char:FindFirstChild("Head")
+    elseif VeilConfig.TargetPart == "Root" then
+        return char:FindFirstChild("HumanoidRootPart")
+    else
+        return char:FindFirstChild("Torso")
+            or char:FindFirstChild("UpperTorso")
+            or char:FindFirstChild("HumanoidRootPart")
+    end
+end
+
+local function VeilGetClosestSurvivor()
+    local myChar = LocalPlayer.Character
+    local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    if not myRoot then return nil end
+    local cam    = Workspace.CurrentCamera
+    local center = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y / 2)
+    local bestDist, bestTarget = VeilConfig.FOV, nil
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Team and p.Team.Name == "Survivors" and p.Character then
+            local char = p.Character
+            local hum  = char:FindFirstChildOfClass("Humanoid")
+            local part = VeilGetTargetPart(char)
+            if hum and hum.Health > 0 and part then
+                local dist3D = (part.Position - myRoot.Position).Magnitude
+                if dist3D <= VeilConfig.MaxDist then
+                    local screenPos, onScreen = cam:WorldToViewportPoint(part.Position)
+                    if onScreen then
+                        local dist2D = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+                        if dist2D < bestDist then
+                            bestDist = dist2D
+                            bestTarget = { Player = p, Part = part }
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return bestTarget
+end
+
+local function VeilSetupInterceptor()
+    if VeilState.remoteHooked then return end
+    SafeCall(function()
+        local oldNamecall
+        oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+            if getnamecallmethod() == "FireServer" and not checkcaller() then
+                if self.Name == "Spearthrow" and VeilConfig.Enabled then
+                    return nil
+                end
+            end
+            return oldNamecall(self, ...)
+        end)
+        VeilState.remoteHooked = true
+    end)
+end
+VeilSetupInterceptor()
+
+local function VeilFire()
+    if VeilState.attackCooldown then return end
+    VeilState.attackCooldown = true
+    task.delay(2, function() VeilState.attackCooldown = false end)
+
+    local myChar    = LocalPlayer.Character
+    local startPart = myChar and (myChar:FindFirstChild("Head") or myChar:FindFirstChild("HumanoidRootPart"))
+    if not startPart then return end
+    local startPos   = startPart.Position
+    local targetInfo = VeilGetClosestSurvivor()
+    local aimDir
+
+    if targetInfo and targetInfo.Part then
+        local targetPart   = targetInfo.Part
+        local targetPlayer = targetInfo.Player
+        local targetPos    = targetPart.Position
+
+        local velocity      = VeilGetRealVelocity(targetPart, targetPlayer.Name)
+        local horizontalVel = Vector3.new(velocity.X, 0, velocity.Z)
+        local speed         = horizontalVel.Magnitude
+
+        local distance  = (targetPos - startPos).Magnitude
+        local timeToHit = distance / VeilConfig.SpearSpeed
+
+        local horizontalPrediction = Vector3.zero
+        if speed > 4 then
+            horizontalPrediction = horizontalVel.Unit * VeilConfig.HorizontalPredictFactor
+        end
+        local predictedPos = targetPos + horizontalPrediction
+
+        local distMult    = math.clamp(distance / 100, 1, 2.5)
+        local autoGravity = math.max(0, distance - 8)
+        local gravity     = VeilConfig.AutoPredict and autoGravity or VeilConfig.Gravity
+        local drop        = 0.5 * gravity * (timeToHit ^ 2) * distMult
+        local finalPos    = predictedPos + Vector3.new(0, drop, 0)
+
+        aimDir = (finalPos - startPos).Unit
+        VeilState.lastPredictedPos = finalPos
+    else
+        aimDir = Workspace.CurrentCamera.CFrame.LookVector
+        VeilState.lastPredictedPos = nil
+    end
+
+    SafeCall(function()
+        local veil = RemoteCache.Get("Killers", "Veil")
+        if veil and veil:FindFirstChild("Spearthrow") then
+            veil.Spearthrow:FireServer(aimDir, VeilConfig.SpearSpeed, startPos)
+        end
+    end)
+
+    if VeilDraw.FOVCircle then VeilDraw.FOVCircle.Color = Color3.fromRGB(180, 180, 180) end
+    if not VeilState.passiveCooldown then
+        VeilState.passiveCooldown = true
+        task.delay(30, function()
+            if VeilDraw.FOVCircle then VeilDraw.FOVCircle.Color = Color3.fromRGB(180, 180, 180) end
+            VeilState.passiveCooldown = false
+        end)
+    end
+end
+
+-- Input: klik/tahan tombol serang -> charging spear -> lepas -> fire
+UserInputService.InputBegan:Connect(function(input, gp)
+    local isTouch = input.UserInputType == Enum.UserInputType.Touch
+    if gp and not isTouch then return end
+    if not VeilConfig.Enabled then return end
+    local char = LocalPlayer.Character
+    local isSpearMode = char and char:GetAttribute("spearmode") == true
+    if not isSpearMode then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        VeilState.chargingSpear = true
+    elseif isTouch then
+        SafeCall(function()
+            local pGui = LocalPlayer:FindFirstChild("PlayerGui")
+            if not pGui then return end
+            local slasher = pGui:FindFirstChild("Slasher-mob")
+            if not slasher then return end
+            local ctrl = slasher:FindFirstChild("Controls")
+            if not ctrl then return end
+            local attackBtn = ctrl:FindFirstChild("attack")
+            if attackBtn and attackBtn.Visible then
+                local pos     = input.Position
+                local absPos  = attackBtn.AbsolutePosition
+                local absSize = attackBtn.AbsoluteSize
+                if pos.X >= absPos.X and pos.X <= absPos.X + absSize.X
+                and pos.Y >= absPos.Y and pos.Y <= absPos.Y + absSize.Y then
+                    VeilState.chargingSpear = true
+                    VeilState.touchInput    = input
+                end
+            end
+        end)
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input, gp)
+    if VeilState.chargingSpear
+       and (input == VeilState.touchInput or input.UserInputType == Enum.UserInputType.MouseButton1) then
+        VeilState.chargingSpear = false
+        if VeilState.touchInput == input then VeilState.touchInput = nil end
+        SafeCall(VeilFire)
+    end
+end)
+
+-- RenderStepped: FOV circle + highlight target + tracer (hanya kalau Veil ON)
+RunService.RenderStepped:Connect(function()
+    if not VeilConfig.Enabled then
+        if VeilDraw.FOVCircle then VeilDraw.FOVCircle.Visible = false end
+        if VeilDraw.Tracer    then VeilDraw.Tracer.Visible = false end
+        if VeilDraw.Highlight then VeilDraw.Highlight.Parent = nil end
+        return
+    end
+    local cam    = Workspace.CurrentCamera
+    local myChar = LocalPlayer.Character
+    local isSpearMode = myChar and myChar:GetAttribute("spearmode") == true
+
+    if VeilDraw.FOVCircle and VeilConfig.ShowFOV and isSpearMode then
+        VeilDraw.FOVCircle.Visible  = true
+        VeilDraw.FOVCircle.Radius   = VeilConfig.FOV
+        VeilDraw.FOVCircle.Position = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y / 2)
+    elseif VeilDraw.FOVCircle then
+        VeilDraw.FOVCircle.Visible = false
+    end
+
+    if VeilState.chargingSpear and isSpearMode then
+        local target = VeilGetClosestSurvivor()
+        if VeilDraw.Highlight and target and target.Part and target.Part.Parent then
+            VeilDraw.Highlight.Parent = target.Part.Parent
+        elseif VeilDraw.Highlight then
+            VeilDraw.Highlight.Parent = nil
+        end
+    elseif VeilDraw.Highlight then
+        VeilDraw.Highlight.Parent = nil
+    end
+
+    if VeilDraw.Tracer and isSpearMode and VeilState.lastPredictedPos then
+        local screenPos, onScreen = cam:WorldToViewportPoint(VeilState.lastPredictedPos)
+        local viewport = cam.ViewportSize
+        local center = Vector2.new(viewport.X / 2, viewport.Y / 2)
+        if onScreen then
+            VeilDraw.Tracer.Position = Vector2.new(screenPos.X, screenPos.Y)
+        else
+            local dx, dy = screenPos.X - center.X, screenPos.Y - center.Y
+            if math.abs(dx) < 1 and math.abs(dy) < 1 then
+                VeilDraw.Tracer.Position = center
+            else
+                local angle  = math.atan2(dy, dx)
+                local maxX   = viewport.X / 2 - 10
+                local maxY   = viewport.Y / 2 - 10
+                local scaleX = maxX / math.abs(dx)
+                local scaleY = maxY / math.abs(dy)
+                local scale  = math.min(scaleX, scaleY)
+                VeilDraw.Tracer.Position = Vector2.new(center.X + dx * scale, center.Y + dy * scale)
+            end
+        end
+        VeilDraw.Tracer.Visible = true
+    elseif VeilDraw.Tracer then
+        VeilDraw.Tracer.Visible = false
+    end
+end)
+
+-- Pasang hook anti-blind sekali di startup (aman kalau remote belum ada)
+task.defer(function() SafeCall(SetupKillerAntiBlind) end)
 
 -- ===== BAGIAN 13 : ESP (Highlight + Label) — OPTIMIZED =====
 -- Perubahan penting:
@@ -2024,8 +2692,41 @@ end
 local GodConfig = {
     Enabled = false, InfiniteHealth = true, AntiKnock = true,
     AntiStun = true, AutoHeal = true, HealThreshold = 50,
+    InstantHealSelf = false, AutoHealAll = false,
 }
 local GodHealthConn = nil
+
+-- Helper heal port dari Ziaan Hub: HealEvent + SkillCheckResultEvent
+-- dipakai oleh Instant Heal (Self) dan Auto Heal All (semua tim).
+local function healSelfSkillCheck()
+    SafeCall(function()
+        local sc = RemoteCache.Get("Healing", "SkillCheckResultEvent")
+        local char = LocalPlayer.Character
+        if sc and char then sc:FireServer("success", 100, char) end
+    end)
+end
+local function healSelfState(state)
+    SafeCall(function()
+        local ev  = RemoteCache.Get("Healing", "HealEvent")
+        local hrp = GetRoot()
+        if ev and hrp then ev:FireServer(hrp, state) end
+    end)
+end
+local function healOtherSkillCheck(player)
+    if not player or not player.Character then return end
+    SafeCall(function()
+        local sc = RemoteCache.Get("Healing", "SkillCheckResultEvent")
+        if sc then sc:FireServer("success", 100, player.Character) end
+    end)
+end
+local function healOtherState(player, state)
+    if not player or not player.Character then return end
+    SafeCall(function()
+        local ev  = RemoteCache.Get("Healing", "HealEvent")
+        local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+        if ev and hrp then ev:FireServer(hrp, state) end
+    end)
+end
 
 local function godDoHeal()
     SafeCall(function()
@@ -2035,6 +2736,7 @@ local function godDoHeal()
         if collisionRemote then pcall(function() firesignal(collisionRemote.OnClientEvent) end) end
     end)
 end
+
 
 local function enableGodMode()
     PerfMgr.SetActive("godMode", true)
@@ -2081,6 +2783,50 @@ PerfMgr.Add("godMode", 0.1, function()
                         hum:ChangeState(Enum.HumanoidStateType.Running)
                     end
                 end
+            end
+        end
+    end
+end)
+
+-- Instant Heal (Self): spam skillcheck success + HealEvent(true/false) cepat
+-- supaya HP sendiri naik instant. Interval 0.05s (skillcheck), state true/false
+-- bergantian tiap ~0.06/0.09s seperti Ziaan Hub.
+local _healSelfTimers = { sc = 0, t = 0, f = 0, active = false }
+PerfMgr.Add("instantHealSelf", 0.05, function()
+    if not GodConfig.InstantHealSelf then return end
+    local myChar = LocalPlayer.Character
+    local myHum  = myChar and myChar:FindFirstChildOfClass("Humanoid")
+    if not myHum or myHum.Health >= myHum.MaxHealth * 0.9 then return end
+    healSelfSkillCheck()
+    _healSelfTimers.t = _healSelfTimers.t + 0.05
+    if _healSelfTimers.t >= 0.06 and not _healSelfTimers.active then
+        _healSelfTimers.t = 0; _healSelfTimers.active = true; healSelfState(true)
+    end
+    _healSelfTimers.f = _healSelfTimers.f + 0.05
+    if _healSelfTimers.f >= 0.09 and _healSelfTimers.active then
+        _healSelfTimers.f = 0; _healSelfTimers.active = false; healSelfState(false); _healSelfTimers.t = -0.10
+    end
+end)
+
+-- Auto Heal All: heal semua rekan tim yang HP-nya di bawah 90%. Pakai timer
+-- per-pemain seperti Ziaan Hub supaya tidak spam tanpa henti.
+local _healAllTimers = {}
+PerfMgr.Add("autoHealAll", 0.07, function()
+    if not GodConfig.AutoHealAll then return end
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local hum = player.Character:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health > 0 and hum.Health < hum.MaxHealth * 0.9 then
+                if not _healAllTimers[player] then _healAllTimers[player] = { sc = 0, t = 0, f = 0, active = false } end
+                local tm = _healAllTimers[player]
+                tm.sc = tm.sc + 0.07
+                if tm.sc >= 0.07 then tm.sc = 0; healOtherSkillCheck(player) end
+                tm.t = tm.t + 0.07
+                if tm.t >= 0.09 and not tm.active then tm.t = 0; tm.active = true; healOtherState(player, true) end
+                tm.f = tm.f + 0.07
+                if tm.f >= 0.07 and tm.active then tm.f = 0; tm.active = false; healOtherState(player, false); tm.t = -0.10 end
+            else
+                _healAllTimers[player] = nil
             end
         end
     end
@@ -2448,14 +3194,114 @@ local Tabs = {
     Config   = Window:AddTab({ Title = "Config",   Icon = "save" }),
 }
 
--- ---------- TAB : KILLER (placeholder) ----------
+-- ---------- TAB : KILLER (fitur killer di-port dari Ziaan Hub) ----------
 Breathe()
-Tabs.Killer:AddSection("KILLER")
+Tabs.Killer:AddSection("GENERAL KILLER")
 Breathe()
 Tabs.Killer:AddParagraph({
-    Title = "Coming Soon",
-    Content = "Menu khusus Killer masih kosong. Fitur akan ditambahkan di update berikutnya.",
+    Title = "Killer Hub",
+    Content = "Semua fitur killer di-port dari Ziaan Hub v1.4.7. Aktifkan satu per satu. Sebagian besar fitur cuma jalan kalau kamu tim Killer.",
 })
+
+-- Auto Attack (versi Zian Hub: cek HP survivor)
+Tabs.Killer:AddToggle("KillerAutoAttack", { Title = "Auto Attack Nearby Survivors", Default = false }):OnChanged(function(v)
+    Killer.AutoAttack = v
+    PerfMgr.SetActive("killerAutoAttack", v)
+    Notify("Auto Attack", (v and "Aktif (Zian Hub v2)") or "Mati", 2)
+end)
+Tabs.Killer:AddSlider("KillerAttackRange", { Title = "Attack Range (studs)", Default = 12, Min = 5, Max = 20, Rounding = 0,
+    Callback = function(v) Killer.AttackRange = v end })
+Tabs.Killer:AddSlider("KillerAttackMinHP", { Title = "Min Survivor HP % (biar ga sacrifice)", Default = 25, Min = 0, Max = 90, Rounding = 0,
+    Callback = function(v) Killer.AttackMinHealthPct = v / 100 end })
+
+-- Double Tap
+Tabs.Killer:AddToggle("KillerDoubleTap", { Title = "Double Tap (serangan ganda)", Default = false }):OnChanged(function(v)
+    Killer.DoubleTap = v
+    PerfMgr.SetActive("killerDoubleTap", v)
+    Notify("Double Tap", (v and "Aktif") or "Mati", 2)
+end)
+
+-- Auto Kick Pallet
+Tabs.Killer:AddToggle("KillerDestroyPallets", { Title = "Auto Kick Pallet", Default = false }):OnChanged(function(v)
+    Killer.DestroyPallets = v
+    PerfMgr.SetActive("killerDestroyPallets", v)
+    Notify("Auto Kick Pallet", (v and "Aktif") or "Mati", 2)
+end)
+
+-- Auto Kick Generator
+Tabs.Killer:AddToggle("KillerAutoBreakGene", { Title = "Auto Kick Generator", Default = false }):OnChanged(function(v)
+    Killer.AutoBreakGene = v
+    PerfMgr.SetActive("killerAutoBreakGene", v)
+    Notify("Auto Kick Gen", (v and "Aktif") or "Mati", 2)
+end)
+
+-- Block All Vaults
+Tabs.Killer:AddToggle("KillerBlockVaults", { Title = "Block All Vaults", Default = false }):OnChanged(function(v)
+    Killer.BlockVaults = v
+    PerfMgr.SetActive("killerBlockVaults", v)
+    Notify("Block Vaults", (v and "Aktif") or "Mati", 2)
+end)
+
+-- Anti Blind
+Tabs.Killer:AddToggle("KillerAntiBlind", { Title = "Anti Blind (Flashlight)", Default = false }):OnChanged(function(v)
+    Killer.AntiBlind = v
+    if v then SafeCall(SetupKillerAntiBlind) end
+    Notify("Anti Blind", (v and "Aktif") or "Mati", 2)
+end)
+
+-- Custom Masked
+Breathe()
+Tabs.Killer:AddSection("CUSTOM MASKED")
+local customMaskedMasks = { "Richard", "Tony", "Brandon", "Jake", "Richter", "Graham", "Alex" }
+Tabs.Killer:AddDropdown("KillerCustomMasked", {
+    Title = "Pilih Mask", Values = customMaskedMasks, Default = 1,
+}):OnChanged(function(value)
+    Killer.CustomMasked = tostring(value)
+end)
+Tabs.Killer:AddButton({
+    Title = "Apply Custom Masked",
+    Callback = function() KillerApplyCustomMasked(Killer.CustomMasked) end,
+})
+Tabs.Killer:AddButton({
+    Title = "Random Custom Masked",
+    Callback = function()
+        local mask = customMaskedMasks[math.random(1, #customMaskedMasks)]
+        Killer.CustomMasked = mask
+        KillerApplyCustomMasked(mask)
+    end,
+})
+
+-- Silent Aim Veil / Spear
+Breathe()
+Tabs.Killer:AddSection("SILENT AIM VEIL (SPEAR)")
+Tabs.Killer:AddParagraph({
+    Title = "Cara pakai Veil",
+    Content = "Aktifkan, lalu tahan tombol serang (klik kiri / tombol attack di HP) saat killer sedang di mode spear (spearmode). Lempar otomatis ke survivor terdekat dalam FOV dengan prediksi. FOV circle & tracer butuh PC (Drawing API).",
+})
+Tabs.Killer:AddToggle("KillerVeilEnabled", { Title = "Silent Aim Veil", Default = false }):OnChanged(function(v)
+    VeilConfig.Enabled = v
+    if not v then
+        if VeilDraw.FOVCircle then VeilDraw.FOVCircle.Visible = false end
+        if VeilDraw.Tracer    then VeilDraw.Tracer.Visible = false end
+        if VeilDraw.Highlight then VeilDraw.Highlight.Parent = nil end
+    end
+    Notify("Silent Aim Veil", (v and "Aktif") or "Mati", 2)
+end)
+Tabs.Killer:AddToggle("KillerVeilShowFOV", { Title = "Show FOV Circle (PC)", Default = true }):OnChanged(function(v) VeilConfig.ShowFOV = v end)
+Tabs.Killer:AddSlider("KillerVeilFOV", { Title = "FOV Radius", Default = 150, Min = 50, Max = 500, Rounding = 0,
+    Callback = function(v) VeilConfig.FOV = v end })
+Tabs.Killer:AddToggle("KillerVeilAutoPredict", { Title = "Auto Predict Gravity", Default = false }):OnChanged(function(v) VeilConfig.AutoPredict = v end)
+Tabs.Killer:AddSlider("KillerVeilSpearSpeed", { Title = "Spear Speed", Default = 165, Min = 50, Max = 300, Rounding = 0,
+    Callback = function(v) VeilConfig.SpearSpeed = v end })
+Tabs.Killer:AddSlider("KillerVeilGravity", { Title = "Gravity", Default = math.floor((workspace.Gravity or 196) * 0.5), Min = 0, Max = 300, Rounding = 0,
+    Callback = function(v) VeilConfig.Gravity = v end })
+Tabs.Killer:AddSlider("KillerVeilHorizontal", { Title = "Horizontal Vector", Default = 2.8, Min = 0, Max = 10, Rounding = 1,
+    Callback = function(v) VeilConfig.HorizontalPredictFactor = v end })
+Tabs.Killer:AddSlider("KillerVeilMaxDist", { Title = "Max Target Distance (studs)", Default = 200, Min = 50, Max = 1000, Rounding = 0,
+    Callback = function(v) VeilConfig.MaxDist = v end })
+Tabs.Killer:AddDropdown("KillerVeilTargetPart", {
+    Title = "Target Part", Values = { "Torso", "Head", "Root" }, Default = 1,
+}):OnChanged(function(value) VeilConfig.TargetPart = tostring(value) end)
 
 -- ---------- TAB : INFO ----------
 Breathe()
@@ -2479,7 +3325,7 @@ Tabs.Info:AddButton({
 Breathe()
 Tabs.Info:AddParagraph({
     Title = "Fitur",
-    Content = "• Aimbot & Auto Parry\n• ESP pemain & objek\n• Menu Teleport lengkap\n• Auto generator & auto attack\n• Fly / God Mode / Speed\n• Performance booster & mobile control",
+    Content = "• Aimbot & Auto Parry\n• ESP pemain & objek (renderer No Mercy)\n• Menu Teleport lengkap\n• Auto generator & auto attack\n• KILLER HUB: Auto Attack, Double Tap, Auto Kick Pallet/Gen, Block Vaults, Anti Blind, Silent Aim Veil/Spear, Custom Masked\n• Fly / God Mode / Instant Heal / Auto Heal All\n• Performance booster & mobile control",
 })
 
 -- ---------- TAB : AIMBOT ----------
@@ -3198,10 +4044,22 @@ Tabs.Player:AddToggle("GodMode", { Title = "No Damage (God Mode)", Default = fal
     if value then enableGodMode() else disableGodMode() end
     Notify("No Damage", (value and "Aktif") or "Mati", 2)
 end)
-Tabs.Player:AddToggle("AutoHeal", { Title = "Auto Heal", Default = true }):OnChanged(function(v) GodConfig.AutoHeal = v end)
+Breathe()
+Tabs.Player:AddSection("AUTO HEAL (di-mode God)")
+Tabs.Player:AddToggle("AutoHeal", { Title = "Auto Heal (God Mode)", Default = true }):OnChanged(function(v) GodConfig.AutoHeal = v end)
 Tabs.Player:AddSlider("HealThreshold", { Title = "Batas HP Auto Heal", Default = 50, Min = 10, Max = 100, Rounding = 0,
     Callback = function(v) GodConfig.HealThreshold = v end })
-Tabs.Player:AddButton({ Title = "Heal Sekarang", Callback = function() godDoHeal(); Notify("Heal", "Heal dipicu", 2) end })
+Tabs.Player:AddToggle("InstantHealSelf", { Title = "Instant Heal (Self)", Default = false }):OnChanged(function(v)
+    GodConfig.InstantHealSelf = v
+    PerfMgr.SetActive("instantHealSelf", v)
+    Notify("Instant Heal", (v and "Aktif") or "Mati", 2)
+end)
+Tabs.Player:AddToggle("AutoHealAll", { Title = "Auto Heal All (semua tim)", Default = false }):OnChanged(function(v)
+    GodConfig.AutoHealAll = v
+    PerfMgr.SetActive("autoHealAll", v)
+    Notify("Auto Heal All", (v and "Aktif") or "Mati", 2)
+end)
+Tabs.Player:AddButton({ Title = "Heal Sekarang (Self)", Callback = function() godDoHeal(); Notify("Heal", "Heal dipicu", 2) end })
 Tabs.Player:AddButton({
     Title = "Scan Generator Terdekat",
     Callback = function()
@@ -3341,6 +4199,12 @@ Tabs.Settings:AddButton({
         PerfMgr.StopAll()
         DisableESP(); ClearESP(); DisableAutoAttack(); DisableLeave(); DisableFPS(); ResetPerf()
         destroyRing(); stopFly(); disableGodMode()
+        -- Cleanup Veil (Silent Aim) draw objects
+        pcall(function()
+            if VeilDraw.FOVCircle then VeilDraw.FOVCircle:Remove() end
+            if VeilDraw.Tracer    then VeilDraw.Tracer:Remove() end
+            if VeilDraw.Highlight then VeilDraw.Highlight:Destroy() end
+        end)
         if MainLoopConn then MainLoopConn:Disconnect(); MainLoopConn = nil end
         ConnMgr.ClearAll()
         RemoteCache.Clear()
@@ -3387,6 +4251,11 @@ if getgenv then
         pcall(function() PerfMgr.StopAll() end)
         pcall(function() DisableESP(true); ClearESP(); DisableAutoAttack(); DisableLeave(); DisableFPS() end)
         pcall(function() destroyRing(); stopFly(); disableGodMode() end)
+        pcall(function()
+            if VeilDraw.FOVCircle then VeilDraw.FOVCircle:Remove() end
+            if VeilDraw.Tracer    then VeilDraw.Tracer:Remove() end
+            if VeilDraw.Highlight then VeilDraw.Highlight:Destroy() end
+        end)
         pcall(function() if MainLoopConn then MainLoopConn:Disconnect(); MainLoopConn = nil end end)
         pcall(function() ConnMgr.ClearAll(); RemoteCache.Clear(); MapCache.Invalidate() end)
         pcall(function() if LaserPart then LaserPart:Destroy() end end)
