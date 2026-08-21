@@ -18,13 +18,14 @@ local ICON = {
 }
 
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 local function GetHolder()
     return (gethui and gethui()) or game:GetService("CoreGui")
 end
 
 -- ============================================================
---  WELCOME INTRO ANIMATION (Garis Hitam-Putih Elegan)
+--  WELCOME INTRO (Logo Bulat Besar + Teks "WELCOME NO MERCY")
 -- ============================================================
 local function ShowWelcomeIntro()
     local holder = GetHolder()
@@ -37,43 +38,72 @@ local function ShowWelcomeIntro()
     gui.Parent = holder
     if syn and syn.protect_gui then pcall(syn.protect_gui, gui) end
 
+    -- Container tengah
+    local centerFrame = Instance.new("Frame")
+    centerFrame.Size = UDim2.fromOffset(250, 250)
+    centerFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+    centerFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+    centerFrame.BackgroundTransparency = 1
+    centerFrame.ZIndex = 999
+    centerFrame.Parent = gui
+
     local img = Instance.new("ImageLabel")
     img.Size = UDim2.fromOffset(0, 0)
-    img.Position = UDim2.new(0.5, 0, 0.5, 0)
+    img.Position = UDim2.new(0.5, 0, 0.4, 0)
     img.AnchorPoint = Vector2.new(0.5, 0.5)
     img.Image = ICON.Logo
     img.BackgroundTransparency = 1
     img.ZIndex = 999
-    img.Parent = gui
+    img.Parent = centerFrame
 
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(1, 0)
     corner.Parent = img
 
     local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(220, 220, 220) -- Garis Hitam-Putih / Abu terang
+    stroke.Color = Color3.fromRGB(255, 255, 255)
     stroke.Thickness = 4
     stroke.Transparency = 1
     stroke.Parent = img
 
+    -- Teks Welcome No Mercy di bawah logo intro
+    local introText = Instance.new("TextLabel")
+    introText.Size = UDim2.new(1, 0, 0, 40)
+    introText.Position = UDim2.new(0.5, 0, 0.75, 0)
+    introText.AnchorPoint = Vector2.new(0.5, 0)
+    introText.BackgroundTransparency = 1
+    introText.Text = "WELCOME NO MERCY"
+    introText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    introText.TextSize = 18
+    introText.Font = Enum.Font.GothamBold
+    introText.TextTransparency = 1
+    introText.ZIndex = 999
+    introText.Parent = centerFrame
+
+    -- Animasi Masuk
     local tweenIn = TweenService:Create(img, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.fromOffset(180, 180)
+        Size = UDim2.fromOffset(150, 150)
     })
     local strokeIn = TweenService:Create(stroke, TweenInfo.new(0.4), { Transparency = 0 })
+    local textIn = TweenService:Create(introText, TweenInfo.new(0.4), { TextTransparency = 0 })
     
     tweenIn:Play()
     strokeIn:Play()
+    textIn:Play()
     tweenIn.Completed:Wait()
 
     task.wait(1.2)
 
+    -- Animasi Keluar
     local tweenOut = TweenService:Create(img, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
         Size = UDim2.fromOffset(0, 0)
     })
     local strokeOut = TweenService:Create(stroke, TweenInfo.new(0.3), { Transparency = 1 })
+    local textOut = TweenService:Create(introText, TweenInfo.new(0.3), { TextTransparency = 1 })
     
     tweenOut:Play()
     strokeOut:Play()
+    textOut:Play()
     tweenOut.Completed:Wait()
 
     gui:Destroy()
@@ -140,7 +170,7 @@ local function makeBubble()
     corner.Parent = btn
 
     local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(200, 200, 200) -- Garis Hitam-Putih
+    stroke.Color = Color3.fromRGB(200, 200, 200)
     stroke.Thickness = 2
     stroke.Parent = btn
 
@@ -296,7 +326,7 @@ local SpeedTab    = Window:MakeTab({ Name = "Speed", Icon = ICON.Zap, PremiumOnl
 local SettingsTab = Window:MakeTab({ Name = "Pengaturan", Icon = ICON.Settings, PremiumOnly = false })
 
 -- ============================================================
---  INFO (Dengan Banner Foto No Mercy yang Dijamin Muncul)
+--  INFO (Banner dengan Efek Animasi Lampu Menyala / Shimmer)
 -- ============================================================
 local InfoSec = InfoTab:AddSection({ Name = "Tentang" })
 
@@ -310,7 +340,6 @@ InfoSec:AddButton({
     end,
 })
 
--- Sistem Injeksi Banner Stabil untuk Orion UI
 task.spawn(function()
     task.wait(0.4)
     local main = FindMainWindow()
@@ -325,7 +354,7 @@ task.spawn(function()
                 bannerFrame.Size = UDim2.new(1, -10, 0, 110)
                 bannerFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
                 bannerFrame.BorderSizePixel = 0
-                bannerFrame.LayoutOrder = -5 -- Biar posisi otomatis ditaruh paling atas
+                bannerFrame.LayoutOrder = -5
                 bannerFrame.Parent = scrollingFrame
 
                 local corner = Instance.new("UICorner")
@@ -342,6 +371,31 @@ task.spawn(function()
                 local imgCorner = Instance.new("UICorner")
                 imgCorner.CornerRadius = UDim.new(0, 8)
                 imgCorner.Parent = bannerImg
+
+                -- Lapisan Efek Lampu / Shimmer yang Berkedip (Cerah lalu Redup)
+                local glowOverlay = Instance.new("Frame")
+                glowOverlay.Size = UDim2.new(1, 0, 1, 0)
+                glowOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                glowOverlay.BackgroundTransparency = 0.85
+                glowOverlay.BorderSizePixel = 0
+                glowOverlay.Parent = bannerFrame
+
+                local gCorner = Instance.new("UICorner")
+                gCorner.CornerRadius = UDim.new(0, 8)
+                gCorner.Parent = glowOverlay
+
+                -- Looping Animasi Lampu Kedip Cerah & Hilang
+                task.spawn(function()
+                    while glowOverlay and glowOverlay.Parent do
+                        local t1 = TweenService:Create(glowOverlay, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { BackgroundTransparency = 0.4 })
+                        t1:Play()
+                        t1.Completed:Wait()
+
+                        local t2 = TweenService:Create(glowOverlay, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { BackgroundTransparency = 0.85 })
+                        t2:Play()
+                        t2.Completed:Wait()
+                    end
+                end)
                 break
             end
         end
@@ -408,7 +462,6 @@ SpeedSec:AddSlider({
 --  PENGATURAN
 -- ============================================================
 local SettingsSec = SettingsTab:AddSection({ Name = "Pengaturan" })
-
 SettingsSec:AddButton({
     Name = "Tutup UI (Close)",
     Callback = function()
@@ -416,9 +469,5 @@ SettingsSec:AddButton({
     end,
 })
 
--- ============================================================
---  NOTIFIKASI LOAD
--- ============================================================
 OrionLib:MakeNotification({ Name = "NO MERCY", Content = "Violence District dimuat!", Image = ICON.Logo, Time = 4 })
-
 print("[NO MERCY] Violence District loaded successfully!")
