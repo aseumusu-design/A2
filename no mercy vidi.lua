@@ -1,500 +1,457 @@
--- ============================================================
--- ESP MODIFIKASI : Label hanya untuk Pumpkin & Window
--- ============================================================
-
--- Fungsi ESP Players (tanpa label)
-local function ESPPlayers()
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Team then
-            local teamName = player.Team.Name
-            if teamName == "Killer" and Settings.ESP.Killer then
-                HighlightObj(player.Character, Color3.fromRGB(255, 0, 0))
-                -- Hapus LabelObj, hanya highlight
-                -- LabelObj(player.Character, player.Name .. "\n[KILLER]", Color3.fromRGB(255, 0, 0))
-            elseif teamName == "Survivors" and Settings.ESP.Survivor then
-                HighlightObj(player.Character, Color3.fromRGB(0, 255, 0))
-                -- LabelObj(player.Character, player.Name .. "\n[SURVIVOR]", Color3.fromRGB(0, 255, 0))
-            else
-                Unhighlight(player.Character)
-                Unlabel(player.Character)
-            end
-        end
-    end
-end
-
--- Fungsi ESP Generators (tanpa label)
-local function ESPGenerators()
-    if not Settings.ESP.Generator then return end
-    SafeCall(function()
-        local map = Workspace:FindFirstChild("Map")
-        if not map then return end
-        for _, obj in ipairs(map:GetDescendants()) do
-            if obj:IsA("Model") and obj.Name == "Generator" then
-                HighlightObj(obj, Color3.fromRGB(203, 132, 66))
-                -- LabelObj(obj, "Generator", Color3.fromRGB(203, 132, 66))
-            end
-        end
-    end)
-end
-
--- Fungsi ESP Gates (tanpa label)
-local function ESPGates()
-    if not Settings.ESP.Gate then return end
-    SafeCall(function()
-        local map = Workspace:FindFirstChild("Map")
-        if not map then return end
-        for _, obj in ipairs(map:GetDescendants()) do
-            if obj:IsA("Model") and obj.Name == "Gate" then
-                HighlightObj(obj, Color3.fromRGB(255, 255, 255))
-                -- LabelObj(obj, "Gate", Color3.fromRGB(255, 255, 255))
-            end
--- ============================================================
--- ESP + TELEPORT GATE (Modifikasi Label)
--- ============================================================
+-- =========================================================================
+-- AUTO HEAL + "CURI HEAL" DARI PLAYER LAIN (VIOLENCE DISTRICT)
+-- =========================================================================
+-- Cara kerja:
+-- 1. Cari player terdekat (selain diri sendiri) yang masih hidup.
+-- 2. Kirim remote heal dengan argumen player tersebut.
+-- 3. Player lain tetap di tempatnya, tidak bergerak.
+-- 4. Jika berhasil, HP kamu bertambah.
+-- =========================================================================
 
 local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
+local StarterGui = game:GetService("StarterGui")
+local CoreGui = game:GetService("CoreGui")
+local Workspace = game:GetService("Workspace")
 
--- ===== SETTINGS =====
-local Settings = {
-    ESP = {
-        Killer = false,      -- ubah ke true untuk aktif
-        Survivor = false,
-        Generator = false,
-        Gate = false,
-        Hook = false,
-        Pallet = false,
-        Window = false,      -- untuk objek "Window" (atau "Vault")
-        Pumpkin = false,     -- untuk objek "Pumpkin" (atau "Chest")
-        ShowOnlyClosestHook = false,
-        ShowDistance = true, -- hanya berpengaruh pada label yang tampil
-        MaxDistance = 500,
-    },
-    Performance = {
-        UpdateRate = 0.5,
-        UseDistanceCulling = true,
-        MaxESPObjects = 100,
-    },
-    Teleportation = {
-        TeleportOffset = 3,
-        SafeTeleport = true,
+local player = Players.LocalPlayer
+local playerGui = player:FindFirstChild("PlayerGui") or CoreGui
+
+-- ==================== AUTO DETECT HEAL REMOTE ====================
+local function findHealRemote()
+    local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+    if not remotes then return nil end
+
+    -- Daftar kemungkinan path remote heal (yang mungkin menerima argumen player)
+    local possiblePaths = {
+        {"Healing", "HealAnimRec"},
+        {"Healing", "Heal"},
+        {"Heal"},
+        {"HealPlayer"},
+        {"Healing", "StartHeal"},
+        {"Heal", "HealPlayer"},
+        {"HealRemote"},
+        {"RemoteHeal"},
+        {"HealEvent"},
+        {"HealOther"},
+        {"HealTarget"},
+        {"HealPlayerRemote"},
+        {"Medic", "Heal"},
+        {"Medic", "HealPlayer"},
+        {"Health", "Heal"},
+        {"Health", "HealOther"},
     }
+
+    for _, path in ipairs(possiblePaths) do
+        local current = remotes
+        local found = true
+        for _, key in ipairs(path) do
+            current = current:FindFirstChild(key)
+            if not current then
+                found = false
+                break
+            end
+        end
+        if found and current then
+            return current
+        end
+    end
+
+    -- Fallback: cari remote dengan nama mengandung "heal"
+    local function recursiveSearch(obj)
+        for _, child in ipairs(obj:GetChildren()) do
+            if child:IsA("RemoteEvent") or child:IsA("RemoteFunction") then
+                local name = child.Name:lower()
+                if name:find("heal") or name:find("health") or name:find("regen") or name:find("medic") then
+                    return child
+                end
+            end
+            local found = recursiveSearch(child)
+            if found then return found end
+        end
+        return nil
+    end
+
+    return recursiveSearch(ReplicatedStorage)
+end
+
+local healRemote = findHealRemote()
+local healRemoteName = healRemote and healRemote.Name or "Tidak ditemukan"
+
+print("🔍 Remote heal ditemukan: " .. healRemoteName)
+
+-- ==================== KONFIGURASI ====================
+local Config = {
+    Cooldown = 5,
+    HealDuration = 2.5,
+    AutoHeal = true,
+    HealThreshold = 0.30,
+    TargetMode = "Nearest", -- "Nearest" atau "Selected"
+    SelectedTarget = nil,
 }
 
--- ===== FUNGSI UTIL =====
-local function IsValid(obj)
-    return obj and (typeof(obj) == "Instance") and (obj.Parent ~= nil)
-end
+local isHealing = false
+local lastHealTime = 0
+local healProgress = 0
+local isAutoHealEnabled = true
 
-local function SafeCall(fn, ...)
-    local ok, result = pcall(fn, ...)
-    return ok and result or nil
-end
+-- ==================== CARI PLAYER TERDEKAT ====================
+local function getNearestPlayer()
+    if not player.Character then return nil end
+    local myPos = player.Character:FindFirstChild("HumanoidRootPart")
+    if not myPos then return nil end
 
-local function GetRoot()
-    if not LocalPlayer.Character then return nil end
-    return LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-end
-
--- ===== TELEPORT =====
-local function Teleport(position, offset)
-    local root = GetRoot()
-    if not root then return false end
-    offset = offset or Vector3.new(0, Settings.Teleportation.TeleportOffset, 0)
-    if Settings.Teleportation.SafeTeleport then
-        SafeCall(function()
-            for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
-                if part:IsA("BasePart") then part.CanCollide = false end
-            end
-        end)
-    end
-    root.CFrame = position + offset
-    if Settings.Teleportation.SafeTeleport then
-        task.delay(0.5, function()
-            SafeCall(function()
-                for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
-                    if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                        part.CanCollide = true
-                    end
-                end
-            end)
-        end)
-    end
-    return true
-end
-
--- ===== ESP DASAR =====
-local ESPHighlights = {}
-local ESPLabels = {}
-
-local function HighlightObj(obj, color)
-    if not IsValid(obj) then return end
-    if obj:FindFirstChild("H") then return end
-    SafeCall(function()
-        local highlight = Instance.new("Highlight")
-        highlight.Name = "H"
-        highlight.Adornee = obj
-        highlight.FillColor = color
-        highlight.OutlineColor = color
-        highlight.FillTransparency = 0.5
-        highlight.OutlineTransparency = 0
-        highlight.Parent = obj
-        ESPHighlights[obj] = highlight
-    end)
-end
-
-local function Unhighlight(obj)
-    if ESPHighlights[obj] then
-        SafeCall(function()
-            if IsValid(ESPHighlights[obj]) then ESPHighlights[obj]:Destroy() end
-        end)
-        ESPHighlights[obj] = nil
-    end
-    local h = obj:FindFirstChild("H")
-    if h then h:Destroy() end
-end
-
-local function LabelObj(obj, name, color)
-    if not IsValid(obj) then return end
-    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
-    local anchorPart = (obj:IsA("Model") and obj:FindFirstChildWhichIsA("BasePart")) or (obj:IsA("BasePart") and obj) or nil
-    if not anchorPart then return end
-    local root = LocalPlayer.Character.HumanoidRootPart
-    local distance = (root.Position - anchorPart.Position).Magnitude
-
-    if Settings.Performance.UseDistanceCulling and (distance > Settings.ESP.MaxDistance) then
-        if ESPLabels[obj] then
-            SafeCall(function() if IsValid(ESPLabels[obj]) then ESPLabels[obj]:Destroy() end end)
-            ESPLabels[obj] = nil
-        end
-        return
-    end
-
-    if ESPLabels[obj] and IsValid(ESPLabels[obj]) then
-        local existing = ESPLabels[obj]:FindFirstChild("TextLabel")
-        if existing and Settings.ESP.ShowDistance then
-            existing.Text = string.format("%s\n%.0fm", name, distance)
-        elseif existing then
-            existing.Text = name
-        end
-        return
-    end
-
-    SafeCall(function()
-        local billboard = Instance.new("BillboardGui")
-        billboard.Size = UDim2.new(0, 200, 0, 50)
-        billboard.AlwaysOnTop = true
-        billboard.StudsOffset = Vector3.new(0, 3, 0)
-        billboard.Adornee = anchorPart
-        billboard.Parent = obj
-
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1, 0, 1, 0)
-        label.BackgroundTransparency = 1
-        label.TextColor3 = color
-        label.TextStrokeColor3 = Color3.new(0, 0, 0)
-        label.TextStrokeTransparency = 0
-        label.Font = Enum.Font.GothamBold
-        label.TextScaled = true
-        label.Text = (Settings.ESP.ShowDistance and string.format("%s\n%.0fm", name, distance)) or name
-        label.Parent = billboard
-
-        ESPLabels[obj] = billboard
-    end)
-end
-
-local function Unlabel(obj)
-    if ESPLabels[obj] then
-        SafeCall(function()
-            if IsValid(ESPLabels[obj]) then ESPLabels[obj]:Destroy() end
-        end)
-        ESPLabels[obj] = nil
-    end
-end
-
-local function ClearESP()
-    for obj in pairs(ESPHighlights) do Unhighlight(obj) end
-    for obj in pairs(ESPLabels) do Unlabel(obj) end
-    ESPHighlights = {}
-    ESPLabels = {}
-end
-
--- ===== FUNGSI ESP PER JENIS (dengan/tanpa label) =====
-
--- PLAYER : tetap ada label
-local function ESPPlayers()
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Team then
-            local teamName = player.Team.Name
-            if teamName == "Killer" and Settings.ESP.Killer then
-                HighlightObj(player.Character, Color3.fromRGB(255, 0, 0))
-                LabelObj(player.Character, player.Name .. "\n[KILLER]", Color3.fromRGB(255, 0, 0))
-            elseif teamName == "Survivors" and Settings.ESP.Survivor then
-                HighlightObj(player.Character, Color3.fromRGB(0, 255, 0))
-                LabelObj(player.Character, player.Name .. "\n[SURVIVOR]", Color3.fromRGB(0, 255, 0))
-            else
-                Unhighlight(player.Character)
-                Unlabel(player.Character)
-            end
-        end
-    end
-end
-
--- GENERATOR : hanya highlight, tanpa label
-local function ESPGenerators()
-    if not Settings.ESP.Generator then return end
-    SafeCall(function()
-        local map = Workspace:FindFirstChild("Map")
-        if not map then return end
-        for _, obj in ipairs(map:GetDescendants()) do
-            if obj:IsA("Model") and obj.Name == "Generator" then
-                HighlightObj(obj, Color3.fromRGB(203, 132, 66))
-                -- Tidak panggil LabelObj
-            end
-        end
-    end)
-end
-
--- GATE : hanya highlight
-local function ESPGates()
-    if not Settings.ESP.Gate then return end
-    SafeCall(function()
-        local map = Workspace:FindFirstChild("Map")
-        if not map then return end
-        for _, obj in ipairs(map:GetDescendants()) do
-            if obj:IsA("Model") and obj.Name == "Gate" then
-                HighlightObj(obj, Color3.fromRGB(255, 255, 255))
-            end
-        end
-    end)
-end
-
--- HOOK : hanya highlight (kecuali closest hook masih highlight saja)
-local function ESPHooks()
-    if not Settings.ESP.Hook then return end
-    SafeCall(function()
-        local map = Workspace:FindFirstChild("Map")
-        if not map then return end
-        if Settings.ESP.ShowOnlyClosestHook then
-            local root = GetRoot()
-            if not root then return end
-            local nearest, nearestDist = nil, math.huge
-            for _, obj in ipairs(map:GetDescendants()) do
-                if obj:IsA("Model") and obj.Name == "Hook" then
-                    local part = obj:FindFirstChildWhichIsA("BasePart")
-                    if part then
-                        local dist = (part.Position - root.Position).Magnitude
-                        if dist < nearestDist then
-                            nearestDist = dist
-                            nearest = obj
-                        end
-                    end
-                end
-            end
-            for _, obj in ipairs(map:GetDescendants()) do
-                if obj:IsA("Model") and obj.Name == "Hook" then
-                    Unhighlight(obj)
-                    Unlabel(obj)
-                end
-            end
-            if nearest then
-                if nearest:FindFirstChild("Model") then
-                    for _, part in ipairs(nearest.Model:GetDescendants()) do
-                        if part:IsA("MeshPart") then HighlightObj(part, Color3.fromRGB(255, 255, 0)) end
-                    end
-                end
-                -- Tidak pakai label
-            end
-        else
-            for _, obj in ipairs(map:GetDescendants()) do
-                if obj:IsA("Model") and obj.Name == "Hook" then
-                    if obj:FindFirstChild("Model") then
-                        for _, part in ipairs(obj.Model:GetDescendants()) do
-                            if part:IsA("MeshPart") then HighlightObj(part, Color3.fromRGB(255, 0, 0)) end
-                        end
-                    end
-                    -- Tidak pakai label
-                end
-            end
-        end
-    end)
-end
-
--- PALLET : hanya highlight
-local function ESPPallets()
-    if not Settings.ESP.Pallet then return end
-    SafeCall(function()
-        local map = Workspace:FindFirstChild("Map")
-        if not map then return end
-        for _, obj in ipairs(map:GetDescendants()) do
-            if obj:IsA("Model") and obj.Name == "Palletwrong" then
-                HighlightObj(obj, Color3.fromRGB(255, 255, 0))
-            end
-        end
-    end)
-end
-
--- WINDOW : tetap ada label (kita pakai "Window" sebagai nama)
-local function ESPWindows()
-    if not Settings.ESP.Window then return end
-    SafeCall(function()
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("Model") and obj.Name == "Window" then
-                HighlightObj(obj, Color3.fromRGB(173, 216, 230))
-                LabelObj(obj, "Window", Color3.fromRGB(173, 216, 230))
-            end
-        end
-    end)
-end
-
--- PUMPKIN (atau objek lain) : tetap ada label
-local function ESPPumpkins()
-    if not Settings.ESP.Pumpkin then return end
-    SafeCall(function()
-        local map = Workspace:FindFirstChild("Map")
-        if not map then return end
-        local pumpkins = map:FindFirstChild("Pumpkins")
-        if not pumpkins then return end
-        for _, obj in ipairs(pumpkins:GetDescendants()) do
-            if obj:IsA("Model") and obj.Name:find("Pumpkin") then
-                HighlightObj(obj, Color3.fromRGB(255, 140, 0))
-                LabelObj(obj, "Pumpkin", Color3.fromRGB(255, 140, 0))
-            end
-        end
-    end)
-end
-
--- ===== LOOP ESP UTAMA =====
-local lastUpdate = 0
-local espLoopConn = nil
-
-local function ESPTick()
-    local now = tick()
-    if (now - lastUpdate) < Settings.Performance.UpdateRate then return end
-    lastUpdate = now
-
-    -- Bersihkan referensi mati
-    for obj in pairs(ESPHighlights) do
-        if not IsValid(obj) or not IsValid(ESPHighlights[obj]) then ESPHighlights[obj] = nil end
-    end
-    for obj in pairs(ESPLabels) do
-        if not IsValid(obj) or not IsValid(ESPLabels[obj]) then ESPLabels[obj] = nil end
-    end
-
-    local count = 0
-    for _ in pairs(ESPHighlights) do count = count + 1 end
-    if count >= Settings.Performance.MaxESPObjects then return end
-
-    -- Panggil semua ESP
-    ESPPlayers()
-    ESPGenerators()
-    ESPGates()
-    ESPHooks()
-    ESPPallets()
-    ESPWindows()
-    ESPPumpkins()
-end
-
-local function EnableESP()
-    if espLoopConn then return end
-    espLoopConn = RunService.Heartbeat:Connect(ESPTick)
-    print("[ESP] Activated")
-end
-
-local function DisableESP()
-    if espLoopConn then
-        espLoopConn:Disconnect()
-        espLoopConn = nil
-    end
-    ClearESP()
-    print("[ESP] Deactivated")
-end
-
--- ===== TELEPORT KE GATE TERDEKAT =====
-local function TeleportToNearestGate()
-    local root = GetRoot()
-    if not root then
-        print("Character not found")
-        return false
-    end
-    local map = Workspace:FindFirstChild("Map")
-    if not map then
-        print("Map not found")
-        return false
-    end
-    local nearestPart, nearestDist = nil, math.huge
-    for _, obj in ipairs(map:GetDescendants()) do
-        if obj:IsA("Model") and obj.Name == "Gate" then
-            local part = obj:FindFirstChildWhichIsA("BasePart")
-            if part then
-                local dist = (part.Position - root.Position).Magnitude
+    local nearest, nearestDist = nil, math.huge
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= player and plr.Character then
+            local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                local dist = (hrp.Position - myPos.Position).Magnitude
                 if dist < nearestDist then
-                    nearestPart = part
                     nearestDist = dist
+                    nearest = plr
                 end
             end
         end
     end
-    if nearestPart then
-        Teleport(nearestPart.CFrame)
-        print(string.format("Teleported to nearest gate (%.0f studs)", nearestDist))
-        return true
-    else
-        print("No gate found")
-        return false
+    return nearest
+end
+
+-- ==================== FUNGSI HEAL (CURI HEAL DARI PLAYER LAIN) ====================
+local function heal()
+    if isHealing then
+        notify("⏳ Sedang healing...", Color3.fromRGB(255,200,0))
+        return
     end
+
+    local now = tick()
+    if now - lastHealTime < Config.Cooldown then
+        local remaining = math.ceil(Config.Cooldown - (now - lastHealTime))
+        notify("⏳ Cooldown " .. remaining .. "s", Color3.fromRGB(255,200,0))
+        return
+    end
+
+    -- Tentukan target
+    local targetPlayer = Config.SelectedTarget or getNearestPlayer()
+    if not targetPlayer then
+        notify("❌ Tidak ada player lain!", Color3.fromRGB(255,0,0))
+        return
+    end
+
+    if not healRemote then
+        notify("❌ Remote heal tidak ditemukan!", Color3.fromRGB(255,0,0))
+        return
+    end
+
+    isHealing = true
+    healProgress = 0
+
+    -- === KIRIM HEAL DENGAN ARGUMEN PLAYER LAIN ===
+    local success = false
+    local targetChar = targetPlayer.Character
+
+    pcall(function()
+        -- Coba berbagai format argument
+        if healRemote.FireServer then
+            -- Kirim dengan target player atau karakter
+            healRemote:FireServer(targetPlayer)     -- player object
+            -- atau healRemote:FireServer(targetChar) -- character
+            success = true
+        elseif healRemote.OnClientEvent then
+            firesignal(healRemote.OnClientEvent, targetPlayer)
+            success = true
+        elseif healRemote.InvokeServer then
+            healRemote:InvokeServer(targetPlayer)
+            success = true
+        end
+    end)
+
+    -- Jika gagal, coba argumen lain (karakter)
+    if not success then
+        pcall(function()
+            if healRemote.FireServer then
+                healRemote:FireServer(targetChar)
+                success = true
+            end
+        end)
+    end
+
+    if success then
+        notify("💚 Heal dari " .. targetPlayer.Name .. "!", Color3.fromRGB(50,255,100))
+    else
+        notify("⚠️ Gagal mengirim heal remote!", Color3.fromRGB(255,200,0))
+    end
+
+    -- Progress bar (simulasi)
+    local startTime = tick()
+    while tick() - startTime < Config.HealDuration and isHealing do
+        healProgress = (tick() - startTime) / Config.HealDuration
+        updateProgressBar()
+        task.wait()
+    end
+
+    healProgress = 1
+    updateProgressBar()
+
+    isHealing = false
+    lastHealTime = tick()
+    notify("✅ Heal selesai!", Color3.fromRGB(0,255,100))
 end
 
--- ===== UI TELEPORT (Tombol di pojok kanan bawah) =====
-local function CreateTeleportUI()
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "TeleportUI"
-    gui.ResetOnSpawn = false
-    gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 60, 0, 60)
-    btn.Position = UDim2.new(1, -80, 1, -80)
-    btn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-    btn.Text = "🚪"
-    btn.TextSize = 24
-    btn.Font = Enum.Font.GothamBold
-    btn.Parent = gui
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(1, 0)
-    corner.Parent = btn
-
-    btn.MouseEnter:Connect(function()
-        btn.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
+-- ==================== NOTIFIKASI ====================
+local function notify(text, color)
+    color = color or Color3.fromRGB(255,255,255)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "Auto Heal",
+            Text = text,
+            Duration = 3,
+        })
     end)
-    btn.MouseLeave:Connect(function()
-        btn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-    end)
-    btn.MouseButton1Click:Connect(function()
-        TeleportToNearestGate()
-    end)
-
-    print("[UI] Tombol teleport ke gate siap.")
 end
 
--- ============================================================
--- CONTOH PENGGUNAAN
--- ============================================================
--- Aktifkan ESP (sesuaikan toggle)
-Settings.ESP.Killer = true
-Settings.ESP.Survivor = true
-Settings.ESP.Generator = true
-Settings.ESP.Gate = true
-Settings.ESP.Hook = true
-Settings.ESP.Pallet = true
-Settings.ESP.Window = true
-Settings.ESP.Pumpkin = true
-EnableESP()
+-- ==================== UI ====================
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AutoHealGUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
 
--- Buat tombol teleport
-CreateTeleportUI()
+local container = Instance.new("Frame")
+container.Size = UDim2.new(0, 260, 0, 150)
+container.Position = UDim2.new(0.5, -130, 0.82, 0)
+container.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+container.BackgroundTransparency = 0.15
+container.BorderSizePixel = 0
+container.Parent = screenGui
+Instance.new("UICorner", container).CornerRadius = UDim.new(0, 12)
 
--- (Opsional) Untuk menonaktifkan ESP panggil DisableESP()
+-- Tombol HEAL
+local healBtn = Instance.new("TextButton", container)
+healBtn.Size = UDim2.new(0.8, 0, 0, 40)
+healBtn.Position = UDim2.new(0.1, 0, 0.05, 0)
+healBtn.BackgroundColor3 = Color3.fromRGB(35, 200, 90)
+healBtn.Text = "❤️ HEAL (Curi)"
+healBtn.TextColor3 = Color3.fromRGB(255,255,255)
+healBtn.TextSize = 16
+healBtn.Font = Enum.Font.GothamBold
+healBtn.BorderSizePixel = 0
+Instance.new("UICorner", healBtn).CornerRadius = UDim.new(0, 8)
+
+-- Progress bar
+local progressBg = Instance.new("Frame", container)
+progressBg.Size = UDim2.new(0.8, 0, 0, 8)
+progressBg.Position = UDim2.new(0.1, 0, 0.45, 0)
+progressBg.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+progressBg.BorderSizePixel = 0
+Instance.new("UICorner", progressBg).CornerRadius = UDim.new(0, 4)
+
+local progressFill = Instance.new("Frame", progressBg)
+progressFill.Size = UDim2.new(0, 0, 1, 0)
+progressFill.BackgroundColor3 = Color3.fromRGB(50, 255, 100)
+progressFill.BorderSizePixel = 0
+Instance.new("UICorner", progressFill).CornerRadius = UDim.new(0, 4)
+
+-- Status label
+local statusLabel = Instance.new("TextLabel", container)
+statusLabel.Size = UDim2.new(0.8, 0, 0, 18)
+statusLabel.Position = UDim2.new(0.1, 0, 0.3, 0)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text = "Siap heal (curi dari player lain)"
+statusLabel.TextColor3 = Color3.fromRGB(200,200,200)
+statusLabel.TextSize = 11
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.TextXAlignment = Enum.TextXAlignment.Center
+
+-- Cooldown label
+local cdLabel = Instance.new("TextLabel", container)
+cdLabel.Size = UDim2.new(0.8, 0, 0, 16)
+cdLabel.Position = UDim2.new(0.1, 0, 0.6, 0)
+cdLabel.BackgroundTransparency = 1
+cdLabel.Text = ""
+cdLabel.TextColor3 = Color3.fromRGB(255,200,0)
+cdLabel.TextSize = 11
+cdLabel.Font = Enum.Font.Gotham
+cdLabel.TextXAlignment = Enum.TextXAlignment.Center
+
+-- Target info
+local targetLabel = Instance.new("TextLabel", container)
+targetLabel.Size = UDim2.new(0.8, 0, 0, 16)
+targetLabel.Position = UDim2.new(0.1, 0, 0.75, 0)
+targetLabel.BackgroundTransparency = 1
+targetLabel.Text = "Target: Nearest"
+targetLabel.TextColor3 = Color3.fromRGB(150,150,200)
+targetLabel.TextSize = 10
+targetLabel.Font = Enum.Font.Gotham
+targetLabel.TextXAlignment = Enum.TextXAlignment.Center
+
+-- Toggle Auto Heal
+local autoBtn = Instance.new("TextButton", container)
+autoBtn.Size = UDim2.new(0.3, 0, 0, 20)
+autoBtn.Position = UDim2.new(0.05, 0, 0.88, 0)
+autoBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+autoBtn.Text = "Auto: ON"
+autoBtn.TextColor3 = Color3.fromRGB(255,255,255)
+autoBtn.TextSize = 10
+autoBtn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", autoBtn).CornerRadius = UDim.new(0, 4)
+
+autoBtn.MouseButton1Click:Connect(function()
+    isAutoHealEnabled = not isAutoHealEnabled
+    autoBtn.Text = isAutoHealEnabled and "Auto: ON" or "Auto: OFF"
+    autoBtn.BackgroundColor3 = isAutoHealEnabled and Color3.fromRGB(50,200,50) or Color3.fromRGB(200,50,50)
+end)
+
+-- Tombol target mode
+local targetBtn = Instance.new("TextButton", container)
+targetBtn.Size = UDim2.new(0.3, 0, 0, 20)
+targetBtn.Position = UDim2.new(0.65, 0, 0.88, 0)
+targetBtn.BackgroundColor3 = Color3.fromRGB(60,60,80)
+targetBtn.Text = "Nearest"
+targetBtn.TextColor3 = Color3.fromRGB(255,255,255)
+targetBtn.TextSize = 10
+targetBtn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", targetBtn).CornerRadius = UDim.new(0, 4)
+
+local modes = {"Nearest", "Selected"}
+targetBtn.MouseButton1Click:Connect(function()
+    local idx = table.find(modes, Config.TargetMode) or 1
+    idx = idx % #modes + 1
+    Config.TargetMode = modes[idx]
+    targetBtn.Text = Config.TargetMode
+    targetLabel.Text = "Target: " .. Config.TargetMode
+    if Config.TargetMode == "Selected" then
+        notify("Pilih player dari daftar (klik nama)", Color3.fromRGB(255,200,0))
+    end
+end)
+
+-- ==================== PLAYER LIST (untuk pilih target manual) ====================
+local listFrame = Instance.new("Frame", container)
+listFrame.Size = UDim2.new(0.8, 0, 0, 60)
+listFrame.Position = UDim2.new(0.1, 0, 0.62, 0)
+listFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+listFrame.BorderSizePixel = 0
+listFrame.Visible = false
+Instance.new("UICorner", listFrame).CornerRadius = UDim.new(0, 4)
+
+local scrollList = Instance.new("ScrollingFrame", listFrame)
+scrollList.Size = UDim2.new(1, 0, 1, 0)
+scrollList.BackgroundTransparency = 1
+scrollList.CanvasSize = UDim2.new(0, 0, 0, 0)
+scrollList.ScrollBarThickness = 3
+
+local layout = Instance.new("UIListLayout", scrollList)
+layout.SortOrder = Enum.SortOrder.Name
+layout.Padding = UDim.new(0, 2)
+
+local function updatePlayerList()
+    for _, child in ipairs(scrollList:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= player then
+            local btn = Instance.new("TextButton", scrollList)
+            btn.Size = UDim2.new(1, -5, 0, 20)
+            btn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+            btn.Text = plr.Name
+            btn.TextColor3 = Color3.fromRGB(220,220,220)
+            btn.TextSize = 10
+            btn.Font = Enum.Font.Gotham
+            btn.TextXAlignment = Enum.TextXAlignment.Left
+            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 3)
+
+            btn.MouseButton1Click:Connect(function()
+                Config.SelectedTarget = plr
+                targetLabel.Text = "Target: " .. plr.Name
+                listFrame.Visible = false
+                notify("✅ Target: " .. plr.Name, Color3.fromRGB(0,255,100))
+            end)
+        end
+    end
+
+    local count = #Players:GetPlayers() - 1
+    scrollList.CanvasSize = UDim2.new(0, 0, 0, math.max(count * 22, 60))
+end
+
+task.spawn(function()
+    while true do
+        task.wait(2)
+        if Config.TargetMode == "Selected" and listFrame.Visible then
+            updatePlayerList()
+        end
+    end
+end)
+
+-- ==================== UPDATE PROGRESS BAR ====================
+local function updateProgressBar()
+    local width = math.clamp(healProgress * 100, 0, 100)
+    progressFill.Size = UDim2.new(width / 100, 0, 1, 0)
+    statusLabel.Text = isHealing and "Healing... " .. math.floor(healProgress * 100) .. "%" or "Siap heal"
+    progressFill.BackgroundColor3 = healProgress >= 1 and Color3.fromRGB(50, 255, 100) or Color3.fromRGB(255, 200, 50)
+end
+
+-- ==================== UPDATE COOLDOWN ====================
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+        if not isHealing then
+            local now = tick()
+            local remaining = Config.Cooldown - (now - lastHealTime)
+            cdLabel.Text = remaining > 0 and "⏳ " .. math.ceil(remaining) .. "s" or "✅ Siap"
+        else
+            cdLabel.Text = "⏳ Healing..."
+        end
+    end
+end)
+
+-- ==================== AUTO HEAL LOOP ====================
+RunService.Heartbeat:Connect(function()
+    if not isAutoHealEnabled then return end
+    if isHealing then return end
+    if not player.Character then return end
+
+    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+
+    local health = humanoid.Health
+    local maxHealth = humanoid.MaxHealth
+    local healthPercent = health / maxHealth
+
+    if healthPercent <= Config.HealThreshold and health > 0 then
+        heal()
+    end
+end)
+
+-- ==================== EVENT ====================
+healBtn.MouseButton1Click:Connect(function()
+    if Config.TargetMode == "Selected" and not Config.SelectedTarget then
+        listFrame.Visible = not listFrame.Visible
+        if listFrame.Visible then updatePlayerList() end
+        return
+    end
+    heal()
+end)
+
+-- Klik kanan untuk toggle list (jika mode Selected)
+healBtn.MouseButton2Click:Connect(function()
+    if Config.TargetMode == "Selected" then
+        listFrame.Visible = not listFrame.Visible
+        if listFrame.Visible then updatePlayerList() end
+    end
+end)
+
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.H then
+        heal()
+    end
+end)
+
+-- ==================== INISIALISASI ====================
+updateProgressBar()
+notify("🩹 Auto Heal siap! Tekan H atau klik HEAL.", Color3.fromRGB(0,255,100))
+print("✅ Auto Heal (Curi Heal) loaded!")
+print("   Remote heal ditemukan: " .. healRemoteName)
