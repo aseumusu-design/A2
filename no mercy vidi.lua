@@ -18,13 +18,14 @@ local ICON = {
 }
 
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 local function GetHolder()
     return (gethui and gethui()) or game:GetService("CoreGui")
 end
 
 -- ============================================================
---  WELCOME INTRO (Logo Bulat Besar + Teks "WELCOME NO MERCY")
+--  WELCOME INTRO (Logo Bulat + Teks + Animasi Garis Stroke)
 -- ============================================================
 local function ShowWelcomeIntro()
     local holder = GetHolder()
@@ -38,7 +39,7 @@ local function ShowWelcomeIntro()
     if syn and syn.protect_gui then pcall(syn.protect_gui, gui) end
 
     local centerFrame = Instance.new("Frame")
-    centerFrame.Size = UDim2.fromOffset(250, 250)
+    centerFrame.Size = UDim2.fromOffset(260, 260)
     centerFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
     centerFrame.AnchorPoint = Vector2.new(0.5, 0.5)
     centerFrame.BackgroundTransparency = 1
@@ -77,6 +78,7 @@ local function ShowWelcomeIntro()
     introText.ZIndex = 999
     introText.Parent = centerFrame
 
+    -- Animasi Masuk
     local tweenIn = TweenService:Create(img, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
         Size = UDim2.fromOffset(150, 150)
     })
@@ -88,8 +90,24 @@ local function ShowWelcomeIntro()
     textIn:Play()
     tweenIn.Completed:Wait()
 
-    task.wait(1.2)
+    -- Animasi Garis Stroke Muncul & Hilang Berulang (Pulsing Glow)
+    local pulsing = true
+    task.spawn(function()
+        while pulsing do
+            local t1 = TweenService:Create(stroke, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0.8, Thickness = 6 })
+            t1:Play()
+            t1.Completed:Wait()
+            if not pulsing then break end
+            local t2 = TweenService:Create(stroke, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0, Thickness = 2 })
+            t2:Play()
+            t2.Completed:Wait()
+        end
+    end)
 
+    task.wait(1.5)
+    pulsing = false
+
+    -- Animasi Keluar
     local tweenOut = TweenService:Create(img, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
         Size = UDim2.fromOffset(0, 0)
     })
@@ -136,6 +154,9 @@ local function FindMainWindow()
     return nil
 end
 
+-- ============================================================
+--  BUBBLE LOGO (Dengan Animasi Stroke Berdenyut Muncul/Hilang)
+-- ============================================================
 local bubbleGui = nil
 
 local function makeBubble()
@@ -165,11 +186,27 @@ local function makeBubble()
     corner.Parent = btn
 
     local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(200, 200, 200)
+    stroke.Color = Color3.fromRGB(255, 255, 255)
     stroke.Thickness = 2
+    stroke.Transparency = 0
     stroke.Parent = btn
 
+    -- Looping Animasi Garis Stroke Berdenyut (Muncul & Hilang) pada Bubble
+    local bubblePulsing = true
+    task.spawn(function()
+        while bubblePulsing and stroke and stroke.Parent do
+            local t1 = TweenService:Create(stroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0.8, Thickness = 4 })
+            t1:Play()
+            t1.Completed:Wait()
+            if not bubblePulsing or not stroke or not stroke.Parent then break end
+            local t2 = TweenService:Create(stroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0, Thickness = 2 })
+            t2:Play()
+            t2.Completed:Wait()
+        end
+    end)
+
     btn.MouseButton1Click:Connect(function()
+        bubblePulsing = false
         local main = FindMainWindow()
         if main then
             main.Visible = true
@@ -321,11 +358,20 @@ local SpeedTab    = Window:MakeTab({ Name = "Speed", Icon = ICON.Zap, PremiumOnl
 local SettingsTab = Window:MakeTab({ Name = "Pengaturan", Icon = ICON.Settings, PremiumOnly = false })
 
 -- ============================================================
---  INFO (Banner Paling Atas Sendiri dengan Efek Lampu Menyala)
+--  INFO (Banner Dijamin Paling Atas Sendiri)
 -- ============================================================
 local InfoSec = InfoTab:AddSection({ Name = "Tentang" })
 
--- Injeksi Banner Langsung di Posisi Paling Atas Section Info
+InfoSec:AddLabel("NO MERCY — Violence District")
+InfoSec:AddLabel("Game: Bola Pedang (Blade Ball)")
+InfoSec:AddButton({
+    Name = "Copy Link Discord",
+    Callback = function()
+        if setclipboard then setclipboard("https://discord.gg/pbg6g79Hp") end
+        OrionLib:MakeNotification({ Name = "NO MERCY", Content = "Link Discord di-copy!", Image = ICON.Logo, Time = 3 })
+    end,
+})
+
 task.spawn(function()
     task.wait(0.3)
     local main = FindMainWindow()
@@ -335,12 +381,18 @@ task.spawn(function()
         if v:IsA("TextLabel") and v.Text == "Tentang" then
             local container = v.Parent.Parent
             if container and container:IsA("ScrollingFrame") then
+                for _, child in ipairs(container:GetChildren()) do
+                    if child.Name == "AbsoluteTopBanner" then
+                        child:Destroy()
+                    end
+                end
+
                 local bannerFrame = Instance.new("Frame")
-                bannerFrame.Name = "TopBannerNoMercy"
+                bannerFrame.Name = "AbsoluteTopBanner"
                 bannerFrame.Size = UDim2.new(1, -10, 0, 115)
                 bannerFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
                 bannerFrame.BorderSizePixel = 0
-                bannerFrame.LayoutOrder = -10 -- Memastikan posisinya paling atas sendiri
+                bannerFrame.LayoutOrder = -999
                 bannerFrame.Parent = container
 
                 local corner = Instance.new("UICorner")
@@ -357,45 +409,11 @@ task.spawn(function()
                 local imgCorner = Instance.new("UICorner")
                 imgCorner.CornerRadius = UDim.new(0, 8)
                 imgCorner.Parent = bannerImg
-
-                -- Efek Animasi Lampu Berkedip Cerah & Redup Secara Halus
-                local glowOverlay = Instance.new("Frame")
-                glowOverlay.Size = UDim2.new(1, 0, 1, 0)
-                glowOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                glowOverlay.BackgroundTransparency = 0.85
-                glowOverlay.BorderSizePixel = 0
-                glowOverlay.Parent = bannerFrame
-
-                local gCorner = Instance.new("UICorner")
-                gCorner.CornerRadius = UDim.new(0, 8)
-                gCorner.Parent = glowOverlay
-
-                task.spawn(function()
-                    while glowOverlay and glowOverlay.Parent do
-                        local t1 = TweenService:Create(glowOverlay, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { BackgroundTransparency = 0.35 })
-                        t1:Play()
-                        t1.Completed:Wait()
-
-                        local t2 = TweenService:Create(glowOverlay, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { BackgroundTransparency = 0.85 })
-                        t2:Play()
-                        t2.Completed:Wait()
-                    end
-                end)
                 break
             end
         end
     end
 end)
-
-InfoSec:AddLabel("NO MERCY — Violence District")
-InfoSec:AddLabel("Game: Bola Pedang (Blade Ball)")
-InfoSec:AddButton({
-    Name = "Copy Link Discord",
-    Callback = function()
-        if setclipboard then setclipboard("https://discord.gg/pbg6g79Hp") end
-        OrionLib:MakeNotification({ Name = "NO MERCY", Content = "Link Discord di-copy!", Image = ICON.Logo, Time = 3 })
-    end,
-})
 
 -- ============================================================
 --  PARRY
