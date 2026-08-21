@@ -18,7 +18,6 @@ local ICON = {
 }
 
 local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
 
 local function GetHolder()
     return (gethui and gethui()) or game:GetService("CoreGui")
@@ -38,7 +37,6 @@ local function ShowWelcomeIntro()
     gui.Parent = holder
     if syn and syn.protect_gui then pcall(syn.protect_gui, gui) end
 
-    -- Container tengah
     local centerFrame = Instance.new("Frame")
     centerFrame.Size = UDim2.fromOffset(250, 250)
     centerFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -66,7 +64,6 @@ local function ShowWelcomeIntro()
     stroke.Transparency = 1
     stroke.Parent = img
 
-    -- Teks Welcome No Mercy di bawah logo intro
     local introText = Instance.new("TextLabel")
     introText.Size = UDim2.new(1, 0, 0, 40)
     introText.Position = UDim2.new(0.5, 0, 0.75, 0)
@@ -80,7 +77,6 @@ local function ShowWelcomeIntro()
     introText.ZIndex = 999
     introText.Parent = centerFrame
 
-    -- Animasi Masuk
     local tweenIn = TweenService:Create(img, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
         Size = UDim2.fromOffset(150, 150)
     })
@@ -94,7 +90,6 @@ local function ShowWelcomeIntro()
 
     task.wait(1.2)
 
-    -- Animasi Keluar
     local tweenOut = TweenService:Create(img, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
         Size = UDim2.fromOffset(0, 0)
     })
@@ -326,36 +321,27 @@ local SpeedTab    = Window:MakeTab({ Name = "Speed", Icon = ICON.Zap, PremiumOnl
 local SettingsTab = Window:MakeTab({ Name = "Pengaturan", Icon = ICON.Settings, PremiumOnly = false })
 
 -- ============================================================
---  INFO (Banner dengan Efek Animasi Lampu Menyala / Shimmer)
+--  INFO (Banner Paling Atas Sendiri dengan Efek Lampu Menyala)
 -- ============================================================
 local InfoSec = InfoTab:AddSection({ Name = "Tentang" })
 
-InfoSec:AddLabel("NO MERCY — Violence District")
-InfoSec:AddLabel("Game: Bola Pedang (Blade Ball)")
-InfoSec:AddButton({
-    Name = "Copy Link Discord",
-    Callback = function()
-        if setclipboard then setclipboard("https://discord.gg/pbg6g79Hp") end
-        OrionLib:MakeNotification({ Name = "NO MERCY", Content = "Link Discord di-copy!", Image = ICON.Logo, Time = 3 })
-    end,
-})
-
+-- Injeksi Banner Langsung di Posisi Paling Atas Section Info
 task.spawn(function()
-    task.wait(0.4)
+    task.wait(0.3)
     local main = FindMainWindow()
     if not main then return end
 
     for _, v in ipairs(main:GetDescendants()) do
-        if v:IsA("TextLabel") and v.Text == "NO MERCY — Violence District" then
-            local scrollingFrame = v.Parent.Parent
-            if scrollingFrame and scrollingFrame:IsA("ScrollingFrame") then
+        if v:IsA("TextLabel") and v.Text == "Tentang" then
+            local container = v.Parent.Parent
+            if container and container:IsA("ScrollingFrame") then
                 local bannerFrame = Instance.new("Frame")
-                bannerFrame.Name = "NoMercyBanner"
-                bannerFrame.Size = UDim2.new(1, -10, 0, 110)
+                bannerFrame.Name = "TopBannerNoMercy"
+                bannerFrame.Size = UDim2.new(1, -10, 0, 115)
                 bannerFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
                 bannerFrame.BorderSizePixel = 0
-                bannerFrame.LayoutOrder = -5
-                bannerFrame.Parent = scrollingFrame
+                bannerFrame.LayoutOrder = -10 -- Memastikan posisinya paling atas sendiri
+                bannerFrame.Parent = container
 
                 local corner = Instance.new("UICorner")
                 corner.CornerRadius = UDim.new(0, 8)
@@ -372,7 +358,7 @@ task.spawn(function()
                 imgCorner.CornerRadius = UDim.new(0, 8)
                 imgCorner.Parent = bannerImg
 
-                -- Lapisan Efek Lampu / Shimmer yang Berkedip (Cerah lalu Redup)
+                -- Efek Animasi Lampu Berkedip Cerah & Redup Secara Halus
                 local glowOverlay = Instance.new("Frame")
                 glowOverlay.Size = UDim2.new(1, 0, 1, 0)
                 glowOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -384,10 +370,9 @@ task.spawn(function()
                 gCorner.CornerRadius = UDim.new(0, 8)
                 gCorner.Parent = glowOverlay
 
-                -- Looping Animasi Lampu Kedip Cerah & Hilang
                 task.spawn(function()
                     while glowOverlay and glowOverlay.Parent do
-                        local t1 = TweenService:Create(glowOverlay, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { BackgroundTransparency = 0.4 })
+                        local t1 = TweenService:Create(glowOverlay, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { BackgroundTransparency = 0.35 })
                         t1:Play()
                         t1.Completed:Wait()
 
@@ -401,6 +386,16 @@ task.spawn(function()
         end
     end
 end)
+
+InfoSec:AddLabel("NO MERCY — Violence District")
+InfoSec:AddLabel("Game: Bola Pedang (Blade Ball)")
+InfoSec:AddButton({
+    Name = "Copy Link Discord",
+    Callback = function()
+        if setclipboard then setclipboard("https://discord.gg/pbg6g79Hp") end
+        OrionLib:MakeNotification({ Name = "NO MERCY", Content = "Link Discord di-copy!", Image = ICON.Logo, Time = 3 })
+    end,
+})
 
 -- ============================================================
 --  PARRY
