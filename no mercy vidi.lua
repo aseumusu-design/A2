@@ -24,7 +24,7 @@ local function GetHolder()
 end
 
 -- ============================================================
---  WELCOME INTRO ANIMATION (Bulat Besar -> UI Muncul -> Hilang)
+--  WELCOME INTRO ANIMATION (Garis Pinggir Hitam Putih Elegan)
 -- ============================================================
 local function ShowWelcomeIntro()
     local holder = GetHolder()
@@ -51,12 +51,11 @@ local function ShowWelcomeIntro()
     corner.Parent = img
 
     local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(120, 110, 255)
+    stroke.Color = Color3.fromRGB(220, 220, 220) -- Warna Hitam-Putih / Abu-abu terang
     stroke.Thickness = 4
     stroke.Transparency = 1
     stroke.Parent = img
 
-    -- Pop-up membesar
     local tweenIn = TweenService:Create(img, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
         Size = UDim2.fromOffset(180, 180)
     })
@@ -68,7 +67,6 @@ local function ShowWelcomeIntro()
 
     task.wait(1.2)
 
-    -- Shrink dan Menghilang
     local tweenOut = TweenService:Create(img, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
         Size = UDim2.fromOffset(0, 0)
     })
@@ -81,13 +79,10 @@ local function ShowWelcomeIntro()
     gui:Destroy()
 end
 
--- Jalankan Welcome Intro
 ShowWelcomeIntro()
 
--- Load Orion UI Library
 local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Marpiii/UiLib/refs/heads/main/source.lua"))()
 
--- Forward declaration: dipanggil CloseCallback (tombol X)
 local onCloseRequest
 
 local Window = OrionLib:MakeWindow({
@@ -95,16 +90,13 @@ local Window = OrionLib:MakeWindow({
     HidePremium = false,
     SaveConfig = true,
     ConfigFolder = "NoMercyViolence",
-    IntroEnabled = false, -- Intro bawaan di-disable karena sudah menggunakan Custom Welcome Intro
+    IntroEnabled = false,
     Icon = ICON.Logo,
     CloseCallback = function()
         if onCloseRequest then onCloseRequest() end
     end,
 })
 
--- ============================================================
---  UTIL — cari window Utama Orion (MainWindow)
--- ============================================================
 local function FindMainWindow()
     local root = GetHolder()
     if not root then return nil end
@@ -119,9 +111,6 @@ local function FindMainWindow()
     return nil
 end
 
--- ============================================================
---  BUBBLE LOGO (toggle window)
--- ============================================================
 local bubbleGui = nil
 
 local function makeBubble()
@@ -151,7 +140,7 @@ local function makeBubble()
     corner.Parent = btn
 
     local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(120, 110, 255)
+    stroke.Color = Color3.fromRGB(200, 200, 200) -- Diganti Hitam-Putih (Abu terang)
     stroke.Thickness = 2
     stroke.Parent = btn
 
@@ -167,9 +156,6 @@ local function makeBubble()
     bubbleGui = gui
 end
 
--- ============================================================
---  TUTUP UI -> hide window + munculkan bubble
--- ============================================================
 local function closeUI()
     local main = FindMainWindow()
     if main then
@@ -185,16 +171,12 @@ local function showUI()
     end
 end
 
--- ============================================================
---  DIALOG KONFIRMASI (Ya / Tidak)
--- ============================================================
 local function confirmClose(fromCloseBtn)
     if fromCloseBtn then
         showUI()
     end
 
     local holder = GetHolder()
-
     local gui = Instance.new("ScreenGui")
     gui.Name = "NoMercyConfirm"
     gui.ResetOnSpawn = false
@@ -261,7 +243,7 @@ local function confirmClose(fromCloseBtn)
     local btnYa = Instance.new("TextButton")
     btnYa.Size = UDim2.fromOffset(90, 36)
     btnYa.Position = UDim2.new(1, -200, 1, -50)
-    btnYa.BackgroundColor3 = Color3.fromRGB(120, 110, 255)
+    btnYa.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     btnYa.BorderSizePixel = 0
     btnYa.Text = "Ya"
     btnYa.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -279,7 +261,7 @@ local function confirmClose(fromCloseBtn)
     local btnTidak = Instance.new("TextButton")
     btnTidak.Size = UDim2.fromOffset(90, 36)
     btnTidak.Position = UDim2.new(1, -100, 1, -50)
-    btnTidak.BackgroundColor3 = Color3.fromRGB(50, 55, 62)
+    btnTidak.BackgroundColor3 = Color3.fromRGB(40, 45, 52)
     btnTidak.BorderSizePixel = 0
     btnTidak.Text = "Tidak"
     btnTidak.TextColor3 = Color3.fromRGB(240, 240, 240)
@@ -314,38 +296,47 @@ local SpeedTab    = Window:MakeTab({ Name = "Speed", Icon = ICON.Zap, PremiumOnl
 local SettingsTab = Window:MakeTab({ Name = "Pengaturan", Icon = ICON.Settings, PremiumOnly = false })
 
 -- ============================================================
---  INFO (Dengan Banner Foto No Mercy)
+--  INFO (Banner Rapi, Tidak Menimpa Elemen Lain)
 -- ============================================================
 local InfoSec = InfoTab:AddSection({ Name = "Tentang" })
 
--- Pembuatan Custom Banner Frame
+InfoSec:AddButton({
+    Name = "Banner No Mercy",
+    Callback = function() end,
+})
+
 task.spawn(function()
     task.wait(0.2)
     local main = FindMainWindow()
     if main then
         local tabContainer = main:FindFirstChild("TabContainer", true) or main:FindFirstChild("Content", true)
         if tabContainer then
-            local bannerFrame = Instance.new("Frame")
-            bannerFrame.Name = "NoMercyBannerFrame"
-            bannerFrame.Size = UDim2.new(0.96, 0, 0, 120)
-            bannerFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-            bannerFrame.BorderSizePixel = 0
-            bannerFrame.Parent = tabContainer:FindFirstChild("Info") or tabContainer
+            for _, v in ipairs(tabContainer:GetDescendants()) do
+                if v:IsA("TextLabel") and v.Text == "Banner No Mercy" then
+                    local parentElement = v.Parent.Parent
+                    if parentElement then
+                        v.Parent.Visible = скрыт or false
+                        v.Parent.Size = UDim2.new(1, 0, 0, 110)
+                        
+                        for _, child in ipairs(v.Parent:GetChildren()) do
+                            if child:IsA("TextButton") or child:IsA("TextLabel") then
+                                child:Destroy()
+                            end
+                        end
 
-            local bannerCorner = Instance.new("UICorner")
-            bannerCorner.CornerRadius = UDim.new(0, 8)
-            bannerCorner.Parent = bannerFrame
+                        local bannerImg = Instance.new("ImageLabel")
+                        bannerImg.Size = UDim2.new(1, 0, 1, 0)
+                        bannerImg.Image = ICON.Banner
+                        bannerImg.BackgroundTransparency = 1
+                        bannerImg.ScaleType = Enum.ScaleType.Crop
+                        bannerImg.Parent = v.Parent
 
-            local bannerImg = Instance.new("ImageLabel")
-            bannerImg.Size = UDim2.new(1, 0, 1, 0)
-            bannerImg.Image = ICON.Banner
-            bannerImg.BackgroundTransparency = 1
-            bannerImg.ScaleType = Enum.ScaleType.Crop
-            bannerImg.Parent = bannerFrame
-
-            local imgCorner = Instance.new("UICorner")
-            imgCorner.CornerRadius = UDim.new(0, 8)
-            imgCorner.Parent = bannerImg
+                        local imgCorner = Instance.new("UICorner")
+                        imgCorner.CornerRadius = UDim.new(0, 6)
+                        imgCorner.Parent = bannerImg
+                    end
+                end
+            end
         end
     end
 end)
@@ -420,7 +411,6 @@ SpeedSec:AddSlider({
 --  PENGATURAN
 -- ============================================================
 local SettingsSec = SettingsTab:AddSection({ Name = "Pengaturan" })
-
 SettingsSec:AddButton({
     Name = "Tutup UI (Close)",
     Callback = function()
@@ -428,9 +418,5 @@ SettingsSec:AddButton({
     end,
 })
 
--- ============================================================
---  NOTIFIKASI LOAD
--- ============================================================
 OrionLib:MakeNotification({ Name = "NO MERCY", Content = "Violence District dimuat!", Image = ICON.Logo, Time = 4 })
-
-print("[NO MERCY] Violence District loaded — Orion UI")
+print("[NO MERCY] Violence District loaded — Clean Black/White Theme")
