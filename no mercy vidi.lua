@@ -732,7 +732,7 @@ local function addTab(window, name, options)
 			local ico = drawIcon(cell, n, 24, window.Theme:Get("Text"))
 			ico.Position = UDim2.new(0.5, -12, 0, 10)
 			label(cell, n, {
-				Position = UDim2.new(0, 0, 1, -20),
+				Position = UDim2.fromOffset(0, 1, -20),
 				Size = UDim2.new(1, 0, 0, 16),
 				TextColor3 = window.Theme:Get("MutedText"),
 				TextSize = 10,
@@ -878,12 +878,17 @@ function NinjaUI.new(options)
 	return window
 end
 
---==[ EXPORTS ]==--
-CeypeepungUI.Icons = ICONS
-CeypeepungUI.IconNames = iconNames
-CeypeepungUI.DrawIcon = function(parent, name, size, color) return drawIcon(parent, name, size, color) end
-CeypeepungUI.RecolorIcon = recolorIcon
-CeypeepungUI.Palette = { Dark = C, Light = Light }
-CeypeepungUI.CreateWindow = function(options) return CeypeepungUI.new(options) end
+-- Alias untuk kemudahan pemanggilan
+CeypeepungUI.CreateWindow = CeypeepungUI.new
+
+-- Instansiasi langsung agar UI otomatis muncul saat dieksekusi oleh Delta/Executor
+local window = CeypeepungUI.CreateWindow({
+    Title = "CeypeepungUI",
+    Subtitle = "Loaded Automatically"
+})
+
+-- Tambahkan tab default agar interface ter-render dengan sempurna
+local mainTab = window:AddTab("Main", { Icon = "Home" })
+mainTab:AddLabel("UI berhasil dimuat secara otomatis!")
 
 return CeypeepungUI
