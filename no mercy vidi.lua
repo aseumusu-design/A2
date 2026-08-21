@@ -25,7 +25,7 @@ local function GetHolder()
 end
 
 -- ============================================================
---  WELCOME INTRO (Logo Bulat + Teks + Animasi Garis Stroke)
+--  WELCOME INTRO (Logo Bulat + Teks + Garis Hitam Putih Tebal)
 -- ============================================================
 local function ShowWelcomeIntro()
     local holder = GetHolder()
@@ -59,11 +59,19 @@ local function ShowWelcomeIntro()
     corner.CornerRadius = UDim.new(1, 0)
     corner.Parent = img
 
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(255, 255, 255)
-    stroke.Thickness = 4
-    stroke.Transparency = 1
-    stroke.Parent = img
+    -- Garis Luar Hitam tebal di belakang
+    local strokeBlack = Instance.new("UIStroke")
+    strokeBlack.Color = Color3.fromRGB(0, 0, 0)
+    strokeBlack.Thickness = 6
+    strokeBlack.Transparency = 0
+    strokeBlack.Parent = img
+
+    -- Garis Putih tebal di depan untuk efek kontras
+    local strokeWhite = Instance.new("UIStroke")
+    strokeWhite.Color = Color3.fromRGB(255, 255, 255)
+    strokeWhite.Thickness = 3
+    strokeWhite.Transparency = 1
+    strokeWhite.Parent = img
 
     local introText = Instance.new("TextLabel")
     introText.Size = UDim2.new(1, 0, 0, 40)
@@ -82,7 +90,7 @@ local function ShowWelcomeIntro()
     local tweenIn = TweenService:Create(img, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
         Size = UDim2.fromOffset(150, 150)
     })
-    local strokeIn = TweenService:Create(stroke, TweenInfo.new(0.4), { Transparency = 0 })
+    local strokeIn = TweenService:Create(strokeWhite, TweenInfo.new(0.4), { Transparency = 0 })
     local textIn = TweenService:Create(introText, TweenInfo.new(0.4), { TextTransparency = 0 })
     
     tweenIn:Play()
@@ -90,15 +98,15 @@ local function ShowWelcomeIntro()
     textIn:Play()
     tweenIn.Completed:Wait()
 
-    -- Animasi Garis Stroke Muncul & Hilang Berulang (Pulsing Glow)
+    -- Animasi Garis Stroke Berdenyut Hitam Putih (Muncul & Hilang)
     local pulsing = true
     task.spawn(function()
         while pulsing do
-            local t1 = TweenService:Create(stroke, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0.8, Thickness = 6 })
+            local t1 = TweenService:Create(strokeWhite, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0.8, Thickness = 5 })
             t1:Play()
             t1.Completed:Wait()
             if not pulsing then break end
-            local t2 = TweenService:Create(stroke, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0, Thickness = 2 })
+            local t2 = TweenService:Create(strokeWhite, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0, Thickness = 2 })
             t2:Play()
             t2.Completed:Wait()
         end
@@ -111,7 +119,7 @@ local function ShowWelcomeIntro()
     local tweenOut = TweenService:Create(img, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
         Size = UDim2.fromOffset(0, 0)
     })
-    local strokeOut = TweenService:Create(stroke, TweenInfo.new(0.3), { Transparency = 1 })
+    local strokeOut = TweenService:Create(strokeWhite, TweenInfo.new(0.3), { Transparency = 1 })
     local textOut = TweenService:Create(introText, TweenInfo.new(0.3), { TextTransparency = 1 })
     
     tweenOut:Play()
@@ -155,7 +163,7 @@ local function FindMainWindow()
 end
 
 -- ============================================================
---  BUBBLE LOGO (Dengan Animasi Stroke Berdenyut Muncul/Hilang)
+--  BUBBLE LOGO (Dengan Garis Hitam Putih Tebal Berdenyut)
 -- ============================================================
 local bubbleGui = nil
 
@@ -185,21 +193,29 @@ local function makeBubble()
     corner.CornerRadius = UDim.new(0, 10)
     corner.Parent = btn
 
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(255, 255, 255)
-    stroke.Thickness = 2
-    stroke.Transparency = 0
-    stroke.Parent = btn
+    -- Garis Hitam tebal di Bubble
+    local strokeBlack = Instance.new("UIStroke")
+    strokeBlack.Color = Color3.fromRGB(0, 0, 0)
+    strokeBlack.Thickness = 5
+    strokeBlack.Transparency = 0
+    strokeBlack.Parent = btn
 
-    -- Looping Animasi Garis Stroke Berdenyut (Muncul & Hilang) pada Bubble
+    -- Garis Putih di Bubble
+    local strokeWhite = Instance.new("UIStroke")
+    strokeWhite.Color = Color3.fromRGB(255, 255, 255)
+    strokeWhite.Thickness = 2
+    strokeWhite.Transparency = 0
+    strokeWhite.Parent = btn
+
+    -- Looping Animasi Garis Berdenyut (Muncul & Hilang) pada Bubble
     local bubblePulsing = true
     task.spawn(function()
-        while bubblePulsing and stroke and stroke.Parent do
-            local t1 = TweenService:Create(stroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0.8, Thickness = 4 })
+        while bubblePulsing and strokeWhite and strokeWhite.Parent do
+            local t1 = TweenService:Create(strokeWhite, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0.85, Thickness = 4 })
             t1:Play()
             t1.Completed:Wait()
-            if not bubblePulsing or not stroke or not stroke.Parent then break end
-            local t2 = TweenService:Create(stroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0, Thickness = 2 })
+            if not bubblePulsing or not strokeWhite or not strokeWhite.Parent then break end
+            local t2 = TweenService:Create(strokeWhite, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0, Thickness = 2 })
             t2:Play()
             t2.Completed:Wait()
         end
