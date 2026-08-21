@@ -1,6 +1,6 @@
 -- ============================================================
 --  NO MERCY — "VIOLENCE DISTRICT"
---  UI: Orion (MarV) — hide/show via bubble + konfirmasi tutup
+--  UI: Orion (MarV) — Clean Black/White Theme + Fixed Banner
 -- ============================================================
 
 local ICON = {
@@ -24,7 +24,7 @@ local function GetHolder()
 end
 
 -- ============================================================
---  WELCOME INTRO ANIMATION (Garis Pinggir Hitam Putih Elegan)
+--  WELCOME INTRO ANIMATION (Garis Hitam Putih Elegan)
 -- ============================================================
 local function ShowWelcomeIntro()
     local holder = GetHolder()
@@ -51,7 +51,7 @@ local function ShowWelcomeIntro()
     corner.Parent = img
 
     local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(220, 220, 220) -- Warna Hitam-Putih / Abu-abu terang
+    stroke.Color = Color3.fromRGB(220, 220, 220) -- Hitam Putih / Abu terang
     stroke.Thickness = 4
     stroke.Transparency = 1
     stroke.Parent = img
@@ -140,7 +140,7 @@ local function makeBubble()
     corner.Parent = btn
 
     local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(200, 200, 200) -- Diganti Hitam-Putih (Abu terang)
+    stroke.Color = Color3.fromRGB(200, 200, 200) -- Garis Hitam Putih
     stroke.Thickness = 2
     stroke.Parent = btn
 
@@ -296,53 +296,13 @@ local SpeedTab    = Window:MakeTab({ Name = "Speed", Icon = ICON.Zap, PremiumOnl
 local SettingsTab = Window:MakeTab({ Name = "Pengaturan", Icon = ICON.Settings, PremiumOnly = false })
 
 -- ============================================================
---  INFO (Banner Rapi, Tidak Menimpa Elemen Lain)
+--  INFO (Banner Aman & Otomatis Muncul)
 -- ============================================================
 local InfoSec = InfoTab:AddSection({ Name = "Tentang" })
 
-InfoSec:AddButton({
-    Name = "Banner No Mercy",
-    Callback = function() end,
-})
-
-task.spawn(function()
-    task.wait(0.2)
-    local main = FindMainWindow()
-    if main then
-        local tabContainer = main:FindFirstChild("TabContainer", true) or main:FindFirstChild("Content", true)
-        if tabContainer then
-            for _, v in ipairs(tabContainer:GetDescendants()) do
-                if v:IsA("TextLabel") and v.Text == "Banner No Mercy" then
-                    local parentElement = v.Parent.Parent
-                    if parentElement then
-                        v.Parent.Visible = скрыт or false
-                        v.Parent.Size = UDim2.new(1, 0, 0, 110)
-                        
-                        for _, child in ipairs(v.Parent:GetChildren()) do
-                            if child:IsA("TextButton") or child:IsA("TextLabel") then
-                                child:Destroy()
-                            end
-                        end
-
-                        local bannerImg = Instance.new("ImageLabel")
-                        bannerImg.Size = UDim2.new(1, 0, 1, 0)
-                        bannerImg.Image = ICON.Banner
-                        bannerImg.BackgroundTransparency = 1
-                        bannerImg.ScaleType = Enum.ScaleType.Crop
-                        bannerImg.Parent = v.Parent
-
-                        local imgCorner = Instance.new("UICorner")
-                        imgCorner.CornerRadius = UDim.new(0, 6)
-                        imgCorner.Parent = bannerImg
-                    end
-                end
-            end
-        end
-    end
-end)
-
 InfoSec:AddLabel("NO MERCY — Violence District")
 InfoSec:AddLabel("Game: Bola Pedang (Blade Ball)")
+
 InfoSec:AddButton({
     Name = "Copy Link Discord",
     Callback = function()
@@ -350,6 +310,44 @@ InfoSec:AddButton({
         OrionLib:MakeNotification({ Name = "NO MERCY", Content = "Link Discord di-copy!", Image = ICON.Logo, Time = 3 })
     end,
 })
+
+-- Sistem injeksi Banner otomatis yang mendeteksi elemen teks InfoSec
+task.spawn(function()
+    task.wait(0.5)
+    local main = FindMainWindow()
+    if not main then return end
+    
+    for _, desc in ipairs(main:GetDescendants()) do
+        if desc:IsA("TextLabel") and desc.Text == "NO MERCY — Violence District" then
+            local container = desc.Parent.Parent
+            if container then
+                local bannerBox = Instance.new("Frame")
+                bannerBox.Name = "CustomBannerBox"
+                bannerBox.Size = UDim2.new(1, 0, 0, 110)
+                bannerBox.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+                bannerBox.BorderSizePixel = 0
+                bannerBox.LayoutOrder = -1 -- Paling atas di section
+                bannerBox.Parent = container
+
+                local bCorner = Instance.new("UICorner")
+                bCorner.CornerRadius = UDim.new(0, 8)
+                bCorner.Parent = bannerBox
+
+                local bImage = Instance.new("ImageLabel")
+                bImage.Size = UDim2.new(1, 0, 1, 0)
+                bImage.Image = ICON.Banner
+                bImage.BackgroundTransparency = 1
+                bImage.ScaleType = Enum.ScaleType.Crop
+                bImage.Parent = bannerBox
+
+                local iCorner = Instance.new("UICorner")
+                iCorner.CornerRadius = UDim.new(0, 8)
+                iCorner.Parent = bImage
+                break
+            end
+        end
+    end
+end)
 
 -- ============================================================
 --  PARRY
@@ -419,4 +417,4 @@ SettingsSec:AddButton({
 })
 
 OrionLib:MakeNotification({ Name = "NO MERCY", Content = "Violence District dimuat!", Image = ICON.Logo, Time = 4 })
-print("[NO MERCY] Violence District loaded — Clean Black/White Theme")
+print("[NO MERCY] Violence District loaded successfully!")
