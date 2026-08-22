@@ -1,5 +1,7 @@
 --[[
-  ZiaanHub X - Violence District v1.4.7 (Optimized ESP + Fullbright/No Fog)
+  NO MERCY — Violence District (ZiaanHub feature migration)
+  Orion UI shell from animation_mercy + complete ZiaanHub feature engine
+  v1.4.7 (Optimized ESP + Fullbright/No Fog)
   Updated for smooth & low-lag ESP
   FIX: Drawing ESP performance improvements
   AUTO PARRY REPLACED with new improved version (WalkSpeed sequence, Legit/Aggressive, animations)
@@ -3732,11 +3734,30 @@ local function __ZiaanHub_Init_Main__()
 
     if Window then
         local Tabs = {
+            Info = Window:AddTab({ Name = "Info", Icon = "rbxassetid://7733964719", Type = "Single" }),
             Player = Window:AddTab({ Name = "Player", Icon = "lucide:user", Type = "Single" }),
             Survivor = Window:AddTab({ Name = "Survivor", Icon = "solar:shield-bold", Type = "Single" }),
             Killer = Window:AddTab({ Name = "Killer", Icon = "solar:danger-bold", Type = "Single" }),
             Visual = Window:AddTab({ Name = "Visual", Icon = "lucide:eye", Type = "Single" }),
         }
+
+        -- Info tetap memakai layout No Mercy dari animation_mercy.
+        local InfoTab = Tabs.Info
+        local infoSection = InfoTab:AddSection({ Name = "Tentang NO MERCY" })
+        pcall(function()
+            infoSection:AddLabel("NO MERCY — VIOLENCE DISTRICT")
+            infoSection:AddLabel("Game: Violence District")
+            infoSection:AddLabel("ZiaanHub features migrated to No Mercy UI")
+            infoSection:AddButton({
+                Name = "Copy Link Discord",
+                Callback = function()
+                    if setclipboard then
+                        setclipboard("https://discord.gg/Mf8gSU96")
+                    end
+                    VD_Notify("NO MERCY", "Link Discord di-copy!", 3)
+                end,
+            })
+        end)
 
         -- Player Tab
         local PlayerTab = Tabs.Player
