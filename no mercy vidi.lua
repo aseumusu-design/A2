@@ -1,10 +1,10 @@
 --[[
 =========================================================================
-    NO MERCY HUB V3.5 + DOUBLE FIRE SYNC (3 MODE AIMBOT) - FIXED
-    - V1: Free Coord (shoot to predicted position)
-    - V2: Cam Lock (camera follows target, only if target in FOV)
-    - V3: Silent Aim + Double Fire (auto shoot + extra silent shot)
-    - Fixed Laser visibility, FOV radius slider, target re-check each frame
+    NO MERCY HUB V3.5 + DOUBLE FIRE SYNC (3 MODE AIMBOT) - FINAL FIX
+    - Fixed FOV slider (now responsive)
+    - Fixed laser always on (only shows when enabled and target exists)
+    - Laser updates smoothly per frame
+    - Target re-acquisition per frame
 =========================================================================
 ]]
 
@@ -13,6 +13,7 @@ local RunService          = game:GetService("RunService")
 local Workspace           = game:GetService("Workspace")
 local ReplicatedStorage   = game:GetService("ReplicatedStorage")
 local CoreGui             = game:GetService("CoreGui")
+local UserInputService    = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera      = Workspace.CurrentCamera
@@ -39,7 +40,7 @@ local TARGET_COLORS = {
 -- ==================== STATE CONFIG ====================
 local Config = {
     AimbotEnabled = true,
-    AimVersion    = "V1",      -- "V1", "V2", "V3"
+    AimVersion    = "V1",
     TargetType    = "Killer",
     SpecificName  = "",
     MaxDistance   = 800,
@@ -48,7 +49,7 @@ local Config = {
     FireDelay     = 0.1,
     LaserEnabled  = true,
     FOVCircleOn   = true,
-    FOVRadius     = 180,       -- default, will be adjustable via slider
+    FOVRadius     = 180,
     DoubleFire    = false,
 }
 
@@ -64,7 +65,7 @@ LaserPart.CanQuery = false
 LaserPart.CanTouch = false
 LaserPart.Material = Enum.Material.Neon
 LaserPart.Transparency = 1
-LaserPart.Size = Vector3.new(0.1, 0.1, 0.1)
+LaserPart.Size = Vector3.new(0.08, 0.08, 0.08)
 LaserPart.Parent = Workspace
 
 -- ==================== VISUAL: SCREEN FOV CIRCLE ====================
@@ -190,6 +191,7 @@ end
 
 -- ==================== MAIN AIMBOT LOOP ====================
 RunService.RenderStepped:Connect(function()
+    -- Update FOV circle visibility and size
     FOVFrame.Visible = Config.FOVCircleOn
     FOVFrame.Size = UDim2.new(0, Config.FOVRadius * 2, 0, Config.FOVRadius * 2)
 
@@ -198,7 +200,7 @@ RunService.RenderStepped:Connect(function()
         return
     end
 
-    -- Re-check current target: still alive, in FOV, within distance, and matches filter
+    -- Re-check current target validity
     if CurrentTarget then
         local head = CurrentTarget.char:FindFirstChild("Head")
         local origin = Camera.CFrame.Position
@@ -213,10 +215,11 @@ RunService.RenderStepped:Connect(function()
         CurrentTarget = FindBestTarget()
     end
 
+    -- Laser and shooting
     if CurrentTarget then
         local pos = GetPredictPos(CurrentTarget.char)
         if pos then
-            -- Laser
+            -- Update laser
             if Config.LaserEnabled then
                 local gun = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Twist of Fate")
                 gun = gun and gun:FindFirstChild("Right Arm") and gun["Right Arm"]:FindFirstChild("EmperorGun")
@@ -230,15 +233,17 @@ RunService.RenderStepped:Connect(function()
                 LaserPart.Transparency = 1
             end
 
-            -- Mode V2: Camera Lock (only if target in FOV, already guaranteed)
+            -- Mode V2: Camera Lock
             if Config.AimVersion == "V2" then
                 Camera.CFrame = CFrame.new(Camera.CFrame.Position, pos)
             end
-            -- V3: no camera lock, only shooting
 
+            -- Auto shoot
             if Config.AutoShoot then
                 FireWeapon(pos)
             end
+        else
+            LaserPart.Transparency = 1
         end
     else
         LaserPart.Transparency = 1
@@ -256,8 +261,8 @@ Bubble.Draggable = true
 Instance.new("UICorner", Bubble).CornerRadius = UDim.new(1, 0)
 
 local Window = Instance.new("Frame", ScreenGui)
-Window.Size = UDim2.new(0, 500, 0, 380)
-Window.Position = UDim2.new(0.5, -250, 0.5, -190)
+Window.Size = UDim2.new(0, 500, 0, 420) -- increased height for slider
+Window.Position = UDim2.new(0.5, -250, 0.5, -210)
 Window.BackgroundColor3 = THEME.Bg
 Window.Active = true
 Window.Draggable = true
@@ -274,7 +279,7 @@ local Title = Instance.new("TextLabel", Header)
 Title.Size = UDim2.new(1, -50, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "NO MERCY HUB V3.5 — 3 MODE AIMBOT (FIXED)"
+Title.Text = "NO MERCY HUB V3.5 — 3 MODE AIMBOT"
 Title.TextColor3 = THEME.White
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 13
@@ -403,7 +408,8 @@ local function AddSlider(parent, text, min, max, default, callback)
     Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
 
     local dragging = false
-    local function update(posX)
+    local function update(input)
+        local posX = input.Position.X
         local rel = math.clamp((posX - slider.AbsolutePosition.X) / slider.AbsoluteSize.X, 0, 1)
         local val = min + rel * (max - min)
         val = math.round(val)
@@ -412,20 +418,20 @@ local function AddSlider(parent, text, min, max, default, callback)
         callback(val)
     end
 
-    slider.InputBegan:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+    slider.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
-            update(inp.Position.X)
+            update(input)
         end
     end)
-    slider.InputEnded:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+    slider.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = false
         end
     end)
-    game:GetService("UserInputService").InputChanged:Connect(function(inp)
-        if dragging and inp.UserInputType == Enum.UserInputType.MouseMovement then
-            update(inp.Position.X)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            update(input)
         end
     end)
 end
@@ -561,7 +567,7 @@ end
 AddToggle(VisualTab, "Laser Tracer ON/OFF", Config.LaserEnabled, function(v) Config.LaserEnabled = v end)
 AddToggle(VisualTab, "FOV Circle ON/OFF", Config.FOVCircleOn, function(v) Config.FOVCircleOn = v end)
 
--- FOV Radius Slider
+-- FOV Radius Slider (with live update)
 AddSlider(VisualTab, "FOV Radius", 50, 400, Config.FOVRadius, function(val)
     Config.FOVRadius = val
     FOVFrame.Size = UDim2.new(0, val * 2, 0, val * 2)
@@ -569,7 +575,7 @@ end)
 
 print("✅ NO MERCY HUB V3.5 + 3 Mode Aimbot Loaded Successfully!")
 
--- ==================== DOUBLE FIRE SYNC (Lynx style) ====================
+-- ==================== DOUBLE FIRE SYNC ====================
 local isFiring = false
 
 if fireRemote and hookmetamethod and getnamecallmethod then
