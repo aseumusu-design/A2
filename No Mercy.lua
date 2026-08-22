@@ -1,7 +1,7 @@
--- ============================================================
---  NO MERCY — "VIOLENCE DISTRICT" (ZIAANHUB X FEATURES INTEGRATED)
---  UI: Orion (MarV) — hide/show via bubble + konfirmasi tutup
--- ============================================================
+--[[
+  NO MERCY — "VIOLENCE DISTRICT" (ZIAANHUB X FULL FEATURES INTEGRATED)
+  UI: Orion Library (MarV) — hide/show via bubble + konfirmasi tutup
+]]
 
 local ICON = {
     Info     = "rbxassetid://7733964719",
@@ -45,6 +45,9 @@ getgenv().VD = getgenv().VD or {
     KILLER_BlockVaults    = false,
     KILLER_AntiBlind      = false,
     KILLER_DoubleTap      = false,
+    SPEAR_Aimbot          = false,
+    SPEAR_Gravity         = 50,
+    SPEAR_Speed           = 100,
     KILLER_CustomMasked   = "Richard",
     DRAWING_ESP           = false,
     ESP_Skeleton          = false,
@@ -81,6 +84,7 @@ local HttpService       = game:GetService("HttpService")
 local LocalPlayer       = Players.LocalPlayer
 local Camera            = Workspace.CurrentCamera
 local VD                = getgenv().VD
+local isMobile          = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 
 local function GetHolder()
     return (gethui and gethui()) or game:GetService("CoreGui")
@@ -126,9 +130,7 @@ local function ShowWelcomeIntro()
     img.ZIndex = 999
     img.Parent = centerFrame
 
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(1, 0)
-    corner.Parent = img
+    Instance.new("UICorner", img).CornerRadius = UDim.new(1, 0)
 
     local stroke = Instance.new("UIStroke")
     stroke.Color = Color3.fromRGB(255, 255, 255)
@@ -188,7 +190,7 @@ local Window = OrionLib:MakeWindow({
     Name = "NO MERCY — VIOLENCE DISTRICT",
     HidePremium = false,
     SaveConfig = true,
-    ConfigFolder = "NoMercyViolenceZiaan",
+    ConfigFolder = "NoMercyViolenceZiaanFull",
     IntroEnabled = false,
     Icon = ICON.Logo,
     CloseCallback = function()
@@ -231,10 +233,7 @@ local function makeBubble()
     btn.Draggable = true
     btn.ZIndex = 10
 
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = btn
-
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
     local stroke = Instance.new("UIStroke")
     stroke.Color = Color3.fromRGB(255, 255, 255)
     stroke.Thickness = 2
@@ -300,9 +299,7 @@ local function confirmClose(fromCloseBtn)
     box.ZIndex = 100
     box.Parent = gui
 
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 12)
-    corner.Parent = box
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 12)
 
     local title = Instance.new("TextLabel")
     title.Size = UDim2.new(1, -40, 0, 30)
@@ -357,6 +354,139 @@ end
 onCloseRequest = function() confirmClose(true) end
 
 -- ============================================================
+--  CORE BACKEND LOGIC (Auto Skillcheck, Parry, ToF, GenBoost, dll.)
+-- ============================================================
+local Character, Humanoid, Root
+local function updateChar(char)
+    Character = char or LocalPlayer.Character
+    if Character then
+        task.spawn(function()
+            Humanoid = Character:WaitForChild("Humanoid", 5)
+            Root     = Character:WaitForChild("HumanoidRootPart", 5)
+        end)
+    else
+        Humanoid, Root = nil, nil
+    end
+end
+updateChar()
+LocalPlayer.CharacterAdded:Connect(updateChar)
+
+-- Auto Skillcheck Backend
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local AutoSkill = { LastGoalRotation = nil, HasClickedThisGoal = false, LastLineRotation = nil, LastTick = nil, WasActive = false }
+
+local function VD_PressSkill()
+    if isMobile then
+        local btn = PlayerGui:FindFirstChild("check", true)
+        if btn and btn:IsA("GuiObject") then
+            local pos = btn.AbsolutePosition
+            local size = btn.AbsoluteSize
+            local inset = GuiService:GetGuiInset()
+            local x = pos.X + (size.X / 2) + inset.X
+            local y = pos.Y + (size.Y / 2) + inset.Y
+            pcall(function() VirtualInputManager:SendTouchEvent(8822, Enum.UserInputState.Begin.Value, x, y) end)
+            task.wait(0.01)
+            pcall(function() VirtualInputManager:SendTouchEvent(8822, Enum.UserInputState.End.Value, x, y) end)
+            if firesignal and btn.MouseButton1Click then firesignal(btn.MouseButton1Click) end
+        end
+    else
+        pcall(function() VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game) end)
+        task.wait(0.01)
+        pcall(function() VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game) end)
+    end
+end
+
+local function VD_GetSkillCheck()
+    for _, guiName in ipairs({ "SkillCheckPromptGui", "SkillCheckPromptGui-con" }) do
+        local gui = PlayerGui:FindFirstChild(guiName, true)
+        if gui then
+            local check = gui:FindFirstChild("Check", true)
+            if check and check.Visible then
+                local line = check:FindFirstChild("Line", true)
+                local goal = check:FindFirstChild("Goal", true)
+                if line and goal then return line, goal end
+            end
+        end
+    end
+end
+
+local function VD_AngularDelta(from, to)
+    local d = to - from
+    if d > 180 then d = d - 360 end
+    if d < -180 then d = d + 360 end
+    return d
+end
+
+local function VD_CrossedZone(prevLr, lr, startPos, endPos)
+    local function inZone(r)
+        if startPos > endPos then return r >= startPos or r <= endPos end
+        return r >= startPos and r <= endPos
+    end
+    if inZone(lr) then return true end
+    if prevLr == nil then return false end
+    local delta = VD_AngularDelta(prevLr, lr)
+    local steps = math.abs(math.floor(delta))
+    if steps < 2 then return false end
+    local stepSize = delta / steps
+    for i = 1, steps do
+        if inZone((prevLr + stepSize * i) % 360) then return true end
+    end
+    return false
+end
+
+RunService.RenderStepped:Connect(function()
+    if not VD.AutoSkillcheck then return end
+    local line, goal = VD_GetSkillCheck()
+    if not (line and goal) then
+        AutoSkill.LastGoalRotation = nil
+        AutoSkill.HasClickedThisGoal = false
+        AutoSkill.LastLineRotation = nil
+        AutoSkill.LastTick = nil
+        AutoSkill.WasActive = false
+        return
+    end
+
+    local lr = line.Rotation % 360
+    local gr = goal.Rotation % 360
+    local now = os.clock()
+    if not AutoSkill.WasActive then
+        AutoSkill.WasActive = true
+        AutoSkill.HasClickedThisGoal = false
+        AutoSkill.LastGoalRotation = gr
+        AutoSkill.LastLineRotation = lr
+        AutoSkill.LastTick = now
+        return
+    end
+    if AutoSkill.LastGoalRotation and math.abs(VD_AngularDelta(AutoSkill.LastGoalRotation, gr)) > 5 then
+        AutoSkill.HasClickedThisGoal = false
+        AutoSkill.LastLineRotation = nil
+        AutoSkill.LastTick = nil
+    end
+    AutoSkill.LastGoalRotation = gr
+    if AutoSkill.HasClickedThisGoal then
+        AutoSkill.LastLineRotation = lr
+        AutoSkill.LastTick = now
+        return
+    end
+    if AutoSkill.LastLineRotation and AutoSkill.LastTick then
+        local dt = now - AutoSkill.LastTick
+        if dt > 0 then
+            local lineSpeed = VD_AngularDelta(AutoSkill.LastLineRotation, lr) / dt
+            local predicted = (lr + lineSpeed * dt * 0) % 360
+            if VD_CrossedZone(AutoSkill.LastLineRotation, predicted, (gr + 104) % 360, (gr + 109) % 360) then
+                AutoSkill.HasClickedThisGoal = true
+                task.spawn(function()
+                    task.wait(0.03)
+                    VD_PressSkill()
+                end)
+            end
+        end
+    end
+    AutoSkill.LastLineRotation = lr
+    AutoSkill.LastTick = now
+end)
+
+-- ============================================================
 --  BUAT TAB ORION
 -- ============================================================
 local InfoTab     = Window:MakeTab({ Name = "Info", Icon = ICON.Info, PremiumOnly = false })
@@ -372,7 +502,7 @@ local SettingsTab = Window:MakeTab({ Name = "Pengaturan", Icon = ICON.Settings, 
 -- ============================================================
 local InfoSec = InfoTab:AddSection({ Name = "Tentang" })
 InfoSec:AddLabel("NO MERCY — Violence District")
-InfoSec:AddLabel("ZiaanHub X Features Integrated")
+InfoSec:AddLabel("ZiaanHub X Full Features Integrated")
 InfoSec:AddButton({
     Name = "Copy Link Discord",
     Callback = function()
@@ -415,19 +545,17 @@ task.spawn(function()
 end)
 
 -- ============================================================
---  PLAYER TAB (Teleport, Fling, Moonwalk / Fun)
+--  PLAYER TAB (Teleport & Fling)
 -- ============================================================
 local TeleSec = PlayerTab:AddSection({ Name = "Teleport" })
 TeleSec:AddButton({ Name = "Teleport to Safe Zone", Callback = function() VD_Notify("Teleport", "Safe Zone Teleported", 2) end })
-TeleSec:AddButton({ Name = "Teleport to Generator", Callback = function() print("TP to Gen") end })
-TeleSec:AddButton({ Name = "Teleport to Gate", Callback = function() print("TP to Gate") end })
 
 local FlingSec = PlayerTab:AddSection({ Name = "Fling & Fun" })
 FlingSec:AddToggle({ Name = "Enable Fling", Default = false, Callback = function(v) VD.FLING_Enabled = v end })
 FlingSec:AddSlider({ Name = "Fling Strength", Min = 1000, Max = 30000, Default = 10000, Increment = 500, Callback = function(v) VD.FLING_Strength = v end })
 
 -- ============================================================
---  SURVIVOR TAB (Auto Parry, Gen Boost, Movement, Healing, ToF)
+--  SURVIVOR TAB (General, Parry, Gen Boost, Movement, Healing)
 -- ============================================================
 local SurvGen = SurvivorTab:AddSection({ Name = "General Survivor" })
 SurvGen:AddToggle({ Name = "Auto Skillcheck", Default = false, Callback = function(v) VD.AutoSkillcheck = v end })
@@ -469,7 +597,7 @@ local KillMask = KillerTab:AddSection({ Name = "Custom Masked" })
 KillMask:AddDropdown({ Name = "Custom Masked", Default = "Richard", Options = { "Richard", "Tony", "Brandon", "Jake", "Richter", "Graham", "Alex" }, Callback = function(v) VD.KILLER_CustomMasked = v end })
 
 -- ============================================================
---  VISUAL TAB (Drawing ESP & Lighting Presets)
+--  VISUAL TAB (Drawing ESP & Lighting)
 -- ============================================================
 local VisSec = VisualTab:AddSection({ Name = "Drawing & Highlight ESP" })
 VisSec:AddToggle({ Name = "Master Turn On Drawing ESP", Default = false, Callback = function(v) VD.DRAWING_ESP = v end })
@@ -501,12 +629,10 @@ local SettingsSec = SettingsTab:AddSection({ Name = "Pengaturan" })
 SettingsSec:AddButton({ Name = "Tutup UI (Close)", Callback = function() confirmClose() end })
 
 -- ============================================================
---  BACKGROUND LOOPS (Fitur Utama Berjalan di Background)
+--  BACKGROUND HEARTBEAT LOOP (Auto Attack Killer, dll.)
 -- ============================================================
 RunService.Heartbeat:Connect(function()
     if VD.Destroyed then return end
-    
-    -- Auto Attack Killer
     if VD.AUTO_Attack and LocalPlayer.Team and LocalPlayer.Team.Name == "Killer" then
         pcall(function()
             local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -526,5 +652,5 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
-VD_Notify("NO MERCY", "Violence District (ZiaanHub X Integrated) Loaded!", 4)
-print("[NO MERCY] Violence District loaded successfully with full ZiaanHub features!")
+VD_Notify("NO MERCY", "Violence District (ZiaanHub X Full Features) Loaded!", 4)
+print("[NO MERCY] Violence District loaded successfully with complete ZiaanHub features!")
