@@ -1,10 +1,10 @@
 --[[
 =========================================================================
-    NO MERCY HUB V3.5 + DOUBLE FIRE SYNC (3 MODE AIMBOT)
+    NO MERCY HUB V3.5 + DOUBLE FIRE SYNC (3 MODE AIMBOT) - FIXED
     - V1: Free Coord (shoot to predicted position)
-    - V2: Cam Lock (camera follows target)
+    - V2: Cam Lock (camera follows target, only if target in FOV)
     - V3: Silent Aim + Double Fire (auto shoot + extra silent shot)
-    - All original features preserved (laser, FOV, target filtering, etc.)
+    - Fixed Laser visibility, FOV radius slider, target re-check each frame
 =========================================================================
 ]]
 
@@ -48,8 +48,8 @@ local Config = {
     FireDelay     = 0.1,
     LaserEnabled  = true,
     FOVCircleOn   = true,
-    FOVRadius     = 180,
-    DoubleFire    = false,     -- akan diaktifkan otomatis saat V3
+    FOVRadius     = 180,       -- default, will be adjustable via slider
+    DoubleFire    = false,
 }
 
 local CurrentTarget = nil
@@ -64,6 +64,7 @@ LaserPart.CanQuery = false
 LaserPart.CanTouch = false
 LaserPart.Material = Enum.Material.Neon
 LaserPart.Transparency = 1
+LaserPart.Size = Vector3.new(0.1, 0.1, 0.1)
 LaserPart.Parent = Workspace
 
 -- ==================== VISUAL: SCREEN FOV CIRCLE ====================
@@ -117,6 +118,14 @@ local function MatchesFilter(p, char, kind)
     return kind == Config.TargetType
 end
 
+local function IsInFOV(headPos)
+    local screenPos, onScreen = Camera:WorldToViewportPoint(headPos)
+    if not onScreen then return false end
+    local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+    local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+    return dist <= Config.FOVRadius
+end
+
 local function FindBestTarget()
     local origin = Camera.CFrame.Position
     local best, bestScore = nil, math.huge
@@ -126,17 +135,11 @@ local function FindBestTarget()
             local kind = ClassifyTarget(p.Character, p)
             if MatchesFilter(p, p.Character, kind) then
                 local head = p.Character:FindFirstChild("Head")
-                if head then
-                    local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
-                    if onScreen then
-                        local mouseDist = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
-                        if mouseDist <= Config.FOVRadius then
-                            local dist = (head.Position - origin).Magnitude
-                            if dist <= Config.MaxDistance and dist < bestScore then
-                                best = { player = p, char = p.Character, kind = kind, name = p.Name }
-                                bestScore = dist
-                            end
-                        end
+                if head and IsInFOV(head.Position) then
+                    local dist = (head.Position - origin).Magnitude
+                    if dist <= Config.MaxDistance and dist < bestScore then
+                        best = { player = p, char = p.Character, kind = kind, name = p.Name }
+                        bestScore = dist
                     end
                 end
             end
@@ -157,7 +160,7 @@ local function GetPredictPos(char)
     return head.Position
 end
 
--- Remote reference (used by both main aimbot and double fire)
+-- Remote reference
 local fireRemote = ReplicatedStorage:FindFirstChild("Remotes")
 if fireRemote then
     fireRemote = fireRemote:FindFirstChild("Items")
@@ -195,13 +198,25 @@ RunService.RenderStepped:Connect(function()
         return
     end
 
-    if not (CurrentTarget and IsAlive(CurrentTarget.char) and MatchesFilter(CurrentTarget.player, CurrentTarget.char, CurrentTarget.kind)) then
+    -- Re-check current target: still alive, in FOV, within distance, and matches filter
+    if CurrentTarget then
+        local head = CurrentTarget.char:FindFirstChild("Head")
+        local origin = Camera.CFrame.Position
+        local dist = head and (head.Position - origin).Magnitude or math.huge
+        local inFOV = head and IsInFOV(head.Position) or false
+        if not (IsAlive(CurrentTarget.char) and inFOV and dist <= Config.MaxDistance and MatchesFilter(CurrentTarget.player, CurrentTarget.char, CurrentTarget.kind)) then
+            CurrentTarget = nil
+        end
+    end
+
+    if not CurrentTarget then
         CurrentTarget = FindBestTarget()
     end
 
     if CurrentTarget then
         local pos = GetPredictPos(CurrentTarget.char)
         if pos then
+            -- Laser
             if Config.LaserEnabled then
                 local gun = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Twist of Fate")
                 gun = gun and gun:FindFirstChild("Right Arm") and gun["Right Arm"]:FindFirstChild("EmperorGun")
@@ -215,11 +230,11 @@ RunService.RenderStepped:Connect(function()
                 LaserPart.Transparency = 1
             end
 
-            -- Mode V2: Camera Lock
+            -- Mode V2: Camera Lock (only if target in FOV, already guaranteed)
             if Config.AimVersion == "V2" then
                 Camera.CFrame = CFrame.new(Camera.CFrame.Position, pos)
             end
-            -- Mode V3: tidak ada lock, hanya tembakan (dan double fire aktif)
+            -- V3: no camera lock, only shooting
 
             if Config.AutoShoot then
                 FireWeapon(pos)
@@ -259,7 +274,7 @@ local Title = Instance.new("TextLabel", Header)
 Title.Size = UDim2.new(1, -50, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "NO MERCY HUB V3.5 — 3 MODE AIMBOT"
+Title.Text = "NO MERCY HUB V3.5 — 3 MODE AIMBOT (FIXED)"
 Title.TextColor3 = THEME.White
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 13
@@ -327,6 +342,7 @@ local VisualTab = CreateTab("Visuals & Laser")
 Tabs["Aimbot Setup"].Page.Visible = true
 Tabs["Aimbot Setup"].Btn.TextColor3 = THEME.White
 
+-- ==================== UI HELPERS ====================
 local function AddToggle(parent, text, default, callback)
     local holder = Instance.new("Frame", parent)
     holder.Size = UDim2.new(1, 0, 0, 32)
@@ -355,6 +371,61 @@ local function AddToggle(parent, text, default, callback)
             state = not state
             dot.BackgroundColor3 = state and THEME.Green or Color3.fromRGB(60, 60, 75)
             callback(state)
+        end
+    end)
+end
+
+local function AddSlider(parent, text, min, max, default, callback)
+    local holder = Instance.new("Frame", parent)
+    holder.Size = UDim2.new(1, 0, 0, 40)
+    holder.BackgroundColor3 = THEME.Dark
+    Instance.new("UICorner", holder).CornerRadius = UDim.new(0, 6)
+
+    local lbl = Instance.new("TextLabel", holder)
+    lbl.Size = UDim2.new(1, -10, 0, 18)
+    lbl.Position = UDim2.new(0, 5, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text .. " (" .. tostring(default) .. ")"
+    lbl.TextColor3 = THEME.White
+    lbl.Font = Enum.Font.GothamMedium
+    lbl.TextSize = 11
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local slider = Instance.new("Frame", holder)
+    slider.Size = UDim2.new(1, -20, 0, 12)
+    slider.Position = UDim2.new(0, 10, 0, 22)
+    slider.BackgroundColor3 = THEME.Panel
+    Instance.new("UICorner", slider).CornerRadius = UDim.new(1, 0)
+
+    local fill = Instance.new("Frame", slider)
+    fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    fill.BackgroundColor3 = THEME.Accent
+    Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+
+    local dragging = false
+    local function update(posX)
+        local rel = math.clamp((posX - slider.AbsolutePosition.X) / slider.AbsoluteSize.X, 0, 1)
+        local val = min + rel * (max - min)
+        val = math.round(val)
+        fill.Size = UDim2.new(rel, 0, 1, 0)
+        lbl.Text = text .. " (" .. tostring(val) .. ")"
+        callback(val)
+    end
+
+    slider.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            update(inp.Position.X)
+        end
+    end)
+    slider.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+    game:GetService("UserInputService").InputChanged:Connect(function(inp)
+        if dragging and inp.UserInputType == Enum.UserInputType.MouseMovement then
+            update(inp.Position.X)
         end
     end)
 end
@@ -396,24 +467,16 @@ local btnV1 = createModeButton(verFrame, "V1 (Free Coord)", 0.02, 0.30)
 local btnV2 = createModeButton(verFrame, "V2 (Cam Lock)", 0.35, 0.30)
 local btnV3 = createModeButton(verFrame, "V3 (Silent + Double)", 0.68, 0.30)
 
--- Set initial highlight
 btnV1.BackgroundColor3 = THEME.Green
 btnV2.BackgroundColor3 = THEME.Panel
 btnV3.BackgroundColor3 = THEME.Panel
 
 local function setMode(mode)
     Config.AimVersion = mode
-    -- Jika V3, aktifkan Double Fire secara otomatis; jika V1/V2, biarkan toggle manual
     if mode == "V3" then
         Config.DoubleFire = true
-        -- Update toggle dot visual? (tidak mudah karena toggle dibuat terpisah, tapi kita bisa cari tahu)
-        -- Kita bisa update state toggle dengan mencari frame yang berisi toggle "Double Fire" dan ubah warna dot.
-        -- Untuk sederhana, kita akan beri notifikasi atau biarkan user menyalakan manual.
-        -- Tapi kita bisa set state internal dan juga update UI toggle jika kita simpan referensi.
-        -- Karena kita tidak menyimpan referensi, kita akan beri tahu di log.
         print("V3 selected: Double Fire automatically enabled.")
     end
-    -- Update button colors
     btnV1.BackgroundColor3 = (mode == "V1") and THEME.Green or THEME.Panel
     btnV2.BackgroundColor3 = (mode == "V2") and THEME.Green or THEME.Panel
     btnV3.BackgroundColor3 = (mode == "V3") and THEME.Green or THEME.Panel
@@ -498,26 +561,25 @@ end
 AddToggle(VisualTab, "Laser Tracer ON/OFF", Config.LaserEnabled, function(v) Config.LaserEnabled = v end)
 AddToggle(VisualTab, "FOV Circle ON/OFF", Config.FOVCircleOn, function(v) Config.FOVCircleOn = v end)
 
+-- FOV Radius Slider
+AddSlider(VisualTab, "FOV Radius", 50, 400, Config.FOVRadius, function(val)
+    Config.FOVRadius = val
+    FOVFrame.Size = UDim2.new(0, val * 2, 0, val * 2)
+end)
+
 print("✅ NO MERCY HUB V3.5 + 3 Mode Aimbot Loaded Successfully!")
 
--- ==================== DOUBLE FIRE SYNC (from Lynx script) ====================
--- This integrates the silent aim double-fire feature using a hook on the Fire remote.
--- It fires an extra shot to the head of the current target (if any) when the remote is called.
+-- ==================== DOUBLE FIRE SYNC (Lynx style) ====================
+local isFiring = false
 
-local isFiring = false  -- Prevents recursion
-
--- Only set up the hook if we have a valid fireRemote and the exploit supports hookmetamethod
 if fireRemote and hookmetamethod and getnamecallmethod then
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
         local method = getnamecallmethod()
         local args = {...}
 
-        -- Intercept FireServer calls on our remote, but only if DoubleFire is enabled
         if Config.DoubleFire and method == "FireServer" and self == fireRemote and not isFiring then
             isFiring = true
-
-            -- Fire an extra shot to the current target's head (if alive and valid)
             task.spawn(function()
                 if CurrentTarget and IsAlive(CurrentTarget.char) then
                     local head = CurrentTarget.char:FindFirstChild("Head")
@@ -537,15 +599,14 @@ if fireRemote and hookmetamethod and getnamecallmethod then
                         end
                     end
                 end
-                task.wait(0.1)  -- Small delay to prevent infinite loops
+                task.wait(0.1)
                 isFiring = false
             end)
         end
 
         return oldNamecall(self, unpack(args))
     end)
-
-    print("✅ Double Fire hook installed successfully.")
+    print("✅ Double Fire hook installed.")
 else
-    warn("⚠️ Double Fire hook not installed: missing remote or exploit support.")
+    warn("⚠️ Double Fire hook not available.")
 end
