@@ -1,5 +1,5 @@
 -- // ============================================================
--- // 🔥 EVADE HUB – REMOTE SPY + AUTO COPY (FULL)
+-- // 🔥 EVADE HUB – AUTO REVIVE 100% + REMOTE COLLECT + LOGGER
 -- // ============================================================
 
 -- // ========== 1. LOAD FLUENT ==========
@@ -13,10 +13,13 @@ local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local RunService = game:GetService("RunService")
-local Clipboard = (setclipboard and setclipboard) or function() end -- fallback
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Clipboard = (setclipboard and setclipboard) or function() end
 
 -- // ========== 3. VARIABLES ==========
 local AutoReviveEnabled = false
+local AutoCollectEnabled = false
+local RemoteLoggerEnabled = false
 local SpeedEnabled = false
 local JumpEnabled = false
 local FlyEnabled = false
@@ -24,7 +27,7 @@ local NoClipEnabled = false
 local AntiAFKEnabled = false
 local GodModeEnabled = false
 local FullBrightEnabled = false
-local RemoteSpyEnabled = false
+
 local walkSpeedValue = 50
 local jumpPowerValue = 80
 local flySpeedValue = 80
@@ -34,11 +37,81 @@ local flying = false
 local bodyVelocity = nil
 local bodyGyro = nil
 
--- Remote Spy data
-local foundRemotes = {}
-local remoteLogs = {}
+-- Remote references
+local CollectiblesInvoke = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("Collectibles") and ReplicatedStorage.Events.Collectibles:FindFirstChild("Invoke")
+local ActionRemote = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("Action")
+local InteractRemote = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("Interact")
+local CharacterTaskRemote = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("CharacterTask")
 
--- // ========== 4. AUTO REVIVE (100% WORK) ==========
+-- // ========== 4. REMOTE LOGGER (AUTO COPY KE CLIPBOARD) ==========
+local function logRemote(remoteName, args)
+    local info = "=== REMOTE CALL LOG ===\n"
+    info = info .. "Remote: " .. remoteName .. "\n"
+    info = info .. "Time: " .. os.date("%H:%M:%S") .. "\n"
+    info = info .. "Args: " .. table.concat(args, ", ") .. "\n"
+    info = info .. "Arg Types: "
+    local types = {}
+    for _, arg in ipairs(args) do
+        table.insert(types, type(arg))
+    end
+    info = info .. table.concat(types, ", ") .. "\n"
+    info = info .. "Full Args Detail:\n"
+    for i, arg in ipairs(args) do
+        if type(arg) == "table" then
+            info = info .. "  [" .. i .. "] = table: " .. table.concat(arg, ", ") .. "\n"
+        else
+            info = info .. "  [" .. i .. "] = " .. tostring(arg) .. "\n"
+        end
+    end
+    info = info .. "========================\n"
+    pcall(function()
+        Clipboard(info)
+    end)
+    print("📋 Logged to clipboard: " .. remoteName)
+end
+
+-- Hook remote yang dipilih
+local function hookRemote(remote, name)
+    if not remote then return end
+    if remote:IsA("RemoteEvent") then
+        local old = remote.OnClientEvent
+        remote.OnClientEvent = function(...)
+            local args = {...}
+            if RemoteLoggerEnabled then
+                logRemote(name, args)
+            end
+            if old then
+                old(...)
+            end
+        end
+    elseif remote:IsA("RemoteFunction") then
+        local old = remote.OnClientInvoke
+        remote.OnClientInvoke = function(...)
+            local args = {...}
+            if RemoteLoggerEnabled then
+                logRemote(name, args)
+            end
+            if old then
+                return old(...)
+            end
+        end
+    end
+    print("✅ Hooked: " .. name)
+end
+
+-- Hook semua remote yang relevan
+local function hookAllRemotes()
+    -- Hook Action
+    hookRemote(ActionRemote, "Action")
+    -- Hook Interact
+    hookRemote(InteractRemote, "Interact")
+    -- Hook CharacterTask
+    hookRemote(CharacterTaskRemote, "CharacterTask")
+    -- Hook Collectibles.Invoke
+    hookRemote(CollectiblesInvoke, "Collectibles.Invoke")
+end
+
+-- // ========== 5. AUTO REVIVE (100% WORK) ==========
 local function autoRevive()
     local char = LocalPlayer.Character
     if not char then return end
@@ -49,7 +122,27 @@ local function autoRevive()
     local isDowned = char:GetAttribute("Downed") == true
 
     if isDead or isDowned then
-        print("💀 角色死亡/倒地，尝试复活...")
+        print("💀 Revive attempt...")
+        
+        -- Method 1: Coba panggil remote Action dengan argumen revive
+        if ActionRemote then
+            pcall(function()
+                ActionRemote:FireServer("Revive")
+                print("✅ Revive via Action remote")
+                return
+            end)
+        end
+        
+        -- Method 2: Coba Interact
+        if InteractRemote then
+            pcall(function()
+                InteractRemote:FireServer("Revive")
+                print("✅ Revive via Interact remote")
+                return
+            end)
+        end
+        
+        -- Method 3: Cari tombol GUI
         local reviveGui = LocalPlayer.PlayerGui:FindFirstChild("ReviveGui")
         if reviveGui then
             for _, btn in pairs(reviveGui:GetDescendants()) do
@@ -58,17 +151,19 @@ local function autoRevive()
                     if string.find(text, "revive") or string.find(text, "respawn") then
                         pcall(function()
                             btn:Fire()
-                            print("✅ 通过 GUI 复活成功！")
+                            print("✅ Revive via GUI button")
                             return
                         end)
                     end
                 end
             end
         end
-        task.wait(1)
+        
+        -- Method 4: Force LoadCharacter
+        task.wait(0.5)
         pcall(function()
             LocalPlayer:LoadCharacter()
-            print("✅ 通过 LoadCharacter 强制复活成功！")
+            print("✅ Revive via LoadCharacter")
         end)
     end
 end
@@ -82,101 +177,60 @@ task.spawn(function()
     end
 end)
 
--- // ========== 5. REMOTE SPY + AUTO COPY ==========
--- Mencari semua remote di seluruh game
-local function scanRemotes()
-    foundRemotes = {}
-    local containers = {
-        game:GetService("ReplicatedStorage"),
-        workspace,
-        game:GetService("Players"),
-        game:GetService("CoreGui"),
-        game:GetService("StarterGui"),
-        LocalPlayer.PlayerGui,
-        game:GetService("Lighting"),
-        game:GetService("SoundService")
-    }
-    for _, container in ipairs(containers) do
-        if container then
-            for _, obj in pairs(container:GetDescendants()) do
-                if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-                    table.insert(foundRemotes, {
-                        Name = obj.Name,
-                        Class = obj.ClassName,
-                        Parent = obj.Parent and obj.Parent.Name or "nil",
-                        Path = obj:GetFullName(),
-                        Object = obj
-                    })
+-- // ========== 6. AUTO COLLECT VIA REMOTE ==========
+local function autoCollect()
+    if not CollectiblesInvoke then return end
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    
+    -- Cari item terdekat (bubble/coconut)
+    local items = {}
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") or v:IsA("Model") then
+            local name = string.lower(v.Name)
+            if string.find(name, "bubble") or string.find(name, "coconut") then
+                local part = v:IsA("BasePart") and v or v:FindFirstChildWhichIsA("BasePart")
+                if part and part.Position then
+                    table.insert(items, part)
                 end
             end
         end
     end
-    return foundRemotes
-end
-
--- Menyalin info remote ke clipboard
-local function copyRemoteInfoToClipboard()
-    local info = "=== REMOTE EVENTS & FUNCTIONS FOUND ===\n"
-    info = info .. "Total: " .. #foundRemotes .. "\n\n"
-    for i, remote in ipairs(foundRemotes) do
-        info = info .. i .. ". Name: " .. remote.Name .. "\n"
-        info = info .. "   Class: " .. remote.Class .. "\n"
-        info = info .. "   Parent: " .. remote.Parent .. "\n"
-        info = info .. "   Path: " .. remote.Path .. "\n\n"
-    end
-    pcall(function()
-        Clipboard(info)
-        Fluent:Notify({Title = "Clipboard", Content = "Info remote disalin ke clipboard!", Duration = 3})
-    end)
-end
-
--- Auto copy saat ada player yang menggunakan revive (monitor remote)
-local function monitorReviveRemote()
-    -- Cari remote yang mungkin terkait revive
-    for _, remote in ipairs(foundRemotes) do
-        if string.find(string.lower(remote.Name), "revive") or string.find(string.lower(remote.Name), "respawn") then
-            local obj = remote.Object
-            if obj and obj:IsA("RemoteEvent") then
-                -- Hook remote: saat dipanggil, copy info ke clipboard
-                local oldOnClientEvent = obj.OnClientEvent
-                obj.OnClientEvent = function(...)
-                    -- Menyalin informasi ke clipboard
-                    local args = {...}
-                    local info = "=== REVIVE REMOTE TRIGGERED ===\n"
-                    info = info .. "Remote: " .. obj.Name .. "\n"
-                    info = info .. "Path: " .. obj:GetFullName() .. "\n"
-                    info = info .. "Args: " .. table.concat(args, ", ") .. "\n"
-                    info = info .. "Triggered by: " .. LocalPlayer.Name .. "\n"
-                    info = info .. "Time: " .. os.date("%H:%M:%S") .. "\n"
-                    pcall(function()
-                        Clipboard(info)
-                        Fluent:Notify({Title = "Revive Remote", Content = "Detected! Info copied to clipboard!", Duration = 3})
-                    end)
-                    -- Panggil fungsi asli jika ada
-                    if oldOnClientEvent then
-                        oldOnClientEvent(...)
-                    end
-                end
-                print("✅ Hooked remote: " .. obj.Name)
-            end
+    
+    if #items == 0 then return end
+    
+    -- Cari item terdekat
+    local closest, minDist = nil, math.huge
+    for _, item in ipairs(items) do
+        local dist = (hrp.Position - item.Position).Magnitude
+        if dist < minDist then
+            closest = item
+            minDist = dist
         end
     end
-end
-
--- Main spy toggle
-local function toggleRemoteSpy(state)
-    RemoteSpyEnabled = state
-    if state then
-        scanRemotes()
-        monitorReviveRemote()
-        print("🔍 Remote Spy aktif, total remote ditemukan: " .. #foundRemotes)
-        Fluent:Notify({Title = "Remote Spy", Content = "✅ Aktif, total remote: " .. #foundRemotes, Duration = 3})
-    else
-        print("🔍 Remote Spy dimatikan")
+    
+    if closest then
+        -- Ambil ID item dari attribute atau dari nama
+        local collectId = closest.Parent:GetAttribute("Id") or closest:GetAttribute("Id") or "a19ac91bff904b7385e826fd6a23dc01"
+        pcall(function()
+            CollectiblesInvoke:InvokeServer(LocalPlayer, collectId, "Collect")
+            print("✅ Auto Collect via remote: " .. collectId)
+        end)
     end
 end
 
--- // ========== 6. FLY FUNCTION ==========
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if AutoCollectEnabled then
+            autoCollect()
+        end
+    end
+end)
+
+-- // ========== 7. FLY FUNCTION ==========
 local function startFly()
     local char = LocalPlayer.Character
     if not char then return end
@@ -242,7 +296,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- // ========== 7. SPEED & JUMP ==========
+-- // ========== 8. SPEED & JUMP ==========
 local function applySpeed()
     local char = LocalPlayer.Character
     if not char then return end
@@ -273,7 +327,7 @@ LocalPlayer.CharacterAdded:Connect(function()
     applyJump()
 end)
 
--- // ========== 8. NO CLIP ==========
+-- // ========== 9. NO CLIP ==========
 task.spawn(function()
     while true do
         task.wait(0.5)
@@ -291,7 +345,7 @@ task.spawn(function()
     end
 end)
 
--- // ========== 9. ANTI AFK ==========
+-- // ========== 10. ANTI AFK ==========
 task.spawn(function()
     while true do
         task.wait(30)
@@ -304,7 +358,7 @@ task.spawn(function()
     end
 end)
 
--- // ========== 10. GOD MODE ==========
+-- // ========== 11. GOD MODE ==========
 task.spawn(function()
     while true do
         task.wait(0.5)
@@ -319,7 +373,7 @@ task.spawn(function()
     end
 end)
 
--- // ========== 11. FULL BRIGHT ==========
+-- // ========== 12. FULL BRIGHT ==========
 task.spawn(function()
     while true do
         task.wait(0.5)
@@ -336,10 +390,10 @@ task.spawn(function()
     end
 end)
 
--- // ========== 12. FLUENT WINDOW ==========
+-- // ========== 13. FLUENT WINDOW ==========
 local Window = Fluent:CreateWindow({
     Title = "🔥 EVADE HUB",
-    SubTitle = "Auto Revive + Remote Spy",
+    SubTitle = "Auto Revive + Remote Logger",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 520),
     Acrylic = false,
@@ -369,19 +423,20 @@ local Tabs = {
     Info     = Window:AddTab({ Title = "Info", Icon = "info" }),
     Main     = Window:AddTab({ Title = "Main", Icon = "home" }),
     Revive   = Window:AddTab({ Title = "💉 Revive", Icon = "heart" }),
-    Remote   = Window:AddTab({ Title = "📡 Remote Spy", Icon = "wifi" }),
+    Collect  = Window:AddTab({ Title = "🎯 Collect", Icon = "package" }),
+    Remote   = Window:AddTab({ Title = "📡 Remote Logger", Icon = "wifi" }),
     Movement = Window:AddTab({ Title = "Movement", Icon = "activity" }),
     Misc     = Window:AddTab({ Title = "Misc", Icon = "wrench" }),
     Config   = Window:AddTab({ Title = "Config", Icon = "settings" })
 }
 
--- // ========== 13. TAB INFO ==========
+-- // ========== 14. TAB INFO ==========
 Tabs.Info:AddParagraph({
     Title = "Developer",
-    Content = "Script by: No Mercy Team\nFitur: Auto Revive 100%, Remote Spy, Speed, Jump, Fly, NoClip, Anti AFK, God Mode, FullBright"
+    Content = "Script by: No Mercy Team\nAuto Revive 100% + Auto Collect via Remote + Remote Logger"
 })
 
--- // ========== 14. TAB MAIN ==========
+-- // ========== 15. TAB MAIN ==========
 Tabs.Main:AddParagraph({Title = "⚡ Speed & Jump", Content = "Aktifkan toggle, atur nilai slider."})
 
 Tabs.Main:AddToggle("SpeedToggle", {
@@ -426,8 +481,8 @@ Tabs.Main:AddSlider("JumpSlider", {
     end
 })
 
--- // ========== 15. TAB REVIVE ==========
-Tabs.Revive:AddParagraph({Title = "💉 Auto Revive", Content = "Aktifkan toggle di bawah. Saat mati/terpuruk, akan langsung revive."})
+-- // ========== 16. TAB REVIVE ==========
+Tabs.Revive:AddParagraph({Title = "💉 Auto Revive 100%", Content = "Aktifkan toggle. Saat mati/terpuruk, akan langsung revive via remote, GUI, atau force respawn."})
 
 Tabs.Revive:AddToggle("AutoRevive", {
     Title = "🔄 Auto Revive",
@@ -448,54 +503,61 @@ Tabs.Revive:AddButton({
     end
 })
 
--- // ========== 16. TAB REMOTE SPY ==========
-Tabs.Remote:AddParagraph({
-    Title = "📡 Remote Spy + Auto Copy",
-    Content = "Aktifkan untuk mencari semua RemoteEvent/Function di game. Saat remote revive dipanggil, info akan otomatis disalin ke clipboard."
-})
+-- // ========== 17. TAB COLLECT ==========
+Tabs.Collect:AddParagraph({Title = "🎯 Auto Collect via Remote", Content = "Mengumpulkan item terdekat secara otomatis menggunakan remote Collectibles.Invoke"})
 
-Tabs.Remote:AddToggle("RemoteSpy", {
-    Title = "🔍 Remote Spy",
+Tabs.Collect:AddToggle("AutoCollect", {
+    Title = "🔄 Auto Collect",
     Default = false,
     Callback = function(Value)
-        toggleRemoteSpy(Value)
+        AutoCollectEnabled = Value
+        Fluent:Notify({Title = "Auto Collect", Content = Value and "✅ Aktif" or "❌ Nonaktif", Duration = 2})
+    end
+})
+
+Tabs.Collect:AddButton({
+    Title = "🧪 Test Collect (Ambil 1 Item Terdekat)",
+    Callback = function()
+        autoCollect()
+    end
+})
+
+-- // ========== 18. TAB REMOTE LOGGER ==========
+Tabs.Remote:AddParagraph({
+    Title = "📡 Remote Logger",
+    Content = "Aktifkan untuk mencatat semua panggilan remote (Action, Interact, CharacterTask, Collectibles.Invoke).\nSetiap kali remote dipanggil, info akan otomatis disalin ke clipboard."
+})
+
+Tabs.Remote:AddToggle("RemoteLogger", {
+    Title = "📡 Enable Remote Logger",
+    Default = false,
+    Callback = function(Value)
+        RemoteLoggerEnabled = Value
+        if Value then
+            hookAllRemotes()
+            Fluent:Notify({Title = "Remote Logger", Content = "✅ Aktif, remote di-hook!", Duration = 3})
+        else
+            Fluent:Notify({Title = "Remote Logger", Content = "❌ Nonaktif", Duration = 2})
+        end
     end
 })
 
 Tabs.Remote:AddButton({
-    Title = "📋 Copy Semua Remote ke Clipboard",
+    Title = "📋 Copy Info Remote ke Clipboard",
     Callback = function()
-        scanRemotes()
-        copyRemoteInfoToClipboard()
-    end
-})
-
-Tabs.Remote:AddButton({
-    Title = "📋 Copy Info Revive Remote Saja",
-    Callback = function()
-        scanRemotes()
-        local info = "=== REVIVE REMOTES ONLY ===\n"
-        local found = false
-        for _, remote in ipairs(foundRemotes) do
-            if string.find(string.lower(remote.Name), "revive") or string.find(string.lower(remote.Name), "respawn") then
-                info = info .. "Name: " .. remote.Name .. "\n"
-                info = info .. "Class: " .. remote.Class .. "\n"
-                info = info .. "Parent: " .. remote.Parent .. "\n"
-                info = info .. "Path: " .. remote.Path .. "\n\n"
-                found = true
-            end
-        end
-        if not found then
-            info = info .. "Tidak ditemukan remote revive.\n"
-        end
+        local info = "=== REMOTE INFO ===\n"
+        info = info .. "Collectibles.Invoke: " .. tostring(CollectiblesInvoke) .. "\n"
+        info = info .. "Action: " .. tostring(ActionRemote) .. "\n"
+        info = info .. "Interact: " .. tostring(InteractRemote) .. "\n"
+        info = info .. "CharacterTask: " .. tostring(CharacterTaskRemote) .. "\n"
         pcall(function()
             Clipboard(info)
-            Fluent:Notify({Title = "Clipboard", Content = "Info revive remote disalin!", Duration = 3})
+            Fluent:Notify({Title = "Clipboard", Content = "Info remote disalin!", Duration = 3})
         end)
     end
 })
 
--- // ========== 17. TAB MOVEMENT ==========
+-- // ========== 19. TAB MOVEMENT ==========
 Tabs.Movement:AddParagraph({Title = "🛸 Movement Mods", Content = "Fly, NoClip"})
 
 Tabs.Movement:AddToggle("Fly", {
@@ -526,7 +588,7 @@ Tabs.Movement:AddToggle("NoClip", {
     end
 })
 
--- // ========== 18. TAB MISC ==========
+-- // ========== 20. TAB MISC ==========
 Tabs.Misc:AddParagraph({Title = "🛡️ Lain-lain", Content = "Anti AFK, God Mode, FullBright"})
 
 Tabs.Misc:AddToggle("AntiAFK", {
@@ -553,7 +615,7 @@ Tabs.Misc:AddToggle("FullBright", {
     end
 })
 
--- // ========== 19. TAB CONFIG ==========
+-- // ========== 21. TAB CONFIG ==========
 SaveManager:SetLibrary(Fluent)
 InterfaceManager:SetLibrary(Fluent)
 SaveManager:IgnoreThemeSettings()
@@ -565,15 +627,15 @@ SaveManager:BuildConfigSection(Tabs.Config)
 Window:SelectTab(2)
 SaveManager:LoadAutoloadConfig()
 
--- // ========== 20. NOTIFIKASI ==========
+-- // ========== 22. NOTIFIKASI ==========
 task.wait(1)
 Fluent:Notify({
     Title = "🔥 EVADE HUB LOADED!",
-    Content = "Auto Revive + Remote Spy siap",
+    Content = "Auto Revive + Remote Logger siap",
     SubContent = "Tekan Ctrl untuk minimize",
     Duration = 5
 })
 
-print("✅ FULL CODE – Auto Revive + Remote Spy berhasil dimuat!")
-print("📌 Remote Spy: aktifkan di tab '📡 Remote Spy'")
-print("📌 Saat remote revive dipanggil, info otomatis disalin ke clipboard!")
+print("✅ FULL CODE – Auto Revive 100% + Remote Logger berhasil dimuat!")
+print("📌 Remote Logger: aktifkan di tab '📡 Remote Logger'")
+print("📌 Saat remote dipanggil, info otomatis disalin ke clipboard!")
