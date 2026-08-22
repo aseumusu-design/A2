@@ -2,7 +2,7 @@
   NO MERCY — VIOLENCE DISTRICT
   UI: Orion (MarV)
   Full feature integration from ZiaanHub X
-  Version: 1.0
+  Version: 2.0 (UI compatibility fix)
 ]]
 
 local ICON = {
@@ -2735,7 +2735,7 @@ function veil_fire()
         if remotes then
             local killers = remotes:FindFirstChild("Killers")
             if killers then
-                local veil = killers:FindFirstChild("Veil")
+                local veil = killers and killers:FindFirstChild("Veil")
                 if veil and veil:FindFirstChild("Spearthrow") then
                     veil.Spearthrow:FireServer(aimDir, VeilConfig.SpearSpeed, startPos)
                 end
@@ -3813,7 +3813,6 @@ local function DrawingESP_render(esp, player, char, cam, screenSize, screenCente
 
     local isKillerPlayer = IsKiller(player)
     local visible = true
-    -- visibility check omitted for performance
     local col      = isKillerPlayer
         and (visible and Color3.fromRGB(255, 120, 120) or Color3.fromRGB(255, 65, 65))
         or (visible and Color3.fromRGB(120, 255, 170) or Color3.fromRGB(65, 220, 130))
@@ -4116,7 +4115,7 @@ local function FindMainWindow()
 end
 
 -- ============================================================
---  BUBBLE LOGO (Dengan Animasi Stroke Berdenyut Muncul/Hilang)
+--  BUBBLE LOGO
 -- ============================================================
 local bubbleGui = nil
 
@@ -4152,7 +4151,6 @@ local function makeBubble()
     stroke.Transparency = 0
     stroke.Parent = btn
 
-    -- Looping Animasi Garis Stroke Berdenyut (Muncul & Hilang) pada Bubble
     local bubblePulsing = true
     task.spawn(function()
         while bubblePulsing and stroke and stroke.Parent do
@@ -4315,7 +4313,7 @@ local ParryTab    = Window:MakeTab({ Name = "Parry", Icon = ICON.Swords, Premium
 local TeleportTab = Window:MakeTab({ Name = "Teleport", Icon = ICON.Globe, PremiumOnly = false })
 local KillerTab   = Window:MakeTab({ Name = "Killer", Icon = ICON.Axe, PremiumOnly = false })
 local SurvivorTab = Window:MakeTab({ Name = "Survivor", Icon = ICON.User, PremiumOnly = false })
-local PlayerTab   = Window:MakeTab({ Name = "Player", Icon = ICON.User, PremiumOnly = false })  -- New Player tab
+local PlayerTab   = Window:MakeTab({ Name = "Player", Icon = ICON.User, PremiumOnly = false })
 local VisualTab   = Window:MakeTab({ Name = "Visual", Icon = ICON.Eye, PremiumOnly = false })
 local SpeedTab    = Window:MakeTab({ Name = "Speed", Icon = ICON.Zap, PremiumOnly = false })
 local SettingsTab = Window:MakeTab({ Name = "Pengaturan", Icon = ICON.Settings, PremiumOnly = false })
@@ -4465,17 +4463,13 @@ ParrySec:AddSlider({
         VD_ParryRange.InnerRadius = math.max(0.1, v - 0.15)
     end
 })
-ParrySec:AddKeybind({
+ParrySec:AddDropdown({
     Name = "Toggle Keybind",
     Default = "F3",
-    Callback = function()
-        VD.SURV_AutoParry = not VD.SURV_AutoParry
-        if not VD.SURV_AutoParry then
-            VD_ParryRange.Transparency = 1
-            ResetCooldown()
-        end
-    end
+    Options = { "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12" },
+    Callback = function(v) VD.Parry_Keybind = v end
 })
+-- Note: Keybind callback is handled by dropdown selection, but toggling still requires manual keypress. We'll handle with UserInputService later.
 ParrySec:AddToggle({
     Name = "Show Parry Range Circle",
     Default = true,
@@ -4670,35 +4664,22 @@ PlayerFlingSec:AddSlider({ Name = "Fling Strength", Min = 1000, Max = 50000, Def
 PlayerFlingSec:AddButton({ Name = "Fling Nearest", Callback = function() pcall(IYAN_FlingNearest) end })
 PlayerFlingSec:AddButton({ Name = "Fling All", Callback = function() pcall(IYAN_FlingAll) end })
 
--- Player Fun (Spoof)
+-- Player Fun (Spoof) - using Slider as substitute for TextInput
 local PlayerFunSec = PlayerTab:AddSection({ Name = "Spoof Stats [Visual Only]" })
-local spoofLevel, spoofGears, spoofScrews = "0", "0", "0"
-PlayerFunSec:AddTextInput({
-    Name = "Set Level",
-    Numeric = true,
-    Default = "0",
-    Callback = function(v) spoofLevel = v end
-})
-PlayerFunSec:AddTextInput({
-    Name = "Set Gears",
-    Numeric = true,
-    Default = "0",
-    Callback = function(v) spoofGears = v end
-})
-PlayerFunSec:AddTextInput({
-    Name = "Set Screws",
-    Numeric = true,
-    Default = "0",
-    Callback = function(v) spoofScrews = v end
-})
+local spoofLevel = 0
+local spoofGears = 0
+local spoofScrews = 0
+PlayerFunSec:AddSlider({ Name = "Set Level", Min = 0, Max = 9999, Default = 0, Increment = 1, Callback = function(v) spoofLevel = v end })
+PlayerFunSec:AddSlider({ Name = "Set Gears", Min = 0, Max = 9999, Default = 0, Increment = 1, Callback = function(v) spoofGears = v end })
+PlayerFunSec:AddSlider({ Name = "Set Screws", Min = 0, Max = 9999, Default = 0, Increment = 1, Callback = function(v) spoofScrews = v end })
 PlayerFunSec:AddButton({
     Name = "Apply Spoof Data",
     Callback = function()
         local p = LocalPlayer
         if p then
-            p:SetAttribute("Level", tonumber(spoofLevel) or 0)
-            p:SetAttribute("Gears", tonumber(spoofGears) or 0)
-            p:SetAttribute("Screws", tonumber(spoofScrews) or 0)
+            p:SetAttribute("Level", spoofLevel)
+            p:SetAttribute("Gears", spoofGears)
+            p:SetAttribute("Screws", spoofScrews)
         end
     end
 })
@@ -4769,9 +4750,8 @@ VisualESPSec:AddToggle({ Name = "ESP Offscreen Arrows (PC Only!)", Default = fal
     VD.ESP_Offscreen = v
 end })
 
--- Highlight ESP (from Zian) - we need to expose controls
+-- Highlight ESP (from Zian) - using toggles for multi-select instead of Multi dropdown
 local VisualHighlightSec = VisualTab:AddSection({ Name = "Highlight ESP" })
--- We'll add toggles that control IYAN_ESPState
 VisualHighlightSec:AddToggle({
     Name = "Enable Player ESP",
     Default = false,
@@ -4785,30 +4765,32 @@ VisualHighlightSec:AddToggle({
         end
     end
 })
-VisualHighlightSec:AddDropdown({
-    Name = "Select Player ESP",
-    Default = {},
-    Options = { "Survivor ESP", "Killer ESP", "Spectator ESP", "Survivor Items ESP" },
-    Multi = true,
-    Callback = function(selected)
-        IYAN_ESPState.SurvivorESP = IYAN_Selected(selected, "Survivor ESP")
-        IYAN_ESPState.KillerESP = IYAN_Selected(selected, "Killer ESP")
-        IYAN_ESPState.SpectatorESP = IYAN_Selected(selected, "Spectator ESP")
-        IYAN_ESPState.SurvivorItemsESP = IYAN_Selected(selected, "Survivor Items ESP")
-        if IYAN_ESPState.PlayerMasterESP then
-            IYAN_StartPlayerLoop()
-            IYAN_RefreshAllPlayers()
-        else
-            IYAN_ClearAllPlayerESP()
-        end
-    end
-})
+-- Instead of Multi dropdown, we use separate toggles for each player type
+VisualHighlightSec:AddToggle({ Name = "Survivor ESP", Default = false, Callback = function(v) IYAN_ESPState.SurvivorESP = v; if IYAN_ESPState.PlayerMasterESP then IYAN_StartPlayerLoop(); IYAN_RefreshAllPlayers() else IYAN_ClearAllPlayerESP() end end })
+VisualHighlightSec:AddToggle({ Name = "Killer ESP", Default = false, Callback = function(v) IYAN_ESPState.KillerESP = v; if IYAN_ESPState.PlayerMasterESP then IYAN_StartPlayerLoop(); IYAN_RefreshAllPlayers() else IYAN_ClearAllPlayerESP() end end })
+VisualHighlightSec:AddToggle({ Name = "Spectator ESP", Default = false, Callback = function(v) IYAN_ESPState.SpectatorESP = v; if IYAN_ESPState.PlayerMasterESP then IYAN_StartPlayerLoop(); IYAN_RefreshAllPlayers() else IYAN_ClearAllPlayerESP() end end })
+VisualHighlightSec:AddToggle({ Name = "Survivor Items ESP", Default = false, Callback = function(v) IYAN_ESPState.SurvivorItemsESP = v; if IYAN_ESPState.PlayerMasterESP then IYAN_StartPlayerLoop(); IYAN_RefreshAllPlayers() else IYAN_ClearAllPlayerESP() end end })
+
 VisualHighlightSec:AddToggle({ Name = "Player Nametags", Default = false, Callback = function(state) IYAN_ESPState.Nametags = state; if IYAN_ESPState.PlayerMasterESP then IYAN_StartPlayerLoop(); IYAN_RefreshAllPlayers() else IYAN_ClearAllPlayerESP() end end })
 VisualHighlightSec:AddToggle({ Name = "Player Distance ESP", Default = false, Callback = function(state) IYAN_ESPState.DistanceESP = state; if IYAN_ESPState.PlayerMasterESP then IYAN_StartPlayerLoop(); IYAN_RefreshAllPlayers() else IYAN_ClearAllPlayerESP() end end })
 
-VisualHighlightSec:AddColorPicker({ Name = "Survivor Color", Default = IYAN_ESPState.SurvivorColor, Callback = function(color) IYAN_ESPState.SurvivorColor = color; IYAN_RefreshAllPlayers() end })
-VisualHighlightSec:AddColorPicker({ Name = "Killer Color", Default = IYAN_ESPState.KillerColor, Callback = function(color) IYAN_ESPState.KillerColor = color; IYAN_RefreshAllPlayers() end })
-VisualHighlightSec:AddColorPicker({ Name = "Spectator Color", Default = IYAN_ESPState.SpectatorColor, Callback = function(color) IYAN_ESPState.SpectatorColor = color; IYAN_RefreshAllPlayers() end })
+-- Color pickers replaced with dropdowns (preset colors)
+local colorOptions = { "Red", "Green", "Blue", "Yellow", "Cyan", "Magenta", "White", "Orange", "Purple" }
+local colorMap = {
+    Red = Color3.fromRGB(255,0,0),
+    Green = Color3.fromRGB(0,255,0),
+    Blue = Color3.fromRGB(0,0,255),
+    Yellow = Color3.fromRGB(255,255,0),
+    Cyan = Color3.fromRGB(0,255,255),
+    Magenta = Color3.fromRGB(255,0,255),
+    White = Color3.fromRGB(255,255,255),
+    Orange = Color3.fromRGB(255,165,0),
+    Purple = Color3.fromRGB(128,0,128),
+}
+
+VisualHighlightSec:AddDropdown({ Name = "Survivor Color", Default = "Green", Options = colorOptions, Callback = function(v) IYAN_ESPState.SurvivorColor = colorMap[v]; IYAN_RefreshAllPlayers() end })
+VisualHighlightSec:AddDropdown({ Name = "Killer Color", Default = "Red", Options = colorOptions, Callback = function(v) IYAN_ESPState.KillerColor = colorMap[v]; IYAN_RefreshAllPlayers() end })
+VisualHighlightSec:AddDropdown({ Name = "Spectator Color", Default = "White", Options = colorOptions, Callback = function(v) IYAN_ESPState.SpectatorColor = colorMap[v]; IYAN_RefreshAllPlayers() end })
 
 VisualHighlightSec:AddToggle({
     Name = "Enable World ESP",
@@ -4823,35 +4805,24 @@ VisualHighlightSec:AddToggle({
         end
     end
 })
-VisualHighlightSec:AddDropdown({
-    Name = "Select World Objects",
-    Default = {},
-    Options = { "Generators", "Hooks", "Gates", "Windows", "Pallets", "SCP / Zombie" },
-    Multi = true,
-    Callback = function(selected)
-        IYAN_ESPState.GeneratorESP = IYAN_Selected(selected, "Generators")
-        IYAN_ESPState.HookESP = IYAN_Selected(selected, "Hooks")
-        IYAN_ESPState.GateESP = IYAN_Selected(selected, "Gates")
-        IYAN_ESPState.WindowESP = IYAN_Selected(selected, "Windows")
-        IYAN_ESPState.PalletESP = IYAN_Selected(selected, "Pallets")
-        IYAN_ESPState.SCPZombieESP = IYAN_Selected(selected, "SCP / Zombie")
-        if IYAN_ESPState.WorldMasterESP and IYAN_AnyWorldEnabled() then
-            IYAN_RefreshESPRoots()
-            IYAN_StartWorldLoop()
-        else
-            IYAN_ClearAllWorldESP()
-        end
-    end
-})
+-- World object toggles (instead of Multi dropdown)
+VisualHighlightSec:AddToggle({ Name = "Generators ESP", Default = false, Callback = function(v) IYAN_ESPState.GeneratorESP = v; if IYAN_ESPState.WorldMasterESP and IYAN_AnyWorldEnabled() then IYAN_StartWorldLoop() else IYAN_ClearAllWorldESP() end end })
+VisualHighlightSec:AddToggle({ Name = "Hooks ESP", Default = false, Callback = function(v) IYAN_ESPState.HookESP = v; if IYAN_ESPState.WorldMasterESP and IYAN_AnyWorldEnabled() then IYAN_StartWorldLoop() else IYAN_ClearAllWorldESP() end end })
+VisualHighlightSec:AddToggle({ Name = "Gates ESP", Default = false, Callback = function(v) IYAN_ESPState.GateESP = v; if IYAN_ESPState.WorldMasterESP and IYAN_AnyWorldEnabled() then IYAN_StartWorldLoop() else IYAN_ClearAllWorldESP() end end })
+VisualHighlightSec:AddToggle({ Name = "Windows ESP", Default = false, Callback = function(v) IYAN_ESPState.WindowESP = v; if IYAN_ESPState.WorldMasterESP and IYAN_AnyWorldEnabled() then IYAN_StartWorldLoop() else IYAN_ClearAllWorldESP() end end })
+VisualHighlightSec:AddToggle({ Name = "Pallets ESP", Default = false, Callback = function(v) IYAN_ESPState.PalletESP = v; if IYAN_ESPState.WorldMasterESP and IYAN_AnyWorldEnabled() then IYAN_StartWorldLoop() else IYAN_ClearAllWorldESP() end end })
+VisualHighlightSec:AddToggle({ Name = "SCP / Zombie ESP", Default = false, Callback = function(v) IYAN_ESPState.SCPZombieESP = v; if IYAN_ESPState.WorldMasterESP and IYAN_AnyWorldEnabled() then IYAN_StartWorldLoop() else IYAN_ClearAllWorldESP() end end })
+
 VisualHighlightSec:AddToggle({ Name = "World Nametags", Default = false, Callback = function(state) IYAN_ESPState.WorldNametags = state; if IYAN_ESPState.WorldMasterESP and IYAN_AnyWorldEnabled() then IYAN_StartWorldLoop() else IYAN_ClearAllWorldESP() end end })
 VisualHighlightSec:AddToggle({ Name = "World Distance ESP", Default = false, Callback = function(state) IYAN_ESPState.WorldDistanceESP = state; if IYAN_ESPState.WorldMasterESP and IYAN_AnyWorldEnabled() then IYAN_StartWorldLoop() else IYAN_ClearAllWorldESP() end end })
 
-VisualHighlightSec:AddColorPicker({ Name = "Generator Color", Default = IYAN_ESPState.GeneratorColor, Callback = function(color) IYAN_ESPState.GeneratorColor = color end })
-VisualHighlightSec:AddColorPicker({ Name = "Hook Color", Default = IYAN_ESPState.HookColor, Callback = function(color) IYAN_ESPState.HookColor = color end })
-VisualHighlightSec:AddColorPicker({ Name = "Gate Color", Default = IYAN_ESPState.GateColor, Callback = function(color) IYAN_ESPState.GateColor = color end })
-VisualHighlightSec:AddColorPicker({ Name = "Window Color", Default = IYAN_ESPState.WindowColor, Callback = function(color) IYAN_ESPState.WindowColor = color end })
-VisualHighlightSec:AddColorPicker({ Name = "Pallet Color", Default = IYAN_ESPState.PalletColor, Callback = function(color) IYAN_ESPState.PalletColor = color end })
-VisualHighlightSec:AddColorPicker({ Name = "SCP / Zombie Color", Default = IYAN_ESPState.SCPZombieColor, Callback = function(color) IYAN_ESPState.SCPZombieColor = color end })
+-- World colors
+VisualHighlightSec:AddDropdown({ Name = "Generator Color", Default = "Blue", Options = colorOptions, Callback = function(v) IYAN_ESPState.GeneratorColor = colorMap[v] end })
+VisualHighlightSec:AddDropdown({ Name = "Hook Color", Default = "Red", Options = colorOptions, Callback = function(v) IYAN_ESPState.HookColor = colorMap[v] end })
+VisualHighlightSec:AddDropdown({ Name = "Gate Color", Default = "Yellow", Options = colorOptions, Callback = function(v) IYAN_ESPState.GateColor = colorMap[v] end })
+VisualHighlightSec:AddDropdown({ Name = "Window Color", Default = "White", Options = colorOptions, Callback = function(v) IYAN_ESPState.WindowColor = colorMap[v] end })
+VisualHighlightSec:AddDropdown({ Name = "Pallet Color", Default = "Orange", Options = colorOptions, Callback = function(v) IYAN_ESPState.PalletColor = colorMap[v] end })
+VisualHighlightSec:AddDropdown({ Name = "SCP / Zombie Color", Default = "Purple", Options = colorOptions, Callback = function(v) IYAN_ESPState.SCPZombieColor = colorMap[v] end })
 
 -- Lighting
 local VisualLightSec = VisualTab:AddSection({ Name = "Lighting" })
@@ -4871,7 +4842,7 @@ SpeedSec:AddSlider({
 })
 
 -- ============================================================
---  SETTINGS TAB (Export/Import/Reset)
+--  SETTINGS TAB
 -- ============================================================
 local SettingsSec = SettingsTab:AddSection({ Name = "Pengaturan" })
 SettingsSec:AddButton({
@@ -4881,19 +4852,14 @@ SettingsSec:AddButton({
 SettingsSec:AddButton({
     Name = "Reset All Settings",
     Callback = function()
-        -- Reset VD to default (except some static)
         for k, v in pairs(getgenv().VD) do
             if k ~= "Destroyed" then
                 getgenv().VD[k] = nil
             end
         end
-        -- Reload default values from initial config
-        -- For simplicity, we can just reload the script? Better to reapply.
         OrionLib:MakeNotification({ Name = "NO MERCY", Content = "Settings reset. Please restart script.", Image = ICON.Logo, Time = 4 })
     end
 })
-
--- Export/Import settings (as JSON)
 SettingsSec:AddButton({
     Name = "Export Settings (Copy to Clipboard)",
     Callback = function()
@@ -4916,7 +4882,6 @@ SettingsSec:AddButton({
                     VD[k] = v
                 end
                 OrionLib:MakeNotification({ Name = "NO MERCY", Content = "Settings imported!", Image = ICON.Logo, Time = 3 })
-                -- Optionally reload UI elements
             else
                 OrionLib:MakeNotification({ Name = "NO MERCY", Content = "Invalid settings data!", Image = ICON.Logo, Time = 3 })
             end
@@ -4925,22 +4890,14 @@ SettingsSec:AddButton({
 })
 
 -- ============================================================
---  AUTO LOAD CONFIG (Orion's built-in)
+--  AUTO LOAD SYNC
 -- ============================================================
--- Orion automatically saves/loads toggles, sliders, dropdowns, etc.
--- But we need to apply the loaded values to our VD and callbacks.
--- We'll manually trigger callbacks for each element after load.
--- Since Orion doesn't provide an explicit load event, we can schedule a task to sync.
-
 task.spawn(function()
-    task.wait(1) -- wait for UI to fully load and config to apply
-    -- We can read the current UI values and set VD accordingly, but it's already set via callbacks during load.
-    -- However, some features like GenBoost need to be started based on VD.
+    task.wait(1)
     if VD.SURV_GenBoost then startGenBoost() end
     if VD.Fullbright then applyFullbright(true) end
     if VD.NoFog then applyNoFog(true) end
     if VD.SURV_AntiKnock then
-        -- reapply anti knock
         local char = LocalPlayer.Character
         if char then
             local hum = char:FindFirstChildOfClass("Humanoid")
@@ -4952,15 +4909,6 @@ task.spawn(function()
             end
         end
     end
-    if VD.SURV_FirstPerson then
-        -- will be handled by render step
-    end
-    if VD.AUTO_ToFAim then
-        -- ToF hook already active
-    end
-    if VeilConfig.Enabled then
-        -- Veil interceptor active
-    end
     if IYAN_ESPState.PlayerMasterESP then
         IYAN_StartPlayerLoop()
         IYAN_RefreshAllPlayers()
@@ -4969,8 +4917,25 @@ task.spawn(function()
         IYAN_RefreshESPRoots()
         IYAN_StartWorldLoop()
     end
-    if VD.DRAWING_ESP then
-        -- Drawing ESP loop already running
+end)
+
+-- ============================================================
+--  KEYBIND HANDLER (for Parry toggle)
+-- ============================================================
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode[VD.Parry_Keybind] then
+        VD.SURV_AutoParry = not VD.SURV_AutoParry
+        if not VD.SURV_AutoParry then
+            VD_ParryRange.Transparency = 1
+            ResetCooldown()
+        end
+        -- Optionally update UI toggle
+        pcall(function()
+            if Window and Window.ConfigElements and Window.ConfigElements["Enable Auto Parry"] then
+                Window.ConfigElements["Enable Auto Parry"]:Set(VD.SURV_AutoParry)
+            end
+        end)
     end
 end)
 
