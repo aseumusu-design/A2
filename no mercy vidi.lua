@@ -1,9 +1,12 @@
 --[[
 =========================================================================
-    NO MERCY HUB V3.5 - 3 MODE AIMBOT + EXTRA FEATURES
-    - FOV Radius: input manual (TextBox) + slider
-    - Invisible Mode (karakter transparan)
-    - Wallhack (target tetap terdeteksi di balik tembok + noclip)
+    NO MERCY HUB V3.5 - FINAL ULTIMATE
+    - Invisible mode (full transparent + accessories)
+    - Auto shoot langsung ke target dalam FOV
+    - Laser radius adjustable
+    - FOV radius with slider & manual input
+    - Wallhack + Noclip
+    - 3 Mode Aimbot (V1, V2, V3)
 =========================================================================
 ]]
 
@@ -47,6 +50,7 @@ local Config = {
     AutoShoot     = true,
     FireDelay     = 0.1,
     LaserEnabled  = true,
+    LaserRadius   = 0.08,       -- ketebalan laser
     FOVCircleOn   = true,
     FOVRadius     = 180,
     DoubleFire    = false,
@@ -66,7 +70,7 @@ LaserPart.CanQuery = false
 LaserPart.CanTouch = false
 LaserPart.Material = Enum.Material.Neon
 LaserPart.Transparency = 1
-LaserPart.Size = Vector3.new(0.08, 0.08, 0.08)
+LaserPart.Size = Vector3.new(Config.LaserRadius, Config.LaserRadius, 0.1)
 LaserPart.Parent = Workspace
 
 -- ==================== VISUAL: SCREEN FOV CIRCLE ====================
@@ -196,7 +200,15 @@ local function applyInvisible(state)
     if not char then return end
     for _, part in ipairs(char:GetDescendants()) do
         if part:IsA("BasePart") then
-            part.Transparency = state and 0.9 or 0  -- 0.9 hampir tidak terlihat
+            part.Transparency = state and 0.99 or 0
+            -- juga handle accessories
+            if part:FindFirstChild("Handle") and part.Handle:IsA("BasePart") then
+                part.Handle.Transparency = state and 0.99 or 0
+            end
+        end
+        -- untuk aksesoris pakaian
+        if part:IsA("Accessory") and part:FindFirstChild("Handle") then
+            part.Handle.Transparency = state and 0.99 or 0
         end
     end
 end
@@ -217,7 +229,7 @@ RunService.RenderStepped:Connect(function()
     FOVFrame.Visible = Config.FOVCircleOn
     FOVFrame.Size = UDim2.new(0, Config.FOVRadius * 2, 0, Config.FOVRadius * 2)
 
-    -- Invisible & Noclip (dijalankan setiap frame agar tetap berlaku)
+    -- Invisible & Noclip
     if Config.Invisible then
         applyInvisible(true)
     else
@@ -234,7 +246,7 @@ RunService.RenderStepped:Connect(function()
         return
     end
 
-    -- Re-check target
+    -- Re-check target validity
     if CurrentTarget then
         local head = CurrentTarget.char:FindFirstChild("Head")
         local origin = Camera.CFrame.Position
@@ -249,10 +261,11 @@ RunService.RenderStepped:Connect(function()
         CurrentTarget = FindBestTarget()
     end
 
+    -- Laser & shooting
     if CurrentTarget then
         local pos = GetPredictPos(CurrentTarget.char)
         if pos then
-            -- Laser
+            -- Update laser with adjustable radius
             if Config.LaserEnabled then
                 local gun = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Twist of Fate")
                 gun = gun and gun:FindFirstChild("Right Arm") and gun["Right Arm"]:FindFirstChild("EmperorGun")
@@ -261,7 +274,7 @@ RunService.RenderStepped:Connect(function()
                 LaserPart.Transparency = 0.25
                 LaserPart.Color = TARGET_COLORS[CurrentTarget.kind] or THEME.White
                 LaserPart.CFrame = CFrame.lookAt(from, pos) * CFrame.new(0, 0, -(pos - from).Magnitude / 2)
-                LaserPart.Size = Vector3.new(0.08, 0.08, (pos - from).Magnitude)
+                LaserPart.Size = Vector3.new(Config.LaserRadius, Config.LaserRadius, (pos - from).Magnitude)
             else
                 LaserPart.Transparency = 1
             end
@@ -271,7 +284,7 @@ RunService.RenderStepped:Connect(function()
                 Camera.CFrame = CFrame.new(Camera.CFrame.Position, pos)
             end
 
-            -- Auto shoot
+            -- Auto shoot (langsung tembak ke target dalam FOV)
             if Config.AutoShoot then
                 FireWeapon(pos)
             end
@@ -294,7 +307,7 @@ Bubble.Draggable = true
 Instance.new("UICorner", Bubble).CornerRadius = UDim.new(1, 0)
 
 local Window = Instance.new("Frame", ScreenGui)
-Window.Size = UDim2.new(0, 500, 0, 500) -- diperbesar untuk fitur baru
+Window.Size = UDim2.new(0, 500, 0, 500)
 Window.Position = UDim2.new(0.5, -250, 0.5, -250)
 Window.BackgroundColor3 = THEME.Bg
 Window.Active = true
@@ -312,7 +325,7 @@ local Title = Instance.new("TextLabel", Header)
 Title.Size = UDim2.new(1, -50, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "NO MERCY HUB V3.5 — 3 MODE + EXTRA"
+Title.Text = "NO MERCY HUB V3.5 — ULTIMATE EDITION"
 Title.TextColor3 = THEME.White
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 13
@@ -574,7 +587,6 @@ local function setMode(mode)
     Config.AimVersion = mode
     if mode == "V3" then
         Config.DoubleFire = true
-        print("V3 selected: Double Fire automatically enabled.")
     end
     btnV1.BackgroundColor3 = (mode == "V1") and THEME.Green or THEME.Panel
     btnV2.BackgroundColor3 = (mode == "V2") and THEME.Green or THEME.Panel
@@ -661,20 +673,25 @@ end
 AddToggle(VisualTab, "Laser Tracer ON/OFF", Config.LaserEnabled, function(v) Config.LaserEnabled = v end)
 AddToggle(VisualTab, "FOV Circle ON/OFF", Config.FOVCircleOn, function(v) Config.FOVCircleOn = v end)
 
--- Slider FOV (tetap ada)
+-- Laser Radius slider
+AddSlider(VisualTab, "Laser Radius", 0.01, 0.5, Config.LaserRadius, function(val)
+    Config.LaserRadius = val
+    LaserPart.Size = Vector3.new(val, val, LaserPart.Size.Z)
+end)
+
+-- FOV Radius slider
 AddSlider(VisualTab, "FOV Radius (slider)", 50, 400, Config.FOVRadius, function(val)
     Config.FOVRadius = val
     FOVFrame.Size = UDim2.new(0, val * 2, 0, val * 2)
 end)
 
--- Input manual FOV
+-- Manual FOV input
 AddTextBox(VisualTab, "FOV Radius (manual)", Config.FOVRadius, function(val)
     Config.FOVRadius = val
     FOVFrame.Size = UDim2.new(0, val * 2, 0, val * 2)
-    print("FOV Radius set to " .. val)
 end, "Apply")
 
-print("✅ NO MERCY HUB V3.5 + EXTRA FEATURES Loaded Successfully!")
+print("✅ NO MERCY HUB ULTIMATE Loaded!")
 
 -- ==================== DOUBLE FIRE SYNC ====================
 local isFiring = false
@@ -713,7 +730,4 @@ if fireRemote and hookmetamethod and getnamecallmethod then
 
         return oldNamecall(self, unpack(args))
     end)
-    print("✅ Double Fire hook installed.")
-else
-    warn("⚠️ Double Fire hook not available.")
 end
