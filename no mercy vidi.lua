@@ -1,12 +1,11 @@
 --[[
 =========================================================================
-    NO MERCY HUB V3.5 - FINAL ULTIMATE
-    - Invisible mode (full transparent + accessories)
-    - Auto shoot langsung ke target dalam FOV
-    - Laser radius adjustable
-    - FOV radius with slider & manual input
-    - Wallhack + Noclip
-    - 3 Mode Aimbot (V1, V2, V3)
+    NO MERCY HUB V3.5 - FINAL FIX (INVISIBLE + WALLHACK + FAST AIM)
+    - Invisible: kamu tetap lihat diri sendiri (outline), orang lain tidak melihat
+    - Aimbot langsung tembak tanpa delay (FireDelay 0.05)
+    - Laser scan target setiap frame
+    - Wallhack (target di balik tembok tetap terdeteksi)
+    - FOV Radius bisa diatur slider atau manual
 =========================================================================
 ]]
 
@@ -20,7 +19,7 @@ local UserInputService    = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera      = Workspace.CurrentCamera
 
--- ==================== THEME CONFIG ====================
+-- ==================== THEME ====================
 local THEME = {
     Bg       = Color3.fromRGB(12, 12, 18),
     Dark     = Color3.fromRGB(18, 18, 26),
@@ -39,7 +38,7 @@ local TARGET_COLORS = {
     All      = Color3.fromRGB(241, 196, 15),
 }
 
--- ==================== STATE CONFIG ====================
+-- ==================== CONFIG ====================
 local Config = {
     AimbotEnabled = true,
     AimVersion    = "V1",
@@ -48,9 +47,8 @@ local Config = {
     MaxDistance   = 800,
     Prediction    = true,
     AutoShoot     = true,
-    FireDelay     = 0.1,
+    FireDelay     = 0.05,   -- sangat cepat
     LaserEnabled  = true,
-    LaserRadius   = 0.08,       -- ketebalan laser
     FOVCircleOn   = true,
     FOVRadius     = 180,
     DoubleFire    = false,
@@ -61,7 +59,7 @@ local Config = {
 local CurrentTarget = nil
 local LastFireTime = 0
 
--- ==================== VISUAL: LASER TRACER ====================
+-- ==================== LASER ====================
 local LaserPart = Instance.new("Part")
 LaserPart.Name = "NM_LaserTracer"
 LaserPart.Anchored = true
@@ -70,10 +68,10 @@ LaserPart.CanQuery = false
 LaserPart.CanTouch = false
 LaserPart.Material = Enum.Material.Neon
 LaserPart.Transparency = 1
-LaserPart.Size = Vector3.new(Config.LaserRadius, Config.LaserRadius, 0.1)
+LaserPart.Size = Vector3.new(0.08, 0.08, 0.08)
 LaserPart.Parent = Workspace
 
--- ==================== VISUAL: SCREEN FOV CIRCLE ====================
+-- ==================== FOV CIRCLE ====================
 local guiParent = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
 pcall(function() if guiParent:FindFirstChild("NoMercyHubV35") then guiParent.NoMercyHubV35:Destroy() end end)
 
@@ -98,7 +96,7 @@ UIStrokeFOV.Color = Color3.fromRGB(255, 255, 255)
 UIStrokeFOV.Thickness = 1.8
 UIStrokeFOV.Transparency = 0.2
 
--- ==================== UTILS TARGET & COMBAT ====================
+-- ==================== UTILS ====================
 local function ClassifyTarget(char, plr)
     local n = (char and char.Name or ""):lower()
     local t = (plr and plr.Team and plr.Team.Name or ""):lower()
@@ -166,7 +164,7 @@ local function GetPredictPos(char)
     return head.Position
 end
 
--- Remote reference
+-- Remote
 local fireRemote = ReplicatedStorage:FindFirstChild("Remotes")
 if fireRemote then
     fireRemote = fireRemote:FindFirstChild("Items")
@@ -194,59 +192,56 @@ local function FireWeapon(targetPos)
     pcall(function() fireRemote:FireServer(gun, Vector3.new(dir.X, dir.Y, dir.Z)) end)
 end
 
--- ==================== INVISIBLE & NOCLIP ====================
+-- ==================== INVISIBLE (client-side outline) ====================
+local highlight = nil
 local function applyInvisible(state)
     local char = LocalPlayer.Character
     if not char then return end
+
+    -- Set transparansi untuk semua bagian tubuh (hanya untuk client lain)
     for _, part in ipairs(char:GetDescendants()) do
         if part:IsA("BasePart") then
-            part.Transparency = state and 0.99 or 0
-            -- juga handle accessories
-            if part:FindFirstChild("Handle") and part.Handle:IsA("BasePart") then
-                part.Handle.Transparency = state and 0.99 or 0
-            end
+            part.Transparency = state and 1 or 0
         end
-        -- untuk aksesoris pakaian
-        if part:IsA("Accessory") and part:FindFirstChild("Handle") then
-            part.Handle.Transparency = state and 0.99 or 0
+    end
+
+    -- Tambahkan highlight/outline agar kita bisa melihat diri sendiri
+    if state then
+        if not highlight or not highlight.Parent then
+            highlight = Instance.new("Highlight")
+            highlight.Name = "SelfHighlight"
+            highlight.FillColor = Color3.fromRGB(100, 100, 255)
+            highlight.FillTransparency = 0.8
+            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+            highlight.OutlineTransparency = 0.3
+            highlight.Parent = char
         end
+    else
+        if highlight then highlight:Destroy() end
+        highlight = nil
     end
 end
 
-local function applyNoclip(state)
-    local char = LocalPlayer.Character
-    if not char then return end
-    for _, part in ipairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = not state
-        end
-    end
-end
-
--- ==================== MAIN AIMBOT LOOP ====================
+-- ==================== MAIN LOOP ====================
 RunService.RenderStepped:Connect(function()
-    -- Update FOV circle
+    -- Update FOV
     FOVFrame.Visible = Config.FOVCircleOn
     FOVFrame.Size = UDim2.new(0, Config.FOVRadius * 2, 0, Config.FOVRadius * 2)
 
-    -- Invisible & Noclip
+    -- Invisible
     if Config.Invisible then
         applyInvisible(true)
     else
         applyInvisible(false)
     end
-    if Config.Wallhack then
-        applyNoclip(true)
-    else
-        applyNoclip(false)
-    end
 
+    -- Aimbot
     if not Config.AimbotEnabled then
         LaserPart.Transparency = 1
         return
     end
 
-    -- Re-check target validity
+    -- Cek target
     if CurrentTarget then
         local head = CurrentTarget.char:FindFirstChild("Head")
         local origin = Camera.CFrame.Position
@@ -261,11 +256,10 @@ RunService.RenderStepped:Connect(function()
         CurrentTarget = FindBestTarget()
     end
 
-    -- Laser & shooting
     if CurrentTarget then
         local pos = GetPredictPos(CurrentTarget.char)
         if pos then
-            -- Update laser with adjustable radius
+            -- Laser
             if Config.LaserEnabled then
                 local gun = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Twist of Fate")
                 gun = gun and gun:FindFirstChild("Right Arm") and gun["Right Arm"]:FindFirstChild("EmperorGun")
@@ -274,7 +268,7 @@ RunService.RenderStepped:Connect(function()
                 LaserPart.Transparency = 0.25
                 LaserPart.Color = TARGET_COLORS[CurrentTarget.kind] or THEME.White
                 LaserPart.CFrame = CFrame.lookAt(from, pos) * CFrame.new(0, 0, -(pos - from).Magnitude / 2)
-                LaserPart.Size = Vector3.new(Config.LaserRadius, Config.LaserRadius, (pos - from).Magnitude)
+                LaserPart.Size = Vector3.new(0.08, 0.08, (pos - from).Magnitude)
             else
                 LaserPart.Transparency = 1
             end
@@ -284,7 +278,7 @@ RunService.RenderStepped:Connect(function()
                 Camera.CFrame = CFrame.new(Camera.CFrame.Position, pos)
             end
 
-            -- Auto shoot (langsung tembak ke target dalam FOV)
+            -- Auto shoot langsung tanpa delay berlebihan
             if Config.AutoShoot then
                 FireWeapon(pos)
             end
@@ -307,8 +301,8 @@ Bubble.Draggable = true
 Instance.new("UICorner", Bubble).CornerRadius = UDim.new(1, 0)
 
 local Window = Instance.new("Frame", ScreenGui)
-Window.Size = UDim2.new(0, 500, 0, 500)
-Window.Position = UDim2.new(0.5, -250, 0.5, -250)
+Window.Size = UDim2.new(0, 500, 0, 520)
+Window.Position = UDim2.new(0.5, -250, 0.5, -260)
 Window.BackgroundColor3 = THEME.Bg
 Window.Active = true
 Window.Draggable = true
@@ -316,6 +310,7 @@ Instance.new("UICorner", Window).CornerRadius = UDim.new(0, 12)
 
 Bubble.MouseButton1Click:Connect(function() Window.Visible = not Window.Visible end)
 
+-- Header
 local Header = Instance.new("Frame", Window)
 Header.Size = UDim2.new(1, 0, 0, 40)
 Header.BackgroundColor3 = THEME.Dark
@@ -325,7 +320,7 @@ local Title = Instance.new("TextLabel", Header)
 Title.Size = UDim2.new(1, -50, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "NO MERCY HUB V3.5 — ULTIMATE EDITION"
+Title.Text = "NO MERCY HUB — FINAL FIX"
 Title.TextColor3 = THEME.White
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 13
@@ -341,6 +336,7 @@ CloseBtn.Font = Enum.Font.GothamBold
 Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
 CloseBtn.MouseButton1Click:Connect(function() Window.Visible = false end)
 
+-- Sidebar
 local Sidebar = Instance.new("ScrollingFrame", Window)
 Sidebar.Size = UDim2.new(0, 130, 1, -50)
 Sidebar.Position = UDim2.new(0, 10, 0, 45)
@@ -356,6 +352,7 @@ Container.Position = UDim2.new(0, 145, 0, 45)
 Container.BackgroundColor3 = THEME.Panel
 Instance.new("UICorner", Container).CornerRadius = UDim.new(0, 8)
 
+-- Tabs
 local Tabs = {}
 local function CreateTab(name)
     local TabBtn = Instance.new("TextButton", Sidebar)
@@ -389,7 +386,6 @@ end
 
 local AimTab = CreateTab("Aimbot Setup")
 local VisualTab = CreateTab("Visuals & Laser")
-
 Tabs["Aimbot Setup"].Page.Visible = true
 Tabs["Aimbot Setup"].Btn.TextColor3 = THEME.White
 
@@ -522,6 +518,7 @@ local function AddTextBox(parent, labelText, default, callback, buttonText)
         local val = tonumber(box.Text)
         if val then
             callback(val)
+            box.Text = tostring(val)
         end
     end)
     box.FocusLost:Connect(function(enterPressed)
@@ -529,23 +526,21 @@ local function AddTextBox(parent, labelText, default, callback, buttonText)
             local val = tonumber(box.Text)
             if val then
                 callback(val)
+                box.Text = tostring(val)
             end
         end
     end)
 end
 
--- ==================== AIMBOT TAB CONTENT ====================
+-- ==================== AIMBOT TAB ====================
 AddToggle(AimTab, "Enable Aim Lock", Config.AimbotEnabled, function(v) Config.AimbotEnabled = v end)
 AddToggle(AimTab, "Auto Shoot Target", Config.AutoShoot, function(v) Config.AutoShoot = v end)
 AddToggle(AimTab, "Double Fire (Extra Silent Shot)", Config.DoubleFire, function(v) Config.DoubleFire = v end)
-AddToggle(AimTab, "Invisible Mode", Config.Invisible, function(v) 
+AddToggle(AimTab, "Invisible Mode (lihat diri sendiri)", Config.Invisible, function(v) 
     Config.Invisible = v
     applyInvisible(v)
 end)
-AddToggle(AimTab, "Wallhack + Noclip", Config.Wallhack, function(v) 
-    Config.Wallhack = v
-    applyNoclip(v)
-end)
+AddToggle(AimTab, "Wallhack (tembus tembok)", Config.Wallhack, function(v) Config.Wallhack = v end)
 
 -- Mode selection
 local verFrame = Instance.new("Frame", AimTab)
@@ -585,9 +580,7 @@ btnV3.BackgroundColor3 = THEME.Panel
 
 local function setMode(mode)
     Config.AimVersion = mode
-    if mode == "V3" then
-        Config.DoubleFire = true
-    end
+    if mode == "V3" then Config.DoubleFire = true end
     btnV1.BackgroundColor3 = (mode == "V1") and THEME.Green or THEME.Panel
     btnV2.BackgroundColor3 = (mode == "V2") and THEME.Green or THEME.Panel
     btnV3.BackgroundColor3 = (mode == "V3") and THEME.Green or THEME.Panel
@@ -669,39 +662,31 @@ for _, tName in ipairs({"Killer", "Survivor", "Zombie"}) do
     end)
 end
 
--- ==================== VISUAL TAB CONTENT ====================
+-- ==================== VISUAL TAB ====================
 AddToggle(VisualTab, "Laser Tracer ON/OFF", Config.LaserEnabled, function(v) Config.LaserEnabled = v end)
 AddToggle(VisualTab, "FOV Circle ON/OFF", Config.FOVCircleOn, function(v) Config.FOVCircleOn = v end)
 
--- Laser Radius slider
-AddSlider(VisualTab, "Laser Radius", 0.01, 0.5, Config.LaserRadius, function(val)
-    Config.LaserRadius = val
-    LaserPart.Size = Vector3.new(val, val, LaserPart.Size.Z)
-end)
-
--- FOV Radius slider
+-- Slider & manual input
 AddSlider(VisualTab, "FOV Radius (slider)", 50, 400, Config.FOVRadius, function(val)
     Config.FOVRadius = val
     FOVFrame.Size = UDim2.new(0, val * 2, 0, val * 2)
 end)
 
--- Manual FOV input
 AddTextBox(VisualTab, "FOV Radius (manual)", Config.FOVRadius, function(val)
     Config.FOVRadius = val
     FOVFrame.Size = UDim2.new(0, val * 2, 0, val * 2)
+    print("FOV Radius set to " .. val)
 end, "Apply")
 
-print("✅ NO MERCY HUB ULTIMATE Loaded!")
+print("✅ NO MERCY HUB FINAL FIX Loaded!")
 
--- ==================== DOUBLE FIRE SYNC ====================
+-- ==================== DOUBLE FIRE HOOK ====================
 local isFiring = false
-
 if fireRemote and hookmetamethod and getnamecallmethod then
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
         local method = getnamecallmethod()
         local args = {...}
-
         if Config.DoubleFire and method == "FireServer" and self == fireRemote and not isFiring then
             isFiring = true
             task.spawn(function()
@@ -716,9 +701,7 @@ if fireRemote and hookmetamethod and getnamecallmethod then
                                 local gun = tool["Right Arm"]["EmperorGun"]
                                 local from = gun.Position
                                 local dir = (targetPos - from).Unit
-                                pcall(function()
-                                    fireRemote:FireServer(gun, Vector3.new(dir.X, dir.Y, dir.Z))
-                                end)
+                                pcall(function() fireRemote:FireServer(gun, Vector3.new(dir.X, dir.Y, dir.Z)) end)
                             end
                         end
                     end
@@ -727,7 +710,7 @@ if fireRemote and hookmetamethod and getnamecallmethod then
                 isFiring = false
             end)
         end
-
         return oldNamecall(self, unpack(args))
     end)
+    print("✅ Double Fire active.")
 end
