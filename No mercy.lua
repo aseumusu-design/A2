@@ -1,12 +1,12 @@
 --[[
 =========================================================================
-    NO MERCY HUB V3.5 - FINAL ULTIMATE (INVISIBLE + INDICATOR + AIMBOT)
-    - Invisible Mode: tubuh transparan untuk orang lain, kamu tetap lihat diri sendiri (outline)
-    - Indikator status Invisible (ikon mata) di pojok layar
+    NO MERCY HUB V3.5 - FINAL ULTIMATE (DENGAN INVISIBILITY PASTEBIN)
+    - Invisibility menggunakan script dari pastebin.com/raw/3Rnd9rHf
+    - Indikator mata 👁️ di pojok layar (hijau = aktif, merah = mati)
+    - Highlight pada karakter sendiri agar tetap terlihat
     - Aimbot 3 mode (V1, V2, V3) dengan auto shoot cepat
-    - Laser dan FOV circle dengan radius bisa diatur slider/manual
+    - Laser dan FOV circle dengan radius bisa diatur
     - Wallhack (target di balik tembok tetap terdeteksi)
-    - Semua fitur dalam satu UI yang rapi
 =========================================================================
 ]]
 
@@ -100,15 +100,99 @@ UIStrokeFOV.Transparency = 0.2
 -- ==================== INVISIBLE INDICATOR (MATA) ====================
 local InvisibleIndicator = Instance.new("TextLabel", ScreenGui)
 InvisibleIndicator.Name = "InvisibleIndicator"
-InvisibleIndicator.Size = UDim2.new(0, 40, 0, 40)
-InvisibleIndicator.Position = UDim2.new(0.95, -50, 0.05, 0)
+InvisibleIndicator.Size = UDim2.new(0, 50, 0, 50)
+InvisibleIndicator.Position = UDim2.new(0.95, -55, 0.03, 0)
 InvisibleIndicator.BackgroundTransparency = 1
-InvisibleIndicator.Text = "👁️"  -- mata terbuka
-InvisibleIndicator.TextColor3 = Color3.fromRGB(255, 255, 255)
+InvisibleIndicator.Text = "👁️"
+InvisibleIndicator.TextColor3 = Color3.fromRGB(255, 0, 0) -- merah = mati
 InvisibleIndicator.Font = Enum.Font.SourceSansBold
-InvisibleIndicator.TextSize = 30
+InvisibleIndicator.TextSize = 35
 InvisibleIndicator.TextScaled = true
-InvisibleIndicator.Visible = false  -- default mati
+InvisibleIndicator.Visible = true  -- selalu muncul, warna menunjukkan status
+
+-- ==================== INVISIBILITY SCRIPT DARI PASTEBIN ====================
+-- Fungsi ini akan menjalankan script invisibility dari pastebin
+-- dan kita kontrol on/off-nya melalui variabel Config.Invisible
+
+local InvisibilityLoaded = false
+local InvisibilityFunction = nil
+
+-- Muat script dari pastebin
+local function LoadInvisibilityScript()
+    if InvisibilityLoaded then return end
+    local success, result = pcall(function()
+        return loadstring(game:HttpGet("https://pastebin.com/raw/3Rnd9rHf"))()
+    end)
+    if success and result then
+        InvisibilityLoaded = true
+        InvisibilityFunction = result
+        print("✅ Invisibility script from Pastebin loaded!")
+    else
+        warn("⚠️ Gagal memuat invisibility script dari Pastebin.")
+    end
+end
+
+-- Jalankan invisibility (aktif/mati)
+local function ApplyInvisibility(state)
+    if not InvisibilityLoaded then
+        LoadInvisibilityScript()
+        -- Tunggu sebentar agar script selesai dimuat
+        task.wait(0.5)
+    end
+    
+    if InvisibilityFunction then
+        -- Script dari pastebin biasanya berupa fungsi atau langsung dieksekusi
+        -- Kita coba panggil dengan parameter on/off
+        pcall(function()
+            if type(InvisibilityFunction) == "function" then
+                InvisibilityFunction(state)
+            else
+                -- Jika script langsung dieksekusi saat di-load, kita jalankan ulang
+                loadstring(game:HttpGet("https://pastebin.com/raw/3Rnd9rHf"))()
+            end
+        end)
+    else
+        -- Fallback: metode manual (transparansi)
+        local char = LocalPlayer.Character
+        if not char then return end
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.Transparency = state and 1 or 0
+            end
+        end
+    end
+    
+    -- Update indikator mata
+    if state then
+        InvisibleIndicator.TextColor3 = Color3.fromRGB(0, 255, 0) -- hijau = aktif
+        InvisibleIndicator.Text = "👁️" -- mata terbuka
+    else
+        InvisibleIndicator.TextColor3 = Color3.fromRGB(255, 0, 0) -- merah = mati
+        InvisibleIndicator.Text = "👁️‍🗨️" -- mata dicoret
+    end
+end
+
+-- Highlight untuk melihat diri sendiri (tetap aktif meskipun invisible)
+local highlight = nil
+local function UpdateSelfHighlight(state)
+    local char = LocalPlayer.Character
+    if not char then return end
+    
+    if state then
+        if not highlight or not highlight.Parent then
+            highlight = Instance.new("Highlight")
+            highlight.Name = "SelfHighlight"
+            highlight.FillColor = Color3.fromRGB(100, 150, 255)
+            highlight.FillTransparency = 0.6
+            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+            highlight.OutlineTransparency = 0.2
+            highlight.Parent = char
+        end
+    else
+        if highlight then highlight:Destroy() end
+        highlight = nil
+    end
+end
 
 -- ==================== UTILS ====================
 local function ClassifyTarget(char, plr)
@@ -206,52 +290,19 @@ local function FireWeapon(targetPos)
     pcall(function() fireRemote:FireServer(gun, Vector3.new(dir.X, dir.Y, dir.Z)) end)
 end
 
--- ==================== INVISIBLE (client-side) ====================
-local highlight = nil
-local function applyInvisible(state)
-    local char = LocalPlayer.Character
-    if not char then return end
-
-    -- Set transparansi untuk semua bagian tubuh (hanya untuk client lain)
-    for _, part in ipairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.Transparency = state and 1 or 0
-        end
-    end
-
-    -- Tambahkan highlight/outline agar kita bisa melihat diri sendiri
-    if state then
-        if not highlight or not highlight.Parent then
-            highlight = Instance.new("Highlight")
-            highlight.Name = "SelfHighlight"
-            highlight.FillColor = Color3.fromRGB(100, 100, 255)
-            highlight.FillTransparency = 0.7
-            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-            highlight.OutlineTransparency = 0.2
-            highlight.Parent = char
-        end
-        -- Tampilkan indikator mata
-        InvisibleIndicator.Visible = true
-        InvisibleIndicator.Text = "👁️"  -- mata terbuka (aktif)
-        InvisibleIndicator.TextColor3 = Color3.fromRGB(0, 255, 0) -- hijau
-    else
-        if highlight then highlight:Destroy() end
-        highlight = nil
-        InvisibleIndicator.Visible = false
-    end
-end
-
 -- ==================== MAIN LOOP ====================
 RunService.RenderStepped:Connect(function()
     -- Update FOV
     FOVFrame.Visible = Config.FOVCircleOn
     FOVFrame.Size = UDim2.new(0, Config.FOVRadius * 2, 0, Config.FOVRadius * 2)
 
-    -- Invisible (otomatis terapkan)
+    -- Invisibility (pakai script dari pastebin)
     if Config.Invisible then
-        applyInvisible(true)
+        ApplyInvisibility(true)
+        UpdateSelfHighlight(true)
     else
-        applyInvisible(false)
+        ApplyInvisibility(false)
+        UpdateSelfHighlight(false)
     end
 
     -- Aimbot
@@ -339,7 +390,7 @@ local Title = Instance.new("TextLabel", Header)
 Title.Size = UDim2.new(1, -50, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "NO MERCY HUB — FINAL ULTIMATE"
+Title.Text = "NO MERCY HUB — INVISIBILITY PASTEBIN"
 Title.TextColor3 = THEME.White
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 13
@@ -555,9 +606,9 @@ end
 AddToggle(AimTab, "Enable Aim Lock", Config.AimbotEnabled, function(v) Config.AimbotEnabled = v end)
 AddToggle(AimTab, "Auto Shoot Target", Config.AutoShoot, function(v) Config.AutoShoot = v end)
 AddToggle(AimTab, "Double Fire (Extra Silent Shot)", Config.DoubleFire, function(v) Config.DoubleFire = v end)
-AddToggle(AimTab, "Invisible Mode (lihat diri sendiri)", Config.Invisible, function(v) 
+AddToggle(AimTab, "Invisible Mode (Pastebin)", Config.Invisible, function(v) 
     Config.Invisible = v
-    applyInvisible(v)
+    -- Langsung terapkan di loop berikutnya
 end)
 AddToggle(AimTab, "Wallhack (tembus tembok)", Config.Wallhack, function(v) Config.Wallhack = v end)
 
@@ -696,7 +747,8 @@ AddTextBox(VisualTab, "FOV Radius (manual)", Config.FOVRadius, function(val)
     print("FOV Radius set to " .. val)
 end, "Apply")
 
-print("✅ NO MERCY HUB FINAL ULTIMATE Loaded!")
+print("✅ NO MERCY HUB + INVISIBILITY PASTEBIN Loaded!")
+print("👁️ Indikator mata di pojok kanan atas: hijau = invisible aktif, merah = mati")
 
 -- ==================== DOUBLE FIRE HOOK ====================
 local isFiring = false
@@ -732,3 +784,6 @@ if fireRemote and hookmetamethod and getnamecallmethod then
     end)
     print("✅ Double Fire active.")
 end
+
+-- Muat script invisibility di awal
+LoadInvisibilityScript()
