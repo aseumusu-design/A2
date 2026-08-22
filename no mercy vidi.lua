@@ -1,10 +1,9 @@
 --[[
 =========================================================================
-    NO MERCY HUB V3.5 + DOUBLE FIRE SYNC (3 MODE AIMBOT) - FINAL FIX
-    - Fixed FOV slider (now responsive)
-    - Fixed laser always on (only shows when enabled and target exists)
-    - Laser updates smoothly per frame
-    - Target re-acquisition per frame
+    NO MERCY HUB V3.5 - 3 MODE AIMBOT + EXTRA FEATURES
+    - FOV Radius: input manual (TextBox) + slider
+    - Invisible Mode (karakter transparan)
+    - Wallhack (target tetap terdeteksi di balik tembok + noclip)
 =========================================================================
 ]]
 
@@ -51,6 +50,8 @@ local Config = {
     FOVCircleOn   = true,
     FOVRadius     = 180,
     DoubleFire    = false,
+    Invisible     = false,
+    Wallhack      = false,
 }
 
 local CurrentTarget = nil
@@ -121,7 +122,7 @@ end
 
 local function IsInFOV(headPos)
     local screenPos, onScreen = Camera:WorldToViewportPoint(headPos)
-    if not onScreen then return false end
+    if not Config.Wallhack and not onScreen then return false end
     local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
     local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
     return dist <= Config.FOVRadius
@@ -189,18 +190,51 @@ local function FireWeapon(targetPos)
     pcall(function() fireRemote:FireServer(gun, Vector3.new(dir.X, dir.Y, dir.Z)) end)
 end
 
+-- ==================== INVISIBLE & NOCLIP ====================
+local function applyInvisible(state)
+    local char = LocalPlayer.Character
+    if not char then return end
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.Transparency = state and 0.9 or 0  -- 0.9 hampir tidak terlihat
+        end
+    end
+end
+
+local function applyNoclip(state)
+    local char = LocalPlayer.Character
+    if not char then return end
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = not state
+        end
+    end
+end
+
 -- ==================== MAIN AIMBOT LOOP ====================
 RunService.RenderStepped:Connect(function()
-    -- Update FOV circle visibility and size
+    -- Update FOV circle
     FOVFrame.Visible = Config.FOVCircleOn
     FOVFrame.Size = UDim2.new(0, Config.FOVRadius * 2, 0, Config.FOVRadius * 2)
+
+    -- Invisible & Noclip (dijalankan setiap frame agar tetap berlaku)
+    if Config.Invisible then
+        applyInvisible(true)
+    else
+        applyInvisible(false)
+    end
+    if Config.Wallhack then
+        applyNoclip(true)
+    else
+        applyNoclip(false)
+    end
 
     if not Config.AimbotEnabled then
         LaserPart.Transparency = 1
         return
     end
 
-    -- Re-check current target validity
+    -- Re-check target
     if CurrentTarget then
         local head = CurrentTarget.char:FindFirstChild("Head")
         local origin = Camera.CFrame.Position
@@ -215,11 +249,10 @@ RunService.RenderStepped:Connect(function()
         CurrentTarget = FindBestTarget()
     end
 
-    -- Laser and shooting
     if CurrentTarget then
         local pos = GetPredictPos(CurrentTarget.char)
         if pos then
-            -- Update laser
+            -- Laser
             if Config.LaserEnabled then
                 local gun = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Twist of Fate")
                 gun = gun and gun:FindFirstChild("Right Arm") and gun["Right Arm"]:FindFirstChild("EmperorGun")
@@ -250,7 +283,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ==================== MODULAR UI INTERFACE ====================
+-- ==================== UI ====================
 local Bubble = Instance.new("ImageButton", ScreenGui)
 Bubble.Size = UDim2.new(0, 55, 0, 55)
 Bubble.Position = UDim2.new(0, 15, 0.25, 0)
@@ -261,8 +294,8 @@ Bubble.Draggable = true
 Instance.new("UICorner", Bubble).CornerRadius = UDim.new(1, 0)
 
 local Window = Instance.new("Frame", ScreenGui)
-Window.Size = UDim2.new(0, 500, 0, 420) -- increased height for slider
-Window.Position = UDim2.new(0.5, -250, 0.5, -210)
+Window.Size = UDim2.new(0, 500, 0, 500) -- diperbesar untuk fitur baru
+Window.Position = UDim2.new(0.5, -250, 0.5, -250)
 Window.BackgroundColor3 = THEME.Bg
 Window.Active = true
 Window.Draggable = true
@@ -279,7 +312,7 @@ local Title = Instance.new("TextLabel", Header)
 Title.Size = UDim2.new(1, -50, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "NO MERCY HUB V3.5 — 3 MODE AIMBOT"
+Title.Text = "NO MERCY HUB V3.5 — 3 MODE + EXTRA"
 Title.TextColor3 = THEME.White
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 13
@@ -411,8 +444,7 @@ local function AddSlider(parent, text, min, max, default, callback)
     local function update(input)
         local posX = input.Position.X
         local rel = math.clamp((posX - slider.AbsolutePosition.X) / slider.AbsoluteSize.X, 0, 1)
-        local val = min + rel * (max - min)
-        val = math.round(val)
+        local val = math.round(min + rel * (max - min))
         fill.Size = UDim2.new(rel, 0, 1, 0)
         lbl.Text = text .. " (" .. tostring(val) .. ")"
         callback(val)
@@ -436,12 +468,73 @@ local function AddSlider(parent, text, min, max, default, callback)
     end)
 end
 
+local function AddTextBox(parent, labelText, default, callback, buttonText)
+    local holder = Instance.new("Frame", parent)
+    holder.Size = UDim2.new(1, 0, 0, 36)
+    holder.BackgroundColor3 = THEME.Dark
+    Instance.new("UICorner", holder).CornerRadius = UDim.new(0, 6)
+
+    local lbl = Instance.new("TextLabel", holder)
+    lbl.Size = UDim2.new(0.5, -10, 1, 0)
+    lbl.Position = UDim2.new(0, 5, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = labelText
+    lbl.TextColor3 = THEME.White
+    lbl.Font = Enum.Font.GothamMedium
+    lbl.TextSize = 11
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local box = Instance.new("TextBox", holder)
+    box.Size = UDim2.new(0.25, 0, 0, 22)
+    box.Position = UDim2.new(0.52, 0, 0.5, -11)
+    box.BackgroundColor3 = THEME.Panel
+    box.Text = tostring(default)
+    box.TextColor3 = THEME.White
+    box.Font = Enum.Font.GothamMedium
+    box.TextSize = 11
+    box.ClearTextOnFocus = false
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 4)
+
+    local btn = Instance.new("TextButton", holder)
+    btn.Size = UDim2.new(0.18, 0, 0, 24)
+    btn.Position = UDim2.new(0.8, 0, 0.5, -12)
+    btn.BackgroundColor3 = THEME.Accent
+    btn.Text = buttonText or "Set"
+    btn.TextColor3 = THEME.White
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 10
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+
+    btn.MouseButton1Click:Connect(function()
+        local val = tonumber(box.Text)
+        if val then
+            callback(val)
+        end
+    end)
+    box.FocusLost:Connect(function(enterPressed)
+        if enterPressed then
+            local val = tonumber(box.Text)
+            if val then
+                callback(val)
+            end
+        end
+    end)
+end
+
 -- ==================== AIMBOT TAB CONTENT ====================
 AddToggle(AimTab, "Enable Aim Lock", Config.AimbotEnabled, function(v) Config.AimbotEnabled = v end)
 AddToggle(AimTab, "Auto Shoot Target", Config.AutoShoot, function(v) Config.AutoShoot = v end)
 AddToggle(AimTab, "Double Fire (Extra Silent Shot)", Config.DoubleFire, function(v) Config.DoubleFire = v end)
+AddToggle(AimTab, "Invisible Mode", Config.Invisible, function(v) 
+    Config.Invisible = v
+    applyInvisible(v)
+end)
+AddToggle(AimTab, "Wallhack + Noclip", Config.Wallhack, function(v) 
+    Config.Wallhack = v
+    applyNoclip(v)
+end)
 
--- Mode selection: V1, V2, V3
+-- Mode selection
 local verFrame = Instance.new("Frame", AimTab)
 verFrame.Size = UDim2.new(1, 0, 0, 56)
 verFrame.BackgroundColor3 = THEME.Dark
@@ -492,6 +585,7 @@ btnV1.MouseButton1Click:Connect(function() setMode("V1") end)
 btnV2.MouseButton1Click:Connect(function() setMode("V2") end)
 btnV3.MouseButton1Click:Connect(function() setMode("V3") end)
 
+-- Target type
 local targetTypeLbl = Instance.new("TextLabel", AimTab)
 targetTypeLbl.Size = UDim2.new(1, 0, 0, 18)
 targetTypeLbl.BackgroundTransparency = 1
@@ -567,13 +661,20 @@ end
 AddToggle(VisualTab, "Laser Tracer ON/OFF", Config.LaserEnabled, function(v) Config.LaserEnabled = v end)
 AddToggle(VisualTab, "FOV Circle ON/OFF", Config.FOVCircleOn, function(v) Config.FOVCircleOn = v end)
 
--- FOV Radius Slider (with live update)
-AddSlider(VisualTab, "FOV Radius", 50, 400, Config.FOVRadius, function(val)
+-- Slider FOV (tetap ada)
+AddSlider(VisualTab, "FOV Radius (slider)", 50, 400, Config.FOVRadius, function(val)
     Config.FOVRadius = val
     FOVFrame.Size = UDim2.new(0, val * 2, 0, val * 2)
 end)
 
-print("✅ NO MERCY HUB V3.5 + 3 Mode Aimbot Loaded Successfully!")
+-- Input manual FOV
+AddTextBox(VisualTab, "FOV Radius (manual)", Config.FOVRadius, function(val)
+    Config.FOVRadius = val
+    FOVFrame.Size = UDim2.new(0, val * 2, 0, val * 2)
+    print("FOV Radius set to " .. val)
+end, "Apply")
+
+print("✅ NO MERCY HUB V3.5 + EXTRA FEATURES Loaded Successfully!")
 
 -- ==================== DOUBLE FIRE SYNC ====================
 local isFiring = false
