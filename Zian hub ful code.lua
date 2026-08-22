@@ -104,7 +104,89 @@ local function __ZiaanHub_Init_Main__()
         end)
     end
 
-    -- Load ModernV2
+    -- ============================================================
+    -- NO MERCY ANIMATION INTRO
+    -- Kept outside the feature system so it never delays callbacks.
+    -- ============================================================
+    local function GetAnimationGuiParent()
+        if gethui then
+            local ok, hui = pcall(gethui)
+            if ok and hui then return hui end
+        end
+        return game:GetService("CoreGui")
+    end
+
+    local function ShowNoMercyIntro()
+        local parent = GetAnimationGuiParent()
+        if not parent then return end
+
+        local gui = Instance.new("ScreenGui")
+        gui.Name = "NoMercyWelcome"
+        gui.IgnoreGuiInset = true
+        gui.ResetOnSpawn = false
+        gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+        gui.Parent = parent
+        pcall(function()
+            if syn and syn.protect_gui then syn.protect_gui(gui) end
+        end)
+
+        local holder = Instance.new("Frame")
+        holder.AnchorPoint = Vector2.new(0.5, 0.5)
+        holder.Position = UDim2.fromScale(0.5, 0.5)
+        holder.Size = UDim2.fromOffset(280, 250)
+        holder.BackgroundTransparency = 1
+        holder.ZIndex = 999
+        holder.Parent = gui
+
+        local logo = Instance.new("ImageLabel")
+        logo.AnchorPoint = Vector2.new(0.5, 0.5)
+        logo.Position = UDim2.fromScale(0.5, 0.38)
+        logo.Size = UDim2.fromOffset(0, 0)
+        logo.BackgroundTransparency = 1
+        logo.Image = "rbxassetid://102609928046926"
+        logo.ZIndex = 999
+        logo.Parent = holder
+        Instance.new("UICorner", logo).CornerRadius = UDim.new(1, 0)
+
+        local ring = Instance.new("UIStroke")
+        ring.Color = Color3.new(1, 1, 1)
+        ring.Thickness = 3
+        ring.Transparency = 1
+        ring.Parent = logo
+
+        local label = Instance.new("TextLabel")
+        label.AnchorPoint = Vector2.new(0.5, 0)
+        label.Position = UDim2.fromScale(0.5, 0.72)
+        label.Size = UDim2.new(1, 0, 0, 40)
+        label.BackgroundTransparency = 1
+        label.Text = "WELCOME NO MERCY"
+        label.TextColor3 = Color3.new(1, 1, 1)
+        label.TextSize = 18
+        label.Font = Enum.Font.GothamBold
+        label.TextTransparency = 1
+        label.ZIndex = 999
+        label.Parent = holder
+
+        local tween = TweenService:Create(logo, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.fromOffset(150, 150)
+        })
+        tween:Play()
+        TweenService:Create(ring, TweenInfo.new(0.4), { Transparency = 0 }):Play()
+        TweenService:Create(label, TweenInfo.new(0.4), { TextTransparency = 0 }):Play()
+        tween.Completed:Wait()
+        task.wait(1.1)
+        TweenService:Create(logo, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Size = UDim2.fromOffset(0, 0)
+        }):Play()
+        TweenService:Create(ring, TweenInfo.new(0.3), { Transparency = 1 }):Play()
+        TweenService:Create(label, TweenInfo.new(0.3), { TextTransparency = 1 }):Play()
+        task.wait(0.4)
+        if gui and gui.Parent then gui:Destroy() end
+    end
+
+    ShowNoMercyIntro()
+
+    -- Load ModernV2 (the latest UI library used by the animation build)
     local ok, result = pcall(require, "./src/Init")
     local ModernV2 = ok and result or nil
     if not ModernV2 then
@@ -176,8 +258,8 @@ local function __ZiaanHub_Init_Main__()
     local Window
     if ModernV2 then
         Window = ModernV2:Window({
-            Title = "ZiaanHub X",
-            Content = "Violence District v1.4.7",
+            Title = "NO MERCY — VIOLENCE DISTRICT",
+            Content = "ZiaanHub features • Animation UI",
             Uitransparent = 0.15,
             Size = UDim2.fromOffset(420, 290),
             Color = Color3.fromRGB(148, 146, 146),
@@ -190,7 +272,7 @@ local function __ZiaanHub_Init_Main__()
             Enable3DRenderer = false,
             Keybind = "RightControl",
             Config = {
-                ConfigFolder = "Ziaan/VD",
+                ConfigFolder = "NoMercy/VD",
                 AutoSaveFile = "Default",
                 AutoSave = true,
                 AutoLoad = true,
