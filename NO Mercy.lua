@@ -1,5 +1,5 @@
 --[[
-  NO MERCY — "VIOLENCE DISTRICT"
+  NO MERCY — "VIOLENCE DISTRICT" (Dengan Efek Teks Bercahaya / Glow Pulse)
   UI: Orion (MarV) — hide/show via bubble + konfirmasi tutup
 ]]
 
@@ -25,11 +25,10 @@ local function GetHolder()
 end
 
 -- ============================================================
---  WELCOME INTRO (Logo Bulat + Teks + Animasi Garis Stroke)
+--  WELCOME INTRO
 -- ============================================================
 local function ShowWelcomeIntro()
     local holder = GetHolder()
-    
     local gui = Instance.new("ScreenGui")
     gui.Name = "NoMercyWelcome"
     gui.ResetOnSpawn = false
@@ -78,47 +77,33 @@ local function ShowWelcomeIntro()
     introText.ZIndex = 999
     introText.Parent = centerFrame
 
-    -- Animasi Masuk
-    local tweenIn = TweenService:Create(img, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.fromOffset(150, 150)
-    })
+    local tweenIn = TweenService:Create(img, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = UDim2.fromOffset(150, 150) })
     local strokeIn = TweenService:Create(stroke, TweenInfo.new(0.4), { Transparency = 0 })
     local textIn = TweenService:Create(introText, TweenInfo.new(0.4), { TextTransparency = 0 })
     
-    tweenIn:Play()
-    strokeIn:Play()
-    textIn:Play()
+    tweenIn:Play(); strokeIn:Play(); textIn:Play()
     tweenIn.Completed:Wait()
 
-    -- Animasi Garis Stroke Muncul & Hilang Berulang (Pulsing Glow)
     local pulsing = true
     task.spawn(function()
         while pulsing do
             local t1 = TweenService:Create(stroke, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0.8, Thickness = 6 })
-            t1:Play()
-            t1.Completed:Wait()
+            t1:Play(); t1.Completed:Wait()
             if not pulsing then break end
             local t2 = TweenService:Create(stroke, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0, Thickness = 2 })
-            t2:Play()
-            t2.Completed:Wait()
+            t2:Play(); t2.Completed:Wait()
         end
     end)
 
     task.wait(1.5)
     pulsing = false
 
-    -- Animasi Keluar
-    local tweenOut = TweenService:Create(img, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-        Size = UDim2.fromOffset(0, 0)
-    })
+    local tweenOut = TweenService:Create(img, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Size = UDim2.fromOffset(0, 0) })
     local strokeOut = TweenService:Create(stroke, TweenInfo.new(0.3), { Transparency = 1 })
     local textOut = TweenService:Create(introText, TweenInfo.new(0.3), { TextTransparency = 1 })
     
-    tweenOut:Play()
-    strokeOut:Play()
-    textOut:Play()
+    tweenOut:Play(); strokeOut:Play(); textOut:Play()
     tweenOut.Completed:Wait()
-
     gui:Destroy()
 end
 
@@ -155,10 +140,9 @@ local function FindMainWindow()
 end
 
 -- ============================================================
---  BUBBLE LOGO (Dengan Animasi Stroke Berdenyut Muncul/Hilang)
+--  BUBBLE LOGO
 -- ============================================================
 local bubbleGui = nil
-
 local function makeBubble()
     if bubbleGui then bubbleGui:Destroy() end
 
@@ -191,26 +175,21 @@ local function makeBubble()
     stroke.Transparency = 0
     stroke.Parent = btn
 
-    -- Looping Animasi Garis Stroke Berdenyut (Muncul & Hilang) pada Bubble
     local bubblePulsing = true
     task.spawn(function()
         while bubblePulsing and stroke and stroke.Parent do
             local t1 = TweenService:Create(stroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0.8, Thickness = 4 })
-            t1:Play()
-            t1.Completed:Wait()
+            t1:Play(); t1.Completed:Wait()
             if not bubblePulsing or not stroke or not stroke.Parent then break end
             local t2 = TweenService:Create(stroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0, Thickness = 2 })
-            t2:Play()
-            t2.Completed:Wait()
+            t2:Play(); t2.Completed:Wait()
         end
     end)
 
     btn.MouseButton1Click:Connect(function()
         bubblePulsing = false
         local main = FindMainWindow()
-        if main then
-            main.Visible = true
-        end
+        if main then main.Visible = true end
         bubbleGui:Destroy()
         bubbleGui = nil
     end)
@@ -220,24 +199,17 @@ end
 
 local function closeUI()
     local main = FindMainWindow()
-    if main then
-        main.Visible = false
-    end
+    if main then main.Visible = false end
     makeBubble()
 end
 
 local function showUI()
     local main = FindMainWindow()
-    if main then
-        main.Visible = true
-    end
+    if main then main.Visible = true end
 end
 
 local function confirmClose(fromCloseBtn)
-    if fromCloseBtn then
-        showUI()
-    end
-
+    if fromCloseBtn then showUI() end
     local holder = GetHolder()
     local gui = Instance.new("ScreenGui")
     gui.Name = "NoMercyConfirm"
@@ -263,9 +235,7 @@ local function confirmClose(fromCloseBtn)
     box.ZIndex = 100
     box.Parent = gui
 
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 12)
-    corner.Parent = box
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 12)
 
     local title = Instance.new("TextLabel")
     title.Size = UDim2.new(1, -40, 0, 30)
@@ -275,7 +245,6 @@ local function confirmClose(fromCloseBtn)
     title.TextColor3 = Color3.fromRGB(240, 240, 240)
     title.TextSize = 18
     title.Font = Enum.Font.GothamBold
-    title.TextXAlignment = Enum.TextXAlignment.Left
     title.ZIndex = 101
     title.Parent = box
 
@@ -287,69 +256,44 @@ local function confirmClose(fromCloseBtn)
     desc.TextColor3 = Color3.fromRGB(150, 150, 150)
     desc.TextSize = 14
     desc.Font = Enum.Font.Gotham
-    desc.TextXAlignment = Enum.TextXAlignment.Left
     desc.ZIndex = 101
     desc.Parent = box
 
-    local function destroy()
-        gui:Destroy()
-    end
-
-    local function cancel()
-        destroy()
-        if fromCloseBtn then
-            showUI()
-        end
-    end
+    local function destroy() gui:Destroy() end
+    local function cancel() destroy(); if fromCloseBtn then showUI() end end
 
     local btnYa = Instance.new("TextButton")
     btnYa.Size = UDim2.fromOffset(90, 36)
     btnYa.Position = UDim2.new(1, -200, 1, -50)
     btnYa.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    btnYa.BorderSizePixel = 0
     btnYa.Text = "Ya"
     btnYa.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btnYa.TextSize = 15
     btnYa.Font = Enum.Font.GothamBold
     btnYa.ZIndex = 101
     btnYa.Parent = box
-    local cYa = Instance.new("UICorner"); cYa.CornerRadius = UDim.new(0, 8); cYa.Parent = btnYa
-
-    btnYa.MouseButton1Click:Connect(function()
-        destroy()
-        closeUI()
-    end)
+    Instance.new("UICorner", btnYa).CornerRadius = UDim.new(0, 8)
+    btnYa.MouseButton1Click:Connect(function() destroy(); closeUI() end)
 
     local btnTidak = Instance.new("TextButton")
     btnTidak.Size = UDim2.fromOffset(90, 36)
     btnTidak.Position = UDim2.new(1, -100, 1, -50)
     btnTidak.BackgroundColor3 = Color3.fromRGB(40, 45, 52)
-    btnTidak.BorderSizePixel = 0
     btnTidak.Text = "Tidak"
     btnTidak.TextColor3 = Color3.fromRGB(240, 240, 240)
-    btnTidak.TextSize = 15
     btnTidak.Font = Enum.Font.GothamBold
     btnTidak.ZIndex = 101
     btnTidak.Parent = box
-    local cT = Instance.new("UICorner"); cT.CornerRadius = UDim.new(0, 8); cT.Parent = btnTidak
-
+    Instance.new("UICorner", btnTidak).CornerRadius = UDim.new(0, 8)
     btnTidak.MouseButton1Click:Connect(cancel)
-    fade.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then
-            cancel()
-        end
-    end)
 end
 
-onCloseRequest = function()
-    confirmClose(true)
-end
+onCloseRequest = function() confirmClose(true) end
 
 -- ============================================================
---  TAB (Ditambahkan Menu & Icon Aimbot)[span_0](start_span)[span_0](end_span)
+--  TAB
 -- ============================================================
 local InfoTab     = Window:MakeTab({ Name = "Info", Icon = ICON.Info, PremiumOnly = false })
-local AimbotTab   = Window:MakeTab({ Name = "Aimbot", Icon = ICON.Crosshair, PremiumOnly = false }) -- Icon Aimbot baru ditambahkan[span_1](start_span)[span_1](end_span)
+local AimbotTab   = Window:MakeTab({ Name = "Aimbot", Icon = ICON.Crosshair, PremiumOnly = false })[span_0](start_span)[span_0](end_span)
 local ParryTab    = Window:MakeTab({ Name = "Parry", Icon = ICON.Swords, PremiumOnly = false })
 local TeleportTab = Window:MakeTab({ Name = "Teleport", Icon = ICON.Globe, PremiumOnly = false })
 local KillerTab   = Window:MakeTab({ Name = "Killer", Icon = ICON.Axe, PremiumOnly = false })
@@ -359,10 +303,9 @@ local SpeedTab    = Window:MakeTab({ Name = "Speed", Icon = ICON.Zap, PremiumOnl
 local SettingsTab = Window:MakeTab({ Name = "Pengaturan", Icon = ICON.Settings, PremiumOnly = false })
 
 -- ============================================================
---  INFO (Banner Dijamin Utuh Menggunakan Fit ScaleType)
+--  INFO (Banner & Glow Effect Otomatis pada Teks Judul UI)
 -- ============================================================
 local InfoSec = InfoTab:AddSection({ Name = "Tentang" })
-
 InfoSec:AddLabel("NO MERCY — Violence District")
 InfoSec:AddLabel("Game: Bola Pedang (Blade Ball)")
 InfoSec:AddButton({
@@ -383,9 +326,7 @@ task.spawn(function()
             local container = v.Parent.Parent
             if container and container:IsA("ScrollingFrame") then
                 for _, child in ipairs(container:GetChildren()) do
-                    if child.Name == "AbsoluteTopBanner" then
-                        child:Destroy()
-                    end
+                    if child.Name == "AbsoluteTopBanner" then child:Destroy() end
                 end
 
                 local bannerFrame = Instance.new("Frame")
@@ -396,20 +337,14 @@ task.spawn(function()
                 bannerFrame.LayoutOrder = -999
                 bannerFrame.Parent = container
 
-                local corner = Instance.new("UICorner")
-                corner.CornerRadius = UDim.new(0, 8)
-                corner.Parent = bannerFrame
-
+                Instance.new("UICorner", bannerFrame).CornerRadius = UDim.new(0, 8)
                 local bannerImg = Instance.new("ImageLabel")
                 bannerImg.Size = UDim2.new(1, 0, 1, 0)
                 bannerImg.Image = ICON.Banner
                 bannerImg.BackgroundTransparency = 1
                 bannerImg.ScaleType = Enum.ScaleType.Fit
                 bannerImg.Parent = bannerFrame
-
-                local imgCorner = Instance.new("UICorner")
-                imgCorner.CornerRadius = UDim.new(0, 8)
-                imgCorner.Parent = bannerImg
+                Instance.new("UICorner", bannerImg).CornerRadius = UDim.new(0, 8)
                 break
             end
         end
@@ -417,79 +352,57 @@ task.spawn(function()
 end)
 
 -- ============================================================
---  AIMBOT (Menu Baru dengan Icon Crosshair)[span_2](start_span)[span_2](end_span)
+--  FUNGSI EFEK TEKS BERCABAHA / GLOW PULSE BERKESINAMBUNGAN
+-- ============================================================
+task.spawn(function()
+    while true do
+        local main = FindMainWindow()
+        if main then
+            -- Mencari teks judul atau bagian tertentu untuk diberi efek pendar (Glow)
+            for _, obj in ipairs(main:GetDescendants()) do
+                if obj:IsA("TextLabel") and (obj.Text == "NO MERCY — VIOLENCE DISTRICT" or obj.Text:find("Aimbot") or obj.Text:find("Killer") or obj.Text:find("Survivor")) then
+                    -- Menambahkan efek pendar warna putih/terang secara halus menggunakan fungsi matematika gelombang sinus (Sine wave)
+                    local alpha = (math.sin(os.clock() * 3) + 1) / 2 -- Nilai berosilasi antara 0 dan 1
+                    obj.TextColor3 = Color3.fromRGB(255, 255, 255):Lerp(Color3.fromRGB(120, 200, 255), alpha)
+                end
+            end
+        end
+        RunService.RenderStepped:Wait()
+    end
+end)
+
+-- ============================================================
+--  SECTIONS & FEATURES
 -- ============================================================
 local AimbotSec = AimbotTab:AddSection({ Name = "Aimbot Settings" })
 AimbotSec:AddToggle({ Name = "Enable Aimbot", Default = false, Callback = function(v) print("Aimbot:", v) end })
 AimbotSec:AddToggle({ Name = "Silent Aim Veil", Default = false, Callback = function(v) print("SilentAimVeil:", v) end })
 AimbotSec:AddSlider({ Name = "FOV Radius", Min = 50, Max = 500, Default = 150, Increment = 10, Callback = function(v) print("FOV:", v) end })
 
--- ============================================================
---  PARRY
--- ============================================================
 local ParrySec = ParryTab:AddSection({ Name = "Auto Parry" })
 ParrySec:AddToggle({ Name = "Enable Auto Parry", Default = false, Callback = function(v) print("AutoParry:", v) end })
-ParrySec:AddDropdown({
-    Name = "Parry Mode",
-    Default = "Always",
-    Options = { "Always", "On Distance", "Hold Key" },
-    Callback = function(v) print("ParryMode:", v) end,
-})
+ParrySec:AddDropdown({ Name = "Parry Mode", Default = "Always", Options = { "Always", "On Distance", "Hold Key" }, Callback = function(v) print("ParryMode:", v) end })
 ParrySec:AddSlider({ Name = "Parry Distance", Min = 5, Max = 50, Default = 15, Increment = 1, ValueName = "studs", Callback = function(v) print("ParryDistance:", v) end })
 
--- ============================================================
---  TELEPORT
--- ============================================================
 local TeleSec = TeleportTab:AddSection({ Name = "Teleport" })
-TeleSec:AddButton({
-    Name = "Teleport to Safe Zone",
-    Callback = function()
-        OrionLib:MakeNotification({ Name = "NO MERCY", Content = "Teleporting...", Image = ICON.Logo, Time = 2 })
-    end,
-})
+TeleSec:AddButton({ Name = "Teleport to Safe Zone", Callback = function() OrionLib:MakeNotification({ Name = "NO MERCY", Content = "Teleporting...", Image = ICON.Logo, Time = 2 }) end })
 
--- ============================================================
---  KILLER
--- ============================================================
 local KillerSec = KillerTab:AddSection({ Name = "Killer" })
 KillerSec:AddToggle({ Name = "Killer Mode", Default = false, Callback = function(v) print("KillerMode:", v) end })
 KillerSec:AddButton({ Name = "Kill All", Callback = function() print("Kill all") end })
 
--- ============================================================
---  SURVIVOR
--- ============================================================
 local SurvivorSec = SurvivorTab:AddSection({ Name = "Survivor" })
 SurvivorSec:AddToggle({ Name = "Survivor Mode", Default = false, Callback = function(v) print("SurvivorMode:", v) end })
 
--- ============================================================
---  VISUAL
--- ============================================================
 local VisualSec = VisualTab:AddSection({ Name = "Visual" })
 VisualSec:AddToggle({ Name = "ESP Players", Default = false, Callback = function(v) print("ESP:", v) end })
 VisualSec:AddToggle({ Name = "Show FOV Circle", Default = true, Callback = function(v) print("FOVCircle:", v) end })
 
--- ============================================================
---  SPEED
--- ============================================================
 local SpeedSec = SpeedTab:AddSection({ Name = "Speed" })
-SpeedSec:AddSlider({
-    Name = "WalkSpeed", Min = 16, Max = 200, Default = 16, Increment = 1, ValueName = "speed",
-    Callback = function(v)
-        local char = game.Players.LocalPlayer.Character
-        if char and char:FindFirstChild("Humanoid") then char.Humanoid.WalkSpeed = v end
-    end,
-})
+SpeedSec:AddSlider({ Name = "WalkSpeed", Min = 16, Max = 200, Default = 16, Increment = 1, ValueName = "speed", Callback = function(v) local char = game.Players.LocalPlayer.Character if char and char:FindFirstChild("Humanoid") then char.Humanoid.WalkSpeed = v end end })
 
--- ============================================================
---  PENGATURAN
--- ============================================================
 local SettingsSec = SettingsTab:AddSection({ Name = "Pengaturan" })
-SettingsSec:AddButton({
-    Name = "Tutup UI (Close)",
-    Callback = function()
-        confirmClose()
-    end,
-})
+SettingsSec:AddButton({ Name = "Tutup UI (Close)", Callback = function() confirmClose() end })
 
 OrionLib:MakeNotification({ Name = "NO MERCY", Content = "Violence District dimuat!", Image = ICON.Logo, Time = 4 })
 print("[NO MERCY] Violence District loaded successfully!")
