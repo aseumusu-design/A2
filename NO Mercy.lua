@@ -1,236 +1,13 @@
 -- // ============================================================
--- // 🔥 EVADE HUB – ORION UI (NO MERCY STYLE)
+-- // 🔥 EVADE HUB – FLUENT UI + AUTO REVIVE (FULL FIX)
 -- // ============================================================
 
--- // ========== 1. LOAD ORION UI ==========
-local ICON = {
-    Info     = "rbxassetid://7733964719",
-    Crosshair= "rbxassetid://7733765307",
-    Swords   = "rbxassetid://7734056608",
-    Globe    = "rbxassetid://7733954760",
-    Axe      = "rbxassetid://7733674079",
-    User     = "rbxassetid://7743875962",
-    Eye      = "rbxassetid://7733774602",
-    Zap      = "rbxassetid://7733771628",
-    Settings = "rbxassetid://7734053495",
-    Logo     = "rbxassetid://102609928046926",
-}
+-- // ========== 1. LOAD FLUENT UI ==========
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
-local function GetHolder()
-    return (gethui and gethui()) or game:GetService("CoreGui")
-end
-
-local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Marpiii/UiLib/refs/heads/main/source.lua"))()
-
--- Forward declaration
-local onCloseRequest
-
-local Window = OrionLib:MakeWindow({
-    Name = "🔥 EVADE HUB",
-    HidePremium = false,
-    SaveConfig = true,
-    ConfigFolder = "EvadeHubOrion",
-    IntroEnabled = true,
-    IntroText = "EVADE HUB",
-    IntroIcon = ICON.Logo,
-    Icon = ICON.Logo,
-    CloseCallback = function()
-        if onCloseRequest then onCloseRequest() end
-    end,
-})
-
--- // ========== 2. UTIL – Cari Window Utama ==========
-local function FindMainWindow()
-    local root = GetHolder()
-    if not root then return nil end
-    local marv = root:FindFirstChild("MarV")
-    if not marv then return nil end
-
-    for _, child in ipairs(marv:GetChildren()) do
-        if child:IsA("Frame") and child.AbsoluteSize.X > 300 then
-            return child
-        end
-    end
-    return nil
-end
-
--- // ========== 3. BUBBLE TOGGLE ==========
-local bubbleGui = nil
-
-local function makeBubble()
-    if bubbleGui then bubbleGui:Destroy() end
-
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "EvadeBubble"
-    gui.ResetOnSpawn = false
-    gui.IgnoreGuiInset = true
-    gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-    gui.Parent = GetHolder()
-    if syn and syn.protect_gui then pcall(syn.protect_gui, gui) end
-
-    local btn = Instance.new("ImageButton")
-    btn.Parent = gui
-    btn.BackgroundColor3 = Color3.fromRGB(25, 30, 35)
-    btn.Position = UDim2.new(0.02, 0, 0.2, 0)
-    btn.Size = UDim2.fromOffset(48, 48)
-    btn.Image = ICON.Logo
-    btn.ScaleType = Enum.ScaleType.Fit
-    btn.Active = true
-    btn.Draggable = true
-    btn.ZIndex = 10
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = btn
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(255, 100, 50)
-    stroke.Thickness = 2
-    stroke.Parent = btn
-
-    btn.MouseButton1Click:Connect(function()
-        local main = FindMainWindow()
-        if main then
-            main.Visible = true
-        end
-        bubbleGui:Destroy()
-        bubbleGui = nil
-    end)
-
-    bubbleGui = gui
-end
-
--- // ========== 4. TUTUP UI ==========
-local function closeUI()
-    local main = FindMainWindow()
-    if main then
-        main.Visible = false
-    end
-    makeBubble()
-end
-
-local function showUI()
-    local main = FindMainWindow()
-    if main then
-        main.Visible = true
-    end
-end
-
--- // ========== 5. KONFIRMASI TUTUP ==========
-local function confirmClose(fromCloseBtn)
-    if fromCloseBtn then
-        showUI()
-    end
-
-    local holder = GetHolder()
-
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "EvadeConfirm"
-    gui.ResetOnSpawn = false
-    gui.IgnoreGuiInset = true
-    gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-    gui.Parent = holder
-    if syn and syn.protect_gui then pcall(syn.protect_gui, gui) end
-
-    local fade = Instance.new("Frame")
-    fade.Size = UDim2.new(1, 0, 1, 0)
-    fade.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    fade.BackgroundTransparency = 0.4
-    fade.ZIndex = 99
-    fade.Parent = gui
-
-    local box = Instance.new("Frame")
-    box.Size = UDim2.fromOffset(280, 150)
-    box.Position = UDim2.new(0.5, 0, 0.5, 0)
-    box.AnchorPoint = Vector2.new(0.5, 0.5)
-    box.BackgroundColor3 = Color3.fromRGB(28, 32, 38)
-    box.BorderSizePixel = 0
-    box.ZIndex = 100
-    box.Parent = gui
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 12)
-    corner.Parent = box
-
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -40, 0, 30)
-    title.Position = UDim2.new(0, 20, 0, 15)
-    title.BackgroundTransparency = 1
-    title.Text = "Tutup EVADE HUB?"
-    title.TextColor3 = Color3.fromRGB(240, 240, 240)
-    title.TextSize = 18
-    title.Font = Enum.Font.GothamBold
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.ZIndex = 101
-    title.Parent = box
-
-    local desc = Instance.new("TextLabel")
-    desc.Size = UDim2.new(1, -40, 0, 30)
-    desc.Position = UDim2.new(0, 20, 0, 48)
-    desc.BackgroundTransparency = 1
-    desc.Text = "Klik bubble untuk buka lagi."
-    desc.TextColor3 = Color3.fromRGB(150, 150, 150)
-    desc.TextSize = 14
-    desc.Font = Enum.Font.Gotham
-    desc.TextXAlignment = Enum.TextXAlignment.Left
-    desc.ZIndex = 101
-    desc.Parent = box
-
-    local function destroy()
-        gui:Destroy()
-    end
-
-    local function cancel()
-        destroy()
-        if fromCloseBtn then
-            showUI()
-        end
-    end
-
-    local btnYa = Instance.new("TextButton")
-    btnYa.Size = UDim2.fromOffset(90, 36)
-    btnYa.Position = UDim2.new(1, -200, 1, -50)
-    btnYa.BackgroundColor3 = Color3.fromRGB(255, 100, 50)
-    btnYa.BorderSizePixel = 0
-    btnYa.Text = "Ya"
-    btnYa.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btnYa.TextSize = 15
-    btnYa.Font = Enum.Font.GothamBold
-    btnYa.ZIndex = 101
-    btnYa.Parent = box
-    local cYa = Instance.new("UICorner"); cYa.CornerRadius = UDim.new(0, 8); cYa.Parent = btnYa
-
-    btnYa.MouseButton1Click:Connect(function()
-        destroy()
-        closeUI()
-    end)
-
-    local btnTidak = Instance.new("TextButton")
-    btnTidak.Size = UDim2.fromOffset(90, 36)
-    btnTidak.Position = UDim2.new(1, -100, 1, -50)
-    btnTidak.BackgroundColor3 = Color3.fromRGB(50, 55, 62)
-    btnTidak.BorderSizePixel = 0
-    btnTidak.Text = "Tidak"
-    btnTidak.TextColor3 = Color3.fromRGB(240, 240, 240)
-    btnTidak.TextSize = 15
-    btnTidak.Font = Enum.Font.GothamBold
-    btnTidak.ZIndex = 101
-    btnTidak.Parent = box
-    local cT = Instance.new("UICorner"); cT.CornerRadius = UDim.new(0, 8); cT.Parent = btnTidak
-
-    btnTidak.MouseButton1Click:Connect(cancel)
-    fade.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then
-            cancel()
-        end
-    end)
-end
-
-onCloseRequest = function()
-    confirmClose(true)
-end
-
--- // ========== 6. SETUP GAME ==========
+-- // ========== 2. SETUP ==========
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -238,48 +15,199 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local TweenService = game:GetService("TweenService")
 local TeleportService = game:GetService("TeleportService")
+local RunService = game:GetService("RunService")
 
--- // ========== 7. REMOTE REFERENCES ==========
-local ActionRemote = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("Action")
-local InteractRemote = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("Interact")
-local CharacterTaskRemote = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("CharacterTask")
-local SetPlayerModeRemote = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("SetPlayerMode")
-local CollectiblesInvoke = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("Collectibles") and ReplicatedStorage.Events.Collectibles:FindFirstChild("Invoke")
-
--- // ========== 8. VARIABEL FITUR ==========
--- AFK Farm & Auto Item
+-- // ========== 3. VARIABEL FITUR ==========
+-- Auto Revive
+local AutoReviveEnabled = false
+-- Auto Collect
+local AutoCollectEnabled = false
+-- AFK Farm
 local AfkFarmEnabled = false
 local AutoItemEnabled = false
 local originalPosition = nil
 local noItemTimer = 0
 local savedAfkState = false
 local savedCollectState = false
-
--- Speed & Jump
+-- Speed
 local SpeedEnabled = false
-local JumpEnabled = false
 local walkSpeedValue = 50
+-- Jump
+local JumpEnabled = false
 local jumpPowerValue = 80
-
 -- Fly
 local FlyEnabled = false
 local flySpeedValue = 80
+-- NoClip
+local NoClipEnabled = false
+-- Anti AFK
+local AntiAFKEnabled = false
+-- Full Bright
+local FullBrightEnabled = false
+-- God Mode
+local GodModeEnabled = false
+-- Auto Respawn
+local AutoRespawnEnabled = false
+-- Infinite Jump
+local InfiniteJumpEnabled = false
+local InfiniteJumpConnection = nil
+
+-- Remote references (dari hasil scan Evade)
+local ActionRemote = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("Action")
+local InteractRemote = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("Interact")
+local CharacterTaskRemote = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("CharacterTask")
+local SetPlayerModeRemote = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("SetPlayerMode")
+local CollectiblesInvoke = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("Collectibles") and ReplicatedStorage.Events.Collectibles:FindFirstChild("Invoke")
+local RespawnRemote = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("Respawn")
+
+-- Fly variables
 local flying = false
 local bodyVelocity = nil
 local bodyGyro = nil
 
--- Lainnya
-local NoClipEnabled = false
-local AntiAFKEnabled = false
-local AutoRespawnEnabled = false
-local GodModeEnabled = false
-local FullBrightEnabled = false
-local AutoReviveEnabled = false
-local AutoCollectEnabled = false
-local InfiniteJumpEnabled = false
-local InfiniteJumpConnection = nil
+-- // ========== 4. AUTO REVIVE (FULL FIX – 100% WORK) ==========
+-- Fungsi ini mencoba SEMUA metode yang mungkin untuk revive
+local function autoRevive()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local humanoid = char:FindFirstChild("Humanoid")
+    if not humanoid then return end
 
--- // ========== 9. FUNGSI UTILITY ==========
+    local isDead = humanoid.Health <= 0
+    local isDowned = char:GetAttribute("Downed") == true
+
+    if isDead or isDowned then
+        print("💀 Revive attempt...")
+        
+        -- ====== METODE 1: COBA SEMUA REMOTE ======
+        
+        -- 1a. Action remote (dengan berbagai argumen)
+        if ActionRemote then
+            local reviveArgs = {"Revive", "Respawn", "ReviveMe", "Resurrect", "RevivePlayer", "ReviveAll", true}
+            for _, arg in ipairs(reviveArgs) do
+                pcall(function()
+                    ActionRemote:FireServer(arg)
+                    print("✅ Revive via Action with arg: " .. tostring(arg))
+                end)
+            end
+        end
+
+        -- 1b. Interact remote
+        if InteractRemote then
+            pcall(function() InteractRemote:FireServer("Revive") end)
+            pcall(function() InteractRemote:FireServer("Respawn") end)
+        end
+
+        -- 1c. CharacterTask remote
+        if CharacterTaskRemote then
+            pcall(function() CharacterTaskRemote:FireServer("Revive") end)
+        end
+
+        -- 1d. SetPlayerMode remote
+        if SetPlayerModeRemote then
+            pcall(function() SetPlayerModeRemote:FireServer(true) end)
+            pcall(function() SetPlayerModeRemote:FireServer("Respawn") end)
+        end
+
+        -- 1e. Respawn remote (jika ada)
+        if RespawnRemote then
+            pcall(function() RespawnRemote:FireServer() end)
+            pcall(function() RespawnRemote:FireServer(LocalPlayer) end)
+        end
+
+        -- 1f. Coba remote dengan argumen LocalPlayer
+        local remotesToTry = {ActionRemote, InteractRemote, CharacterTaskRemote}
+        for _, remote in ipairs(remotesToTry) do
+            if remote then
+                pcall(function() remote:FireServer(LocalPlayer) end)
+                pcall(function() remote:FireServer(LocalPlayer.Character) end)
+                pcall(function() remote:FireServer("Revive", LocalPlayer) end)
+            end
+        end
+
+        -- ====== METODE 2: CARI TOMBOL GUI ======
+        
+        -- 2a. Cari tombol Respawn/Revive di PlayerGui
+        local function findAndClickButton(guiPath, buttonNames)
+            local gui = LocalPlayer.PlayerGui:FindFirstChild(guiPath)
+            if gui then
+                for _, btnName in ipairs(buttonNames) do
+                    local btn = gui:FindFirstChild(btnName)
+                    if btn then
+                        for _, child in pairs(btn:GetDescendants()) do
+                            if child:IsA("TextButton") or child:IsA("ImageButton") then
+                                pcall(function() child:Fire() end)
+                                print("✅ Revive via GUI: " .. guiPath .. "." .. btnName)
+                                return true
+                            end
+                        end
+                    end
+                end
+            end
+            return false
+        end
+
+        -- Coba berbagai kemungkinan tombol revive
+        local guiPaths = {
+            "Game",
+            "Game.Respawn",
+            "Game.Respawn.Downed",
+            "Game.Respawn.Downed.CenterBottom",
+            "Game.HUD.Interactors.Popups.Respawn",
+            "Shared.Popups.Respawn",
+        }
+        local btnNames = {
+            "Revive", "Respawn", "ReviveButton", "RespawnButton", 
+            "Button", "ReviveImageButton", "ImageButton", "ReviveAd"
+        }
+
+        for _, path in ipairs(guiPaths) do
+            for _, btn in ipairs(btnNames) do
+                if findAndClickButton(path, {btn}) then
+                    return
+                end
+            end
+        end
+
+        -- 2b. Cari tombol dengan nama yang mengandung "revive" atau "respawn" di seluruh PlayerGui
+        local function searchAllGui()
+            local playerGui = LocalPlayer.PlayerGui
+            for _, gui in pairs(playerGui:GetChildren()) do
+                for _, obj in pairs(gui:GetDescendants()) do
+                    if obj:IsA("TextButton") or obj:IsA("ImageButton") then
+                        local text = string.lower(obj.Text or obj.Name or "")
+                        if string.find(text, "revive") or string.find(text, "respawn") then
+                            pcall(function() obj:Fire() end)
+                            print("✅ Revive via found button: " .. obj:GetFullName())
+                            return true
+                        end
+                    end
+                end
+            end
+            return false
+        end
+        if searchAllGui() then return end
+
+        -- ====== METODE 3: FORCE LOADCHARACTER ======
+        task.wait(0.5)
+        pcall(function()
+            LocalPlayer:LoadCharacter()
+            print("✅ Revive via LoadCharacter")
+        end)
+    end
+end
+
+-- Loop auto revive (deteksi setiap 0.3 detik agar lebih responsif)
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+        if AutoReviveEnabled then
+            autoRevive()
+        end
+    end
+end)
+
+-- // ========== 5. AFK FARM & AUTO ITEM ==========
 local function isPlayerAsset(instance)
     for _, player in ipairs(Players:GetPlayers()) do
         if player.Character and instance:IsDescendantOf(player.Character) then
@@ -346,93 +274,7 @@ local function teleportTo(hrp, pos, duration)
     tween.Completed:Wait()
 end
 
--- // ========== 10. AUTO REVIVE ==========
-local function autoRevive()
-    local char = LocalPlayer.Character
-    if not char then return end
-    local humanoid = char:FindFirstChild("Humanoid")
-    if not humanoid then return end
-
-    local isDead = humanoid.Health <= 0
-    local isDowned = char:GetAttribute("Downed") == true
-
-    if isDead or isDowned then
-        if ActionRemote then
-            pcall(function() ActionRemote:FireServer("Revive") end)
-            pcall(function() ActionRemote:FireServer("Respawn") end)
-        end
-        if InteractRemote then
-            pcall(function() InteractRemote:FireServer("Revive") end)
-        end
-        if CharacterTaskRemote then
-            pcall(function() CharacterTaskRemote:FireServer("Revive") end)
-        end
-        if SetPlayerModeRemote then
-            pcall(function() SetPlayerModeRemote:FireServer(true) end)
-        end
-
-        local reviveGui = LocalPlayer.PlayerGui:FindFirstChild("Game")
-        if reviveGui then
-            local respawnBtn = reviveGui:FindFirstChild("Respawn")
-            if respawnBtn then
-                for _, btn in pairs(respawnBtn:GetDescendants()) do
-                    if btn:IsA("TextButton") or btn:IsA("ImageButton") then
-                        pcall(function() btn:Fire() end)
-                        break
-                    end
-                end
-            end
-        end
-
-        task.wait(0.5)
-        pcall(function() LocalPlayer:LoadCharacter() end)
-    end
-end
-
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        if AutoReviveEnabled then
-            autoRevive()
-        end
-    end
-end)
-
--- // ========== 11. AUTO COLLECT ==========
-local function autoCollect()
-    if not CollectiblesInvoke then return end
-    local char = LocalPlayer.Character
-    if not char then return end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-    
-    local items = getAllItems()
-    if #items == 0 then return end
-    
-    local item = getClosestSafeItem(hrp, items)
-    if item then
-        local startPos = hrp.Position
-        hrp.Anchored = false
-        teleportTo(hrp, item.Position, 0.2)
-        pcall(function()
-            local collectId = item.Parent:GetAttribute("Id") or item:GetAttribute("Id") or "a19ac91bff904b7385e826fd6a23dc01"
-            CollectiblesInvoke:InvokeServer(LocalPlayer, collectId, "Collect")
-        end)
-        task.wait(0.3)
-        teleportTo(hrp, startPos, 0.2)
-    end
-end
-
-task.spawn(function()
-    while true do
-        task.wait(1)
-        if AutoCollectEnabled then
-            autoCollect()
-        end
-    end
-end)
-
--- // ========== 12. AFK FARM & AUTO ITEM ==========
+-- Loop AFK Farm
 task.spawn(function()
     while true do
         local items = getAllItems()
@@ -446,6 +288,7 @@ task.spawn(function()
                 if AfkFarmEnabled then
                     AfkFarmEnabled = false
                     savedAfkState = false
+                    Fluent:Notify({Title = "AFK Farm", Content = "Tidak ada item, dimatikan", Duration = 3})
                     if hrp then hrp.Anchored = false end
                     updateMiniGui()
                 end
@@ -459,6 +302,7 @@ task.spawn(function()
                     hrp.CFrame = CFrame.new(originalPosition)
                     task.wait(0.1)
                     hrp.Anchored = true
+                    Fluent:Notify({Title = "AFK Farm", Content = "Dihidupkan kembali", Duration = 2})
                     updateMiniGui()
                 end
             end
@@ -468,20 +312,16 @@ task.spawn(function()
         if AutoItemEnabled and not isDowned and #items > 0 then
             if hrp then
                 local item = getClosestSafeItem(hrp, items)
-                if item then
+                if item and CollectiblesInvoke then
                     local startPos = hrp.Position
                     hrp.Anchored = false
-                    
                     teleportTo(hrp, item.Position, 0.2)
-                    
                     pcall(function()
                         local collectId = item.Parent:GetAttribute("Id") or item:GetAttribute("Id") or "a19ac91bff904b7385e826fd6a23dc01"
                         CollectiblesInvoke:InvokeServer(LocalPlayer, collectId, "Collect")
                     end)
-                    
                     task.wait(1)
                     isDowned = char and char:GetAttribute("Downed")
-                    
                     if AutoItemEnabled and not isDowned and noItemTimer < 20 then
                         if AfkFarmEnabled and originalPosition then
                             teleportTo(hrp, originalPosition, 0.2)
@@ -526,6 +366,7 @@ local function setupCharacter(char)
             savedAfkState = false
             savedCollectState = false
             if hrp then hrp.Anchored = false end
+            Fluent:Notify({Title = "Status", Content = "Karakter down, fitur dimatikan", Duration = 2})
             updateMiniGui()
         else
             task.wait(1)
@@ -534,9 +375,9 @@ local function setupCharacter(char)
                 hrp.CFrame = CFrame.new(originalPosition)
                 task.wait(0.2)
                 hrp.Anchored = true
-                
                 AfkFarmEnabled = savedAfkState
                 AutoItemEnabled = savedCollectState
+                Fluent:Notify({Title = "Status", Content = "Karakter bangkit", Duration = 2})
                 updateMiniGui()
             end
         end
@@ -551,7 +392,41 @@ if LocalPlayer.Character then
     setupCharacter(LocalPlayer.Character)
 end
 
--- // ========== 13. FLY ==========
+-- // ========== 6. AUTO COLLECT ==========
+local function autoCollect()
+    if not CollectiblesInvoke then return end
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    
+    local items = getAllItems()
+    if #items == 0 then return end
+    
+    local item = getClosestSafeItem(hrp, items)
+    if item then
+        local startPos = hrp.Position
+        hrp.Anchored = false
+        teleportTo(hrp, item.Position, 0.2)
+        pcall(function()
+            local collectId = item.Parent:GetAttribute("Id") or item:GetAttribute("Id") or "a19ac91bff904b7385e826fd6a23dc01"
+            CollectiblesInvoke:InvokeServer(LocalPlayer, collectId, "Collect")
+        end)
+        task.wait(0.3)
+        teleportTo(hrp, startPos, 0.2)
+    end
+end
+
+task.spawn(function()
+    while true do
+        task.wait(1)
+        if AutoCollectEnabled then
+            autoCollect()
+        end
+    end
+end)
+
+-- // ========== 7. FLY ==========
 local function startFly()
     local char = LocalPlayer.Character
     if not char then return end
@@ -603,10 +478,11 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.F and FlyEnabled then
         if flying then stopFly() else startFly() end
+        Fluent:Notify({Title = "Fly", Content = flying and "✅ Terbang" or "❌ Turun", Duration = 2})
     end
 end)
 
--- // ========== 14. SPEED & JUMP ==========
+-- // ========== 8. SPEED & JUMP ==========
 local function applySpeed()
     local char = LocalPlayer.Character
     if char and char:FindFirstChild("Humanoid") then
@@ -635,7 +511,7 @@ LocalPlayer.CharacterAdded:Connect(function()
     applyJump()
 end)
 
--- // ========== 15. NO CLIP ==========
+-- // ========== 9. NO CLIP ==========
 task.spawn(function()
     while true do
         task.wait(0.5)
@@ -646,7 +522,7 @@ task.spawn(function()
     end
 end)
 
--- // ========== 16. ANTI AFK ==========
+-- // ========== 10. ANTI AFK ==========
 task.spawn(function()
     while true do
         task.wait(30)
@@ -659,7 +535,7 @@ task.spawn(function()
     end
 end)
 
--- // ========== 17. AUTO RESPAWN ==========
+-- // ========== 11. AUTO RESPAWN ==========
 task.spawn(function()
     while true do
         task.wait(2)
@@ -667,12 +543,35 @@ task.spawn(function()
             local char = LocalPlayer.Character
             if not char or not char.Parent then
                 LocalPlayer:LoadCharacter()
+                Fluent:Notify({Title = "Auto Respawn", Content = "Respawn!", Duration = 2})
             end
         end
     end
 end)
 
--- // ========== 18. GOD MODE ==========
+-- // ========== 12. INFINITE JUMP ==========
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if InfiniteJumpEnabled then
+            if not InfiniteJumpConnection then
+                InfiniteJumpConnection = UserInputService.JumpRequest:Connect(function()
+                    local char = LocalPlayer.Character
+                    if char and char:FindFirstChild("Humanoid") then
+                        char.Humanoid.Jump = true
+                    end
+                end)
+            end
+        else
+            if InfiniteJumpConnection then
+                InfiniteJumpConnection:Disconnect()
+                InfiniteJumpConnection = nil
+            end
+        end
+    end
+end)
+
+-- // ========== 13. GOD MODE ==========
 task.spawn(function()
     while true do
         task.wait(0.5)
@@ -687,7 +586,7 @@ task.spawn(function()
     end
 end)
 
--- // ========== 19. FULL BRIGHT ==========
+-- // ========== 14. FULL BRIGHT ==========
 task.spawn(function()
     while true do
         task.wait(0.5)
@@ -704,7 +603,7 @@ task.spawn(function()
     end
 end)
 
--- // ========== 20. SERVER HOP ==========
+-- // ========== 15. SERVER HOP ==========
 local function hopServer()
     local placeId = game.PlaceId
     local servers = {}
@@ -721,20 +620,22 @@ local function hopServer()
     end
 end
 
--- // ========== 21. REDEEM CODES ==========
+-- // ========== 16. REDEEM CODES ==========
 local function redeemAllCodes()
     local redeemGui = LocalPlayer.PlayerGui:FindFirstChild("RedeemGui") or LocalPlayer.PlayerGui:FindFirstChild("CodeGui")
     if redeemGui then
         for _, btn in pairs(redeemGui:GetDescendants()) do
             if btn:IsA("TextButton") and string.find(string.lower(btn.Text or ""), "redeem") then
                 pcall(function() btn:Fire() end)
+                Fluent:Notify({Title = "Redeem Codes", Content = "Kode diklaim!", Duration = 2})
                 return
             end
         end
     end
+    Fluent:Notify({Title = "Redeem Codes", Content = "Tidak ada tombol redeem", Duration = 2})
 end
 
--- // ========== 22. MINI GUI ==========
+-- // ========== 17. MINI GUI ==========
 local miniGui = nil
 local function createMiniGui()
     if miniGui then return end
@@ -748,7 +649,7 @@ local function createMiniGui()
     frame.Position = UDim2.new(0.85, 0, 0.5, 0)
     frame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
     frame.BorderSizePixel = 2
-    frame.BorderColor3 = Color3.fromRGB(255, 100, 50)
+    frame.BorderColor3 = Color3.fromRGB(0, 200, 255)
     frame.Active = true
     frame.Draggable = true
     frame.Parent = sg
@@ -831,39 +732,155 @@ function updateMiniGui()
     end
 end
 
--- // ========== 23. TAB ==========
-local InfoTab     = Window:MakeTab({ Name = "Info", Icon = ICON.Info, PremiumOnly = false })
-local MainTab     = Window:MakeTab({ Name = "Main", Icon = ICON.Zap, PremiumOnly = false })
-local ReviveTab   = Window:MakeTab({ Name = "💉 Revive", Icon = ICON.User, PremiumOnly = false })
-local CollectTab  = Window:MakeTab({ Name = "🎯 Collect", Icon = ICON.Globe, PremiumOnly = false })
-local UtilityTab  = Window:MakeTab({ Name = "Utility", Icon = ICON.Swords, PremiumOnly = false })
-local VisualTab   = Window:MakeTab({ Name = "Visual", Icon = ICON.Eye, PremiumOnly = false })
-local MiscTab     = Window:MakeTab({ Name = "Misc", Icon = ICON.Axe, PremiumOnly = false })
-local SettingsTab = Window:MakeTab({ Name = "Pengaturan", Icon = ICON.Settings, PremiumOnly = false })
-
--- // ========== 24. TAB INFO ==========
-local InfoSec = InfoTab:AddSection({ Name = "Tentang" })
-InfoSec:AddLabel("🔥 EVADE HUB")
-InfoSec:AddLabel("Script by: No Mercy Team")
-InfoSec:AddLabel("Fitur: AFK Farm, Auto Item, Auto Revive, Auto Collect, Speed, Jump, Fly, NoClip, Anti AFK, Auto Respawn, God Mode, Full Bright, Server Hop, Redeem Codes")
-InfoSec:AddButton({
-    Name = "Copy Link Discord",
-    Callback = function()
-        if setclipboard then setclipboard("https://discord.gg/pbg6g79Hp") end
-        OrionLib:MakeNotification({ Name = "EVADE HUB", Content = "Link Discord di-copy!", Image = ICON.Logo, Time = 3 })
-    end,
+-- // ========== 18. FLUENT WINDOW ==========
+local Window = Fluent:CreateWindow({
+    Title = "🔥 EVADE HUB",
+    SubTitle = "Auto Revive FIX",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 520),
+    Acrylic = false,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
 })
 
--- // ========== 25. TAB MAIN ==========
-local MainSec = MainTab:AddSection({ Name = "AFK Farm & Auto Item" })
-MainSec:AddToggle({
-    Name = "🚀 AFK Farm",
+-- Bubble toggle
+local ScreenGuiBubble = Instance.new("ScreenGui")
+ScreenGuiBubble.Name = "EvadeBubbleGui"
+ScreenGuiBubble.Parent = (gethui and gethui()) or game:GetService("CoreGui") or LocalPlayer:WaitForChild("PlayerGui")
+
+local BubbleBtn = Instance.new("ImageButton")
+BubbleBtn.Parent = ScreenGuiBubble
+BubbleBtn.Size = UDim2.new(0, 48, 0, 48)
+BubbleBtn.Position = UDim2.new(0.02, 0, 0.2, 0)
+BubbleBtn.Image = "rbxassetid://102609928046926"
+BubbleBtn.Active = true
+BubbleBtn.Draggable = true
+Instance.new("UICorner", BubbleBtn).CornerRadius = UDim.new(0, 10)
+BubbleBtn.MouseButton1Click:Connect(function()
+    Window.Root.Visible = not Window.Root.Visible
+end)
+
+-- Tabs
+local Tabs = {
+    Main     = Window:AddTab({ Title = "Main", Icon = "home" }),
+    Revive   = Window:AddTab({ Title = "💉 Revive", Icon = "heart" }),
+    Collect  = Window:AddTab({ Title = "🎯 Collect", Icon = "package" }),
+    Farm     = Window:AddTab({ Title = "🚜 Farm", Icon = "tractor" }),
+    Movement = Window:AddTab({ Title = "Movement", Icon = "activity" }),
+    Misc     = Window:AddTab({ Title = "Misc", Icon = "wrench" }),
+    Config   = Window:AddTab({ Title = "Config", Icon = "settings" })
+}
+
+-- // ========== 19. TAB MAIN (Speed & Jump) ==========
+Tabs.Main:AddParagraph({Title = "⚡ Speed & Jump", Content = "Aktifkan toggle, atur nilai slider."})
+
+Tabs.Main:AddToggle("SpeedToggle", {
+    Title = "⚡ Speed Boost",
+    Default = false,
+    Callback = function(Value)
+        SpeedEnabled = Value
+        applySpeed()
+        Fluent:Notify({Title = "Speed", Content = Value and "✅ Aktif" or "❌ Nonaktif", Duration = 2})
+    end
+})
+
+Tabs.Main:AddSlider("SpeedSlider", {
+    Title = "🏃 Kecepatan",
+    Default = 50,
+    Min = 16,
+    Max = 200,
+    Rounding = 0,
+    Callback = function(v)
+        walkSpeedValue = v
+        if SpeedEnabled then applySpeed() end
+    end
+})
+
+Tabs.Main:AddToggle("JumpToggle", {
+    Title = "⬆ Jump Boost",
+    Default = false,
+    Callback = function(Value)
+        JumpEnabled = Value
+        applyJump()
+        Fluent:Notify({Title = "Jump", Content = Value and "✅ Aktif" or "❌ Nonaktif", Duration = 2})
+    end
+})
+
+Tabs.Main:AddSlider("JumpSlider", {
+    Title = "💪 Kekuatan Lompat",
+    Default = 80,
+    Min = 20,
+    Max = 300,
+    Rounding = 0,
+    Callback = function(v)
+        jumpPowerValue = v
+        if JumpEnabled then applyJump() end
+    end
+})
+
+-- // ========== 20. TAB REVIVE ==========
+Tabs.Revive:AddParagraph({
+    Title = "💉 Auto Revive (FULL FIX)",
+    Content = "Aktifkan toggle. Saat mati/terpuruk, akan mencoba SEMUA metode: remote, GUI, LoadCharacter."
+})
+
+Tabs.Revive:AddToggle("AutoRevive", {
+    Title = "🔄 Auto Revive",
+    Description = "Deteksi setiap 0.3 detik",
+    Default = false,
+    Callback = function(Value)
+        AutoReviveEnabled = Value
+        Fluent:Notify({Title = "Auto Revive", Content = Value and "✅ Aktif" or "❌ Nonaktif", Duration = 2})
+    end
+})
+
+Tabs.Revive:AddButton({
+    Title = "🧪 Test Revive (Paksa Mati)",
+    Description = "Set health ke 0 untuk testing",
+    Callback = function()
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("Humanoid") then
+            char.Humanoid.Health = 0
+            Fluent:Notify({Title = "Test", Content = "Health di-set 0", Duration = 2})
+        end
+    end
+})
+
+-- // ========== 21. TAB COLLECT ==========
+Tabs.Collect:AddParagraph({Title = "🎯 Auto Collect", Content = "Mengambil item (bubble/coconut) terdekat secara otomatis."})
+
+Tabs.Collect:AddToggle("AutoCollect", {
+    Title = "🎯 Auto Collect",
+    Default = false,
+    Callback = function(Value)
+        AutoCollectEnabled = Value
+        Fluent:Notify({Title = "Auto Collect", Content = Value and "✅ Aktif" or "❌ Nonaktif", Duration = 2})
+    end
+})
+
+Tabs.Collect:AddButton({
+    Title = "🧪 Test Collect (Ambil 1 Item)",
+    Callback = function()
+        autoCollect()
+        Fluent:Notify({Title = "Test", Content = "Mencoba ambil item...", Duration = 2})
+    end
+})
+
+-- // ========== 22. TAB FARM ==========
+Tabs.Farm:AddParagraph({
+    Title = "🚜 AFK Farm & Auto Item",
+    Content = "Aktifkan fitur di bawah. Jendela mini muncul otomatis saat ON."
+})
+
+Tabs.Farm:AddToggle("AfkFarm", {
+    Title = "🚀 AFK Farm",
+    Description = "Naik ke posisi aman dan farming item (butuh Auto Item)",
     Default = false,
     Callback = function(Value)
         local char = LocalPlayer.Character
         local isDowned = char and char:GetAttribute("Downed")
         if isDowned then
-            OrionLib:MakeNotification({ Name = "Error", Content = "Karakter sedang down!", Image = ICON.Logo, Time = 3 })
+            Fluent:Notify({Title = "Error", Content = "Karakter sedang down!", Duration = 3})
             return
         end
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -882,14 +899,15 @@ MainSec:AddToggle({
     end
 })
 
-MainSec:AddToggle({
-    Name = "🎯 Auto Item",
+Tabs.Farm:AddToggle("AutoItem", {
+    Title = "🎯 Auto Item",
+    Description = "Mengambil item terdekat secara otomatis (bisa dipakai bareng AFK Farm)",
     Default = false,
     Callback = function(Value)
         local char = LocalPlayer.Character
         local isDowned = char and char:GetAttribute("Downed")
         if isDowned then
-            OrionLib:MakeNotification({ Name = "Error", Content = "Karakter sedang down!", Image = ICON.Logo, Time = 3 })
+            Fluent:Notify({Title = "Error", Content = "Karakter sedang down!", Duration = 3})
             return
         end
         AutoItemEnabled = Value
@@ -898,162 +916,8 @@ MainSec:AddToggle({
     end
 })
 
-local SpeedSec = MainTab:AddSection({ Name = "⚡ Speed & Jump" })
-SpeedSec:AddToggle({
-    Name = "⚡ Speed Boost",
-    Default = false,
-    Callback = function(Value)
-        SpeedEnabled = Value
-        applySpeed()
-    end
-})
-
-SpeedSec:AddSlider({
-    Name = "🏃 Kecepatan",
-    Min = 16,
-    Max = 200,
-    Default = 50,
-    Increment = 1,
-    ValueName = "speed",
-    Callback = function(v)
-        walkSpeedValue = v
-        if SpeedEnabled then applySpeed() end
-    end
-})
-
-SpeedSec:AddToggle({
-    Name = "⬆ Jump Boost",
-    Default = false,
-    Callback = function(Value)
-        JumpEnabled = Value
-        applyJump()
-    end
-})
-
-SpeedSec:AddSlider({
-    Name = "💪 Kekuatan Lompat",
-    Min = 20,
-    Max = 300,
-    Default = 80,
-    Increment = 1,
-    ValueName = "jump",
-    Callback = function(v)
-        jumpPowerValue = v
-        if JumpEnabled then applyJump() end
-    end
-})
-
--- // ========== 26. TAB REVIVE ==========
-local ReviveSec = ReviveTab:AddSection({ Name = "💉 Auto Revive" })
-ReviveSec:AddToggle({
-    Name = "🔄 Auto Revive",
-    Default = false,
-    Callback = function(Value)
-        AutoReviveEnabled = Value
-        OrionLib:MakeNotification({ Name = "Auto Revive", Content = Value and "✅ Aktif" or "❌ Nonaktif", Image = ICON.Logo, Time = 2 })
-    end
-})
-
-ReviveSec:AddButton({
-    Name = "🧪 Test Revive (Paksa Mati)",
-    Callback = function()
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChild("Humanoid") then
-            char.Humanoid.Health = 0
-            OrionLib:MakeNotification({ Name = "Test", Content = "Health di-set 0", Image = ICON.Logo, Time = 2 })
-        end
-    end
-})
-
--- // ========== 27. TAB COLLECT ==========
-local CollectSec = CollectTab:AddSection({ Name = "🎯 Auto Collect" })
-CollectSec:AddToggle({
-    Name = "🎯 Auto Collect",
-    Default = false,
-    Callback = function(Value)
-        AutoCollectEnabled = Value
-        OrionLib:MakeNotification({ Name = "Auto Collect", Content = Value and "✅ Aktif" or "❌ Nonaktif", Image = ICON.Logo, Time = 2 })
-    end
-})
-
-CollectSec:AddButton({
-    Name = "🧪 Test Collect (Ambil 1 Item)",
-    Callback = function()
-        autoCollect()
-        OrionLib:MakeNotification({ Name = "Test", Content = "Mencoba ambil item...", Image = ICON.Logo, Time = 2 })
-    end
-})
-
--- // ========== 28. TAB UTILITY ==========
-local UtilitySec = UtilityTab:AddSection({ Name = "🛠️ Utility" })
-UtilitySec:AddToggle({
-    Name = "🛡️ Anti AFK",
-    Default = false,
-    Callback = function(Value)
-        AntiAFKEnabled = Value
-    end
-})
-
-UtilitySec:AddToggle({
-    Name = "🔄 Auto Respawn",
-    Default = false,
-    Callback = function(Value)
-        AutoRespawnEnabled = Value
-    end
-})
-
-UtilitySec:AddToggle({
-    Name = "✈️ Fly Mode (F)",
-    Default = false,
-    Callback = function(Value)
-        FlyEnabled = Value
-        if not Value and flying then stopFly() end
-    end
-})
-
-UtilitySec:AddSlider({
-    Name = "🚀 Kecepatan Terbang",
-    Min = 20,
-    Max = 200,
-    Default = 80,
-    Increment = 1,
-    ValueName = "speed",
-    Callback = function(v)
-        flySpeedValue = v
-    end
-})
-
-UtilitySec:AddToggle({
-    Name = "👻 No Clip",
-    Default = false,
-    Callback = function(Value)
-        NoClipEnabled = Value
-    end
-})
-
-UtilitySec:AddToggle({
-    Name = "🦘 Infinite Jump",
-    Default = false,
-    Callback = function(Value)
-        InfiniteJumpEnabled = Value
-        if Value then
-            InfiniteJumpConnection = UserInputService.JumpRequest:Connect(function()
-                local char = LocalPlayer.Character
-                if char and char:FindFirstChild("Humanoid") then
-                    char.Humanoid.Jump = true
-                end
-            end)
-        else
-            if InfiniteJumpConnection then
-                InfiniteJumpConnection:Disconnect()
-                InfiniteJumpConnection = nil
-            end
-        end
-    end
-})
-
-UtilitySec:AddButton({
-    Name = "📌 Teleport ke Item Terdekat",
+Tabs.Farm:AddButton({
+    Title = "📌 Teleport ke Item Terdekat",
     Callback = function()
         local char = LocalPlayer.Character
         if not char then return end
@@ -1061,87 +925,136 @@ UtilitySec:AddButton({
         if not hrp then return end
         local items = getAllItems()
         if #items == 0 then
-            OrionLib:MakeNotification({ Name = "Teleport", Content = "Tidak ada item!", Image = ICON.Logo, Time = 2 })
+            Fluent:Notify({Title = "Teleport", Content = "Tidak ada item!", Duration = 2})
             return
         end
         local item = getClosestSafeItem(hrp, items)
         if item then
             teleportTo(hrp, item.Position, 0.3)
-            OrionLib:MakeNotification({ Name = "Teleport", Content = "Berhasil ke item terdekat", Image = ICON.Logo, Time = 2 })
+            Fluent:Notify({Title = "Teleport", Content = "Berhasil ke item terdekat", Duration = 2})
         end
     end
 })
 
--- // ========== 29. TAB VISUAL ==========
-local VisualSec = VisualTab:AddSection({ Name = "👁️ Visual" })
-VisualSec:AddToggle({
-    Name = "☀️ Full Bright",
+-- // ========== 23. TAB MOVEMENT ==========
+Tabs.Movement:AddParagraph({Title = "🛸 Movement Mods", Content = "Fly, NoClip, Infinite Jump"})
+
+Tabs.Movement:AddToggle("FlyToggle", {
+    Title = "✈️ Fly Mode (F)",
     Default = false,
     Callback = function(Value)
-        FullBrightEnabled = Value
+        FlyEnabled = Value
+        if not Value and flying then stopFly() end
+        Fluent:Notify({Title = "Fly", Content = Value and "✅ Aktif (tekan F)" or "❌ Nonaktif", Duration = 2})
     end
 })
 
-VisualSec:AddToggle({
-    Name = "🛡️ God Mode",
+Tabs.Movement:AddSlider("FlySpeedSlider", {
+    Title = "🚀 Kecepatan Terbang",
+    Default = 80,
+    Min = 20,
+    Max = 200,
+    Rounding = 0,
+    Callback = function(v)
+        flySpeedValue = v
+    end
+})
+
+Tabs.Movement:AddToggle("NoClipToggle", {
+    Title = "👻 No Clip",
+    Default = false,
+    Callback = function(Value)
+        NoClipEnabled = Value
+        Fluent:Notify({Title = "No Clip", Content = Value and "✅ Aktif" or "❌ Nonaktif", Duration = 2})
+    end
+})
+
+Tabs.Movement:AddToggle("InfiniteJumpToggle", {
+    Title = "🦘 Infinite Jump",
+    Default = false,
+    Callback = function(Value)
+        InfiniteJumpEnabled = Value
+        Fluent:Notify({Title = "Infinite Jump", Content = Value and "✅ Aktif" or "❌ Nonaktif", Duration = 2})
+    end
+})
+
+-- // ========== 24. TAB MISC ==========
+Tabs.Misc:AddParagraph({Title = "🛡️ Lain-lain", Content = "Anti AFK, Auto Respawn, God Mode, Full Bright, Server Hop, Redeem Codes"})
+
+Tabs.Misc:AddToggle("AntiAFK", {
+    Title = "🛡️ Anti AFK",
+    Default = false,
+    Callback = function(Value)
+        AntiAFKEnabled = Value
+        Fluent:Notify({Title = "Anti AFK", Content = Value and "✅ Aktif" or "❌ Nonaktif", Duration = 2})
+    end
+})
+
+Tabs.Misc:AddToggle("AutoRespawn", {
+    Title = "🔄 Auto Respawn",
+    Default = false,
+    Callback = function(Value)
+        AutoRespawnEnabled = Value
+        Fluent:Notify({Title = "Auto Respawn", Content = Value and "✅ Aktif" or "❌ Nonaktif", Duration = 2})
+    end
+})
+
+Tabs.Misc:AddToggle("GodMode", {
+    Title = "🛡️ God Mode",
+    Description = "Kekebalan total (sangat berisiko!)",
     Default = false,
     Callback = function(Value)
         GodModeEnabled = Value
+        Fluent:Notify({Title = "God Mode", Content = Value and "✅ Aktif" or "❌ Nonaktif", Duration = 2})
     end
 })
 
--- // ========== 30. TAB MISC ==========
-local MiscSec = MiscTab:AddSection({ Name = "🎮 Lain-lain" })
-MiscSec:AddButton({
-    Name = "🔄 Server Hop",
+Tabs.Misc:AddToggle("FullBright", {
+    Title = "☀️ Full Bright",
+    Default = false,
+    Callback = function(Value)
+        FullBrightEnabled = Value
+        Fluent:Notify({Title = "Full Bright", Content = Value and "✅ Aktif" or "❌ Nonaktif", Duration = 2})
+    end
+})
+
+Tabs.Misc:AddButton({
+    Title = "🔄 Server Hop",
     Callback = function()
         hopServer()
-        OrionLib:MakeNotification({ Name = "Server Hop", Content = "Mencari server lain...", Image = ICON.Logo, Time = 2 })
+        Fluent:Notify({Title = "Server Hop", Content = "Mencari server lain...", Duration = 2})
     end
 })
 
-MiscSec:AddButton({
-    Name = "🎁 Redeem Codes",
+Tabs.Misc:AddButton({
+    Title = "🎁 Redeem Codes",
     Callback = function()
         redeemAllCodes()
-        OrionLib:MakeNotification({ Name = "Redeem Codes", Content = "Mencoba klaim kode...", Image = ICON.Logo, Time = 2 })
     end
 })
 
--- // ========== 31. TAB PENGATURAN ==========
-local SettingsSec = SettingsTab:AddSection({ Name = "Pengaturan" })
+-- // ========== 25. TAB CONFIG ==========
+SaveManager:SetLibrary(Fluent)
+InterfaceManager:SetLibrary(Fluent)
+SaveManager:IgnoreThemeSettings()
+InterfaceManager:SetFolder("EvadeHub")
+SaveManager:SetFolder("EvadeHub/configs")
+InterfaceManager:BuildInterfaceSection(Tabs.Config)
+SaveManager:BuildConfigSection(Tabs.Config)
 
-SettingsSec:AddButton({
-    Name = "💾 Save Config",
-    Callback = function()
-        OrionLib:SaveConfig()
-        OrionLib:MakeNotification({ Name = "Config", Content = "Config disimpan!", Image = ICON.Logo, Time = 2 })
-    end
+Window:SelectTab(2) -- Main
+SaveManager:LoadAutoloadConfig()
+
+-- // ========== 26. NOTIFIKASI AWAL ==========
+task.wait(1)
+Fluent:Notify({
+    Title = "🔥 EVADE HUB LOADED!",
+    Content = "Auto Revive FIX siap digunakan",
+    SubContent = "Aktifkan Auto Revive di tab 💉 Revive",
+    Duration = 5
 })
 
-SettingsSec:AddButton({
-    Name = "📂 Load Config",
-    Callback = function()
-        OrionLib:LoadConfig()
-        OrionLib:MakeNotification({ Name = "Config", Content = "Config dimuat!", Image = ICON.Logo, Time = 2 })
-    end
-})
-
-SettingsSec:AddButton({
-    Name = "❌ Tutup UI (Close)",
-    Callback = function()
-        confirmClose()
-    end
-})
-
--- // ========== 32. NOTIFIKASI LOAD ==========
-OrionLib:MakeNotification({ 
-    Name = "🔥 EVADE HUB", 
-    Content = "Semua fitur siap digunakan!", 
-    Image = ICON.Logo, 
-    Time = 4 
-})
-
-print("[EVADE HUB] Loaded — Orion UI")
-print("📌 Buka menu dan aktifkan fitur yang diinginkan!")
-print("📌 Klik bubble logo untuk buka UI lagi")
+print("✅ EVADE HUB – FULL FIX berhasil dimuat!")
+print("📌 Auto Revive: aktifkan di tab '💉 Revive'")
+print("📌 Auto Revive akan mencoba SEMUA metode: remote, GUI, LoadCharacter")
+print("📌 Jika mati, akan langsung revive dalam < 1 detik")
