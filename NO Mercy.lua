@@ -1,4 +1,4 @@
--- [[ CUSTOM UI LIBRARY (ALL-IN-ONE TEST SCRIPT) ]] --
+-- [[ CUSTOM UI LIBRARY (FIXED & FULL FEATURES) ]] --
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
@@ -64,7 +64,7 @@ function Library:CreateWindow(windowTitle, configFileName)
             if not isfolder("MyUILibraryConfigs") then
                 makefolder("MyUILibraryConfigs")
             end
-            local filePath = "MyUILibraryConfigs/" .. ConfigName
+            local filePath = "MyUILibraryConfigs/" + ConfigName
             if pcall(readfile, filePath) then
                 SavedData = HttpService:JSONDecode(readfile(filePath))
             end
@@ -193,6 +193,8 @@ function Library:CreateWindow(windowTitle, configFileName)
     ContentHolder.BackgroundTransparency = 1
     ContentHolder.Parent = MainFrame
     
+    local firstTab = true
+    
     function Window:AddTab(tabName)
         local Tab = {}
         
@@ -222,7 +224,8 @@ function Library:CreateWindow(windowTitle, configFileName)
         TabCorner.CornerRadius = UDim.new(0, 6)
         TabCorner.Parent = TabButton
         
-        TabButton.MouseButton1Click:Connect(function()
+        -- Fungsi pilih tab
+        local function selectTab()
             for _, p in ipairs(ContentHolder:GetChildren()) do
                 p.Visible = false
             end
@@ -235,8 +238,50 @@ function Library:CreateWindow(windowTitle, configFileName)
             Page.Visible = true
             TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
             TabButton.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
-        end)
+        end
         
+        TabButton.MouseButton1Click:Connect(selectTab)
+        
+        -- Otomatis buka tab pertama kali dibuat
+        if firstTab then
+            firstTab = false
+            selectTab()
+        end
+        
+        -- 1. Button + Icon
+        function Tab:AddButton(buttonText, iconId, callback)
+            callback = callback or function() end
+            local Button = Instance.new("TextButton")
+            Button.Size = UDim2.new(1, 0, 0, 35)
+            Button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+            Button.AutoButtonColor = false
+            Button.Text = "       " .. buttonText
+            Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+            Button.TextSize = 13
+            Button.Font = Enum.Font.SourceSansSemibold
+            Button.TextXAlignment = Enum.TextXAlignment.Left
+            Button.Parent = Page
+            
+            local BtnCorner = Instance.new("UICorner")
+            BtnCorner.CornerRadius = UDim.new(0, 6)
+            BtnCorner.Parent = Button
+            
+            if iconId and iconId ~= "" then
+                Button.Text = "          " .. buttonText
+                local Icon = Instance.new("ImageLabel")
+                Icon.Size = UDim2.new(0, 18, 0, 18)
+                Icon.Position = UDim2.new(0, 10, 0.5, -9)
+                Icon.BackgroundTransparency = 1
+                Icon.Image = iconId
+                Icon.Parent = Button
+            end
+            
+            Button.MouseButton1Click:Connect(function()
+                pcall(callback)
+            end)
+        end
+        
+        -- 2. Toggle
         function Tab:AddToggle(toggleId, toggleText, defaultState, callback)
             local state = SavedData[toggleId] ~= nil and SavedData[toggleId] or (defaultState or false)
             callback = callback or function() end
@@ -284,6 +329,87 @@ function Library:CreateWindow(windowTitle, configFileName)
             end)
         end
         
+        -- 3. Slider
+        function Tab:AddSlider(sliderId, sliderText, minVal, maxVal, defaultVal, callback)
+            minVal = minVal or 0
+            maxVal = maxVal or 100
+            local val = SavedData[sliderId] ~= nil and SavedData[sliderId] or (defaultVal or minVal)
+            callback = callback or function() end
+            pcall(callback, val)
+            
+            local SliderFrame = Instance.new("Frame")
+            SliderFrame.Size = UDim2.new(1, 0, 0, 50)
+            SliderFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+            SliderFrame.BorderSizePixel = 0
+            SliderFrame.Parent = Page
+            
+            local SldCorner = Instance.new("UICorner")
+            SldCorner.CornerRadius = UDim.new(0, 6)
+            SldCorner.Parent = SliderFrame
+            
+            local Label = Instance.new("TextLabel")
+            Label.Size = UDim2.new(1, -20, 0, 20)
+            Label.Position = UDim2.new(0, 10, 0, 5)
+            Label.BackgroundTransparency = 1
+            Label.Text = sliderText .. ": " .. tostring(val)
+            Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+            Label.TextSize = 13
+            Label.Font = Enum.Font.SourceSansSemibold
+            Label.TextXAlignment = Enum.TextXAlignment.Left
+            Label.Parent = SliderFrame
+            
+            local SliderBar = Instance.new("Frame")
+            SliderBar.Size = UDim2.new(1, -20, 0, 6)
+            SliderBar.Position = UDim2.new(0, 10, 0, 32)
+            SliderBar.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            SliderBar.BorderSizePixel = 0
+            SliderBar.Parent = SliderFrame
+            
+            local BarCorner = Instance.new("UICorner")
+            BarCorner.CornerRadius = UDim.new(0, 3)
+            BarCorner.Parent = SliderBar
+            
+            local FillBar = Instance.new("Frame")
+            FillBar.Size = UDim2.new((val - minVal) / (maxVal - minVal), 0, 1, 0)
+            FillBar.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+            FillBar.BorderSizePixel = 0
+            FillBar.Parent = SliderBar
+            
+            local FillCorner = Instance.new("UICorner")
+            FillCorner.CornerRadius = UDim.new(0, 3)
+            FillCorner.Parent = FillBar
+            
+            local draggingSlider = false
+            local function updateSlider(input)
+                local pos = math.clamp((input.Position.X - SliderBar.AbsolutePosition.X) / SliderBar.AbsoluteSize.X, 0, 1)
+                val = math.floor(minVal + ((maxVal - minVal) * pos))
+                FillBar.Size = UDim2.new(pos, 0, 1, 0)
+                Label.Text = sliderText .. ": " .. tostring(val)
+                SavedData[sliderId] = val
+                SaveConfig()
+                pcall(callback, val)
+            end
+            
+            SliderBar.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    draggingSlider = true
+                    updateSlider(input)
+                end
+            end)
+            
+            UserInputService.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    draggingSlider = false
+                end
+            end)
+            
+            UserInputService.InputChanged:Connect(function(input)
+                if draggingSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                    updateSlider(input)
+                end
+            end)
+        end
+        
         return Tab
     end
     
@@ -291,17 +417,25 @@ function Library:CreateWindow(windowTitle, configFileName)
 end
 
 -- ==========================================
--- EKSEKUSI / MENAMPILKAN UI KE LAYAR
+-- CONTOH PENGGUNAAN / EKSEKUSI
 -- ==========================================
-
--- Munculkan Intro Bubble dulu
-Library.ShowIntro("UI LIBRARY KU")
+Library.ShowIntro("PANEL MANDIRI")
 task.wait(2.5)
 
--- Buka Window dan Tab
 local Window = Library:CreateWindow("Panel Mandiri", "ConfigKu.json")
 local TabUtama = Window:AddTab("Utama")
 
-TabUtama:AddToggle("fitur_test", "Contoh Toggle Aktif", false, function(state)
-    print("Status Toggle:", state)
+-- Menambahkan Tombol, Toggle, dan Slider ke Tab Utama
+TabUtama:AddButton("Tombol Info", "rbxassetid://6023426915", function()
+    print("Tombol berhasil diklik!")
+end)
+
+TabUtama:AddToggle("toggle_farm", "Aktifkan Auto Farm", false, function(state)
+    print("Auto Farm status:", state)
+end)
+
+TabUtama:AddSlider("slider_ws", "Kecepatan Jalan", 16, 200, 16, function(val)
+    if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
+        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = val
+    end
 end)
