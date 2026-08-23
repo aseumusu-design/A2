@@ -461,6 +461,7 @@ local NM_TabIcons = {
     Survivor = ICON.User,
     Killer = ICON.Axe,
     Visual = ICON.Eye,
+    Parry = ICON.Swords,
 }
 
 local NM_Window
@@ -1799,24 +1800,71 @@ local function __ZiaanHub_Init_Main__()
             return IYAN_FirstBasePart(model)
         end
 
-        local function IYAN_GeneratorLabel(model)
-            local pct = tonumber(model:GetAttribute("RepairProgress")) or 0
-            if pct >= 0 and pct <= 1.001 then pct = pct * 100 end
+        local function IYAN_GeneratorProgress(model)
+            local pct = nil
+            for _, attrName in ipairs({ "RepairProgress", "Progress", "Repair", "GeneratorProgress", "Percent", "Charge" }) do
+                local ok, v = pcall(function() return tonumber(model:GetAttribute(attrName)) end)
+                if ok and v then pct = v break end
+            end
+            if not pct then
+                for _, child in ipairs(model:GetDescendants()) do
+                    if child:IsA("NumberValue") or child:IsA("IntValue") then
+                        local ln = string.lower(child.Name)
+                        if string.find(ln, "progress") or string.find(ln, "repair") or string.find(ln, "charge") then
+                            pct = child.Value
+                            break
+                        end
+                    end
+                end
+            end
+            pct = tonumber(pct) or 0
+            if pct > 0 and pct <= 1.001 then pct = pct * 100 end
             pct = IYAN_Clamp(pct, 0, 100)
+
+            local completed = pct >= 99.5
+            for _, attrName in ipairs({ "Completed", "Finished", "IsDone", "Done", "Repaired" }) do
+                local ok, v = pcall(function() return model:GetAttribute(attrName) end)
+                if ok and v == true then completed = true end
+            end
+            if completed then pct = 100 end
+            return pct, completed
+        end
+
+        local function IYAN_GeneratorProgressBar(pct, completed)
+            local slots = 10
+            local filled = math.floor((pct / 100) * slots + 0.0001)
+            if completed then filled = slots end
+            filled = IYAN_Clamp(filled, 0, slots)
+            local bar = string.rep("\u{2588}", filled) .. string.rep("\u{2591}", slots - filled)
+            if completed then
+                return "[" .. bar .. "] COMPLETE \u{2713}", Color3.fromRGB(0, 255, 130)
+            end
+            return "[" .. bar .. "] " .. tostring(math.floor(pct + 0.5)) .. "%",
+                Color3.fromHSV(IYAN_Clamp((pct / 100) * 0.33, 0, 0.33), 1, 1)
+        end
+
+        local function IYAN_GeneratorLabel(model)
+            local pct, completed = IYAN_GeneratorProgress(model)
 
             local repairers = tonumber(model:GetAttribute("PlayersRepairingCount")) or 0
             local paused = model:GetAttribute("ProgressPaused") == true
             local kickcount = tonumber(model:GetAttribute("kickcount")) or 0
             local abyss50 = model:GetAttribute("Abyss50Triggered") == true
 
-            local parts = { "Gen " .. tostring(math.floor(pct + 0.5)) .. "%" }
-            if repairers > 0 then table.insert(parts, "(" .. repairers .. "p)") end
-            if paused then table.insert(parts, "Pause") end
-            if abyss50 then table.insert(parts, "Warn") end
-            if kickcount > 0 then table.insert(parts, "K:" .. kickcount) end
+            local parts = {}
+            if completed then
+                table.insert(parts, "Gen COMPLETE \u{2713}")
+            else
+                table.insert(parts, "Gen " .. tostring(math.floor(pct + 0.5)) .. "%")
+                if repairers > 0 then table.insert(parts, "(" .. repairers .. "p)") end
+                if paused then table.insert(parts, "Pause") end
+                if abyss50 then table.insert(parts, "Warn") end
+                if kickcount > 0 then table.insert(parts, "K:" .. kickcount) end
+            end
 
-            local hue = IYAN_Clamp((pct / 100) * 0.33, 0, 0.33)
-            return table.concat(parts, " "), Color3.fromHSV(hue, 1, 1)
+            local labelColor = completed and Color3.fromRGB(0, 255, 130)
+                or Color3.fromHSV(IYAN_Clamp((pct / 100) * 0.33, 0, 0.33), 1, 1)
+            return table.concat(parts, " "), labelColor, pct, completed
         end
 
         local function IYAN_HasBasePart(model)
@@ -2020,6 +2068,12 @@ local function __ZiaanHub_Init_Main__()
 
             local nameText = ""
             local labelColor = color
+            local progressLine = nil
+            local progressColor = color
+            if cat == "Generator" then
+                local pct, completed = IYAN_GeneratorProgress(model)
+                progressLine, progressColor = IYAN_GeneratorProgressBar(pct, completed)
+            end
             if IYAN_ESPState.WorldNametags then
                 if cat == "Generator" then
                     local txt, genColor = IYAN_GeneratorLabel(model)
@@ -2043,6 +2097,10 @@ local function __ZiaanHub_Init_Main__()
                 mainLine = nameText
             elseif distanceText ~= "" then
                 mainLine = distanceText
+            end
+
+            if progressLine then
+                table.insert(lines, { Text = progressLine, Color = progressColor })
             end
 
             if mainLine ~= "" then
@@ -4101,6 +4159,7 @@ local function __ZiaanHub_Init_Main__()
             Survivor = Window:AddTab({ Name = "Survivor", Icon = "solar:shield-bold", Type = "Single" }),
             Killer = Window:AddTab({ Name = "Killer", Icon = "solar:danger-bold", Type = "Single" }),
             Visual = Window:AddTab({ Name = "Visual", Icon = "lucide:eye", Type = "Single" }),
+            Parry = Window:AddTab({ Name = "Parry", Icon = "solar:sword-bold", Type = "Single" }),
         }
 
         -- Player Tab
@@ -4122,7 +4181,6 @@ local function __ZiaanHub_Init_Main__()
             { Key = "Offensive", Name = "Offensive", Icon = "solar:target-bold" },
         })
         local SurvivorTabbox2 = addCenterFeatureTabbox(SurvivorTab, "Survivor Misc", {
-            { Key = "Parry", Name = "Parry", Icon = "solar:sword-bold" },
             { Key = "GenBoost", Name = "Gen Boost", Icon = "solar:plug-bold" },
             { Key = "Pallet", Name = "Auto Drop Pallet", Icon = "solar:box-bold" },
             { Key = "Movement", Name = "Movement", Icon = "solar:walk-bold" },  -- ADDED
@@ -4193,9 +4251,18 @@ local function __ZiaanHub_Init_Main__()
             end)
         end })
 
-        tpSection:AddButton({ Name = "TP to Gen", Callback = function() pcall(function() IYAN_TeleportToGenerator(1) end) end })
-        tpSection:AddButton({ Name = "TP to Gate", Callback = function() pcall(IYAN_TeleportToGate) end })
-        tpSection:AddButton({ Name = "TP to Hook", Callback = function() pcall(IYAN_TeleportToHook) end })
+        local function tpRun(label, fn, ...)
+            local args = { ... }
+            local ok, res = pcall(function() return fn(table.unpack(args)) end)
+            if not (ok and res) then
+                NM_Notify("Teleport", label .. " tidak ditemukan di map ini", 3)
+            end
+        end
+
+        tpSection:AddButton({ Name = "TP to Gen", Callback = function() tpRun("Generator", IYAN_TeleportToGenerator, 1) end })
+        tpSection:AddButton({ Name = "TP to Gate", Callback = function() tpRun("Gate", IYAN_TeleportToGate) end })
+        tpSection:AddButton({ Name = "TP to Exit", Callback = function() tpRun("Exit", IYAN_TeleportToExit) end })
+        tpSection:AddButton({ Name = "TP to Hook", Callback = function() tpRun("Hook", IYAN_TeleportToHook) end })
 
         -- Fling
         local FlingTab = PlayerTabbox1.Fling
@@ -4452,8 +4519,11 @@ local function __ZiaanHub_Init_Main__()
             Callback = function(v) VD.AUTO_ToFDotThreshold = v end
         })
 
-        -- Parry subtab
-        local ParryTab = SurvivorTabbox2.Parry
+        -- Parry tab (dedicated menu, own icon)
+        local ParryTabbox = addCenterFeatureTabbox(Tabs.Parry, "Parry", {
+            { Key = "AutoParry", Name = "Auto Parry", Icon = "solar:sword-bold" },
+        })
+        local ParryTab = ParryTabbox.AutoParry
         local parrySection = ParryTab:AddSection({
             Position = "Center",
             Name = "Auto Parry",
@@ -4906,10 +4976,15 @@ local function __ZiaanHub_Init_Main__()
                 local part = obj:FindFirstChild("HitBox", true) or obj:FindFirstChild("GeneratorPoint", true) or obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
                 if part then
                     local n = obj.Name
+                    local ln = string.lower(n)
                     if n == "Generator" then
                         table.insert(newGens, { model = obj, part = part })
-                    elseif n == "Gate" or n == "ExitGate" or obj:FindFirstChild("ExitLever") then
-                        table.insert(newGates, { model = obj, part = part })
+                    elseif ln == "gate" or ln == "exitgate" or ln == "exit" or ln:find("exitgate")
+                        or ln:find("gate") or obj:FindFirstChild("ExitLever", true)
+                        or obj:FindFirstChild("GateLever", true) or obj:FindFirstChild("ExitDoor", true) then
+                        local gp = obj:FindFirstChild("ExitLever", true) or obj:FindFirstChild("GateLever", true) or part
+                        if gp:IsA("Model") then gp = gp.PrimaryPart or gp:FindFirstChildWhichIsA("BasePart", true) end
+                        table.insert(newGates, { model = obj, part = gp or part })
                     elseif n == "Hook" then
                         table.insert(newHooks, { model = obj, part = part })
                     elseif n == "Palletwrong" or n:lower():find("pallet") then
@@ -4940,6 +5015,21 @@ local function __ZiaanHub_Init_Main__()
         IYAN_Cache.Hooks      = newHooks
         IYAN_Cache.Pallets    = newPallets
         IYAN_Cache.Windows    = newWindows
+        if not exitPos then
+            for _, obj in ipairs(map:GetDescendants()) do
+                local ln = string.lower(obj.Name)
+                if ln:find("exit") or ln:find("escape") or ln:find("finish") then
+                    local pp = obj:IsA("BasePart") and obj
+                        or (obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)))
+                    if pp then exitPart = pp; exitPos = pp.Position break end
+                end
+            end
+        end
+        if not exitPos and newGates[1] and newGates[1].part then
+            exitPart = newGates[1].part
+            exitPos = newGates[1].part.Position
+        end
+
         IYAN_Cache.ExitPos    = exitPos
         IYAN_Cache.ExitPart   = exitPart
 
@@ -4960,11 +5050,40 @@ local function __ZiaanHub_Init_Main__()
 
     local originalCanCollide = {}
 
+    local function IYAN_GetRoot()
+        local char = LocalPlayer.Character
+        return Root or (char and (char:FindFirstChild("HumanoidRootPart") or char.PrimaryPart)) or nil
+    end
+
+    -- make sure the cache is fresh before any teleport (fixes "gate / exit not working")
+    local function IYAN_EnsureCache(kind)
+        local list = IYAN_Cache and IYAN_Cache[kind]
+        local empty = (kind == "ExitPos") and (not IYAN_Cache or not IYAN_Cache.ExitPos)
+            or (type(list) == "table" and #list == 0)
+        if empty then pcall(IYAN_ScanMap) end
+        return IYAN_Cache
+    end
+
+    local function IYAN_ClosestOf(list)
+        local root = IYAN_GetRoot()
+        local closest, closestDist = nil, math.huge
+        for _, item in ipairs(list or {}) do
+            local part = item.part
+            if part and part.Parent then
+                local dist = root and (part.Position - root.Position).Magnitude or 0
+                if dist < closestDist then closestDist = dist; closest = item end
+            end
+        end
+        return closest
+    end
+
     function IYAN_TeleportToGenerator(index)
+        IYAN_EnsureCache("Generators")
         if not IYAN_Cache or not IYAN_Cache.Generators or #IYAN_Cache.Generators == 0 then return false end
         local sorted = {}
         for _, gen in ipairs(IYAN_Cache.Generators) do
-            table.insert(sorted, {gen = gen, dist = (Root and (gen.part.Position - Root.Position).Magnitude) or math.huge})
+                local _r = IYAN_GetRoot()
+            table.insert(sorted, {gen = gen, dist = (_r and (gen.part.Position - _r.Position).Magnitude) or 0})
         end
         table.sort(sorted, function(a, b) return a.dist < b.dist end)
         local target = sorted[index or 1]
@@ -4973,27 +5092,39 @@ local function __ZiaanHub_Init_Main__()
     end
 
     function IYAN_TeleportToGate()
-        if not IYAN_Cache or not IYAN_Cache.Gates or #IYAN_Cache.Gates == 0 then return false end
-        local closest, closestDist = nil, math.huge
-        for _, gate in ipairs(IYAN_Cache.Gates) do
-            local dist = (Root and (gate.part.Position - Root.Position).Magnitude) or math.huge
-            if dist < closestDist then
-                closestDist = dist
-                closest = gate
-            end
+        IYAN_EnsureCache("Gates")
+        local closest = IYAN_ClosestOf(IYAN_Cache and IYAN_Cache.Gates)
+        if not closest then
+            -- fallback: exit point if no gate model was found
+            return IYAN_TeleportToExit()
         end
-        if not closest then return false end
         return IYAN_TeleportToPosition(closest.part.Position)
     end
 
+    function IYAN_TeleportToExit()
+        IYAN_EnsureCache("ExitPos")
+        local pos = IYAN_Cache and IYAN_Cache.ExitPos
+        if not pos and IYAN_Cache and IYAN_Cache.ExitPart and IYAN_Cache.ExitPart.Parent then
+            pos = IYAN_Cache.ExitPart.Position
+        end
+        if not pos then
+            local closest = IYAN_ClosestOf(IYAN_Cache and IYAN_Cache.Gates)
+            pos = closest and closest.part.Position
+        end
+        if not pos then return false end
+        return IYAN_TeleportToPosition(pos)
+    end
+
     function IYAN_TeleportToHook()
-        if not IYAN_Cache or not IYAN_Cache.ClosestHook then return false end
-        return IYAN_TeleportToPosition(IYAN_Cache.ClosestHook.part.Position)
+        IYAN_EnsureCache("Hooks")
+        local target = (IYAN_Cache and IYAN_Cache.ClosestHook) or IYAN_ClosestOf(IYAN_Cache and IYAN_Cache.Hooks)
+        if not (target and target.part) then return false end
+        return IYAN_TeleportToPosition(target.part.Position)
     end
 
     function IYAN_TeleportToPosition(pos)
         if not pos then return false end
-        local root = Root
+        local root = IYAN_GetRoot()
         if not root then return false end
         if LocalPlayer.Character then
             root.Anchored = true
