@@ -1,6 +1,5 @@
 --[[
-  NO MERCY — "VIOLENCE DISTRICT" (Custom Intro from GitHub + Full ZiaanHub + Global Text Glow)
-  UI: Orion Library (MarV)
+  NO MERCY — "VIOLENCE DISTRICT" (Synced Custom Intro + Hidden UI Until Intro Ends)
 ]]
 
 local ICON = {
@@ -98,27 +97,36 @@ local function VD_Notify(title, content, duration)
     end)
 end
 
--- ============================================================
---  LOAD & RUN CUSTOM INTRO FROM GITHUB
--- ============================================================
-task.spawn(function()
-    local success, err = pcall(function()
-        local introSource = game:HttpGet("https://raw.githubusercontent.com/aseumusu-design/NoMercy_BladeBal/refs/heads/main/intro.lua")
-        local introFn, compileErr = loadstring(introSource)
-        if introFn then
-            introFn()
-        else
-            warn("[NO MERCY Intro Compile Error]: " .. tostring(compileErr))
+local function FindMainWindow()
+    local root = GetHolder()
+    if not root then return nil end
+    local marv = root:FindFirstChild("MarV")
+    if not marv then return nil end
+    for _, child in ipairs(marv:GetChildren()) do
+        if child:IsA("Frame") and child.AbsoluteSize.X > 300 then
+            return child
         end
-    end)
-    if not success then
-        warn("[NO MERCY Intro Load Error]: " .. tostring(err))
+    end
+    return nil
+end
+
+-- ============================================================
+--  1. JALANKAN INTRO DULU & TUNGGU SAMPAI SELESAI
+-- ============================================================
+local introSuccess = pcall(function()
+    local introSource = game:HttpGet("https://raw.githubusercontent.com/aseumusu-design/NoMercy_BladeBal/refs/heads/main/intro.lua")
+    local introFn = loadstring(introSource)
+    if introFn then
+        introFn()
     end
 end)
 
--- Beri sedikit jeda agar intro selesai berjalan sebelum UI utama dimuat
-task.wait(2.2)
+-- Sesuaikan durasi tunggu ini (dalam detik) jika intro GitHub Anda butuh waktu lebih lama/cepat
+task.wait(4.5) 
 
+-- ============================================================
+--  2. SETELAH INTRO SELESAI, MUAT UI UTAMA & SEMBUNYIKAN DI AWAL
+-- ============================================================
 local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Marpiii/UiLib/refs/heads/main/source.lua"))()
 local onCloseRequest
 
@@ -134,21 +142,12 @@ local Window = OrionLib:MakeWindow({
     end,
 })
 
-local function FindMainWindow()
-    local root = GetHolder()
-    if not root then return nil end
-    local marv = root:FindFirstChild("MarV")
-    if not marv then return nil end
-    for _, child in ipairs(marv:GetChildren()) do
-        if child:IsA("Frame") and child.AbsoluteSize.X > 300 then
-            return child
-        end
-    end
-    return nil
-end
+-- Sembunyikan window utama sesaat setelah dibuat agar transisi mulus
+local mainWin = FindMainWindow()
+if mainWin then mainWin.Visible = false end
 
 -- ============================================================
---  BUBBLE LOGO
+--  BUBBLE LOGO & CONFIRM CLOSE
 -- ============================================================
 local bubbleGui = nil
 local function makeBubble()
@@ -291,6 +290,13 @@ local function confirmClose(fromCloseBtn)
 end
 
 onCloseRequest = function() confirmClose(true) end
+
+-- Munculkan kembali window utama setelah jeda intro selesai
+task.spawn(function()
+    task.wait(0.2)
+    local m = FindMainWindow()
+    if m then m.Visible = true end
+end)
 
 -- ============================================================
 --  CORE BACKEND LOGIC
@@ -602,4 +608,4 @@ RunService.Heartbeat:Connect(function()
 end)
 
 VD_Notify("NO MERCY", "Violence District Loaded Successfully!", 4)
-print("[NO MERCY] Violence District loaded successfully with custom intro from GitHub, global text glow, and full features!")
+print("[NO MERCY] Loaded with synchronized GitHub intro and global text glow!")
