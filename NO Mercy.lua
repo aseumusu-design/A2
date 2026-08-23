@@ -1,5 +1,5 @@
 --[[
-  NO MERCY — "VIOLENCE DISTRICT" (Synced Custom Intro + Hidden UI Until Intro Ends)
+  NO MERCY — "VIOLENCE DISTRICT" (Synced Intro with Extended Timer)
 ]]
 
 local ICON = {
@@ -121,11 +121,11 @@ local introSuccess = pcall(function()
     end
 end)
 
--- Sesuaikan durasi tunggu ini (dalam detik) jika intro GitHub Anda butuh waktu lebih lama/cepat
-task.wait(4.5) 
+-- Waktu tunggu diperpanjang menjadi 6.5 detik agar intro GitHub selesai sempurna
+task.wait(6.5) 
 
 -- ============================================================
---  2. SETELAH INTRO SELESAI, MUAT UI UTAMA & SEMBUNYIKAN DI AWAL
+--  2. SETELAH INTRO SELESAI, MUAT UI UTAMA
 -- ============================================================
 local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Marpiii/UiLib/refs/heads/main/source.lua"))()
 local onCloseRequest
@@ -142,7 +142,6 @@ local Window = OrionLib:MakeWindow({
     end,
 })
 
--- Sembunyikan window utama sesaat setelah dibuat agar transisi mulus
 local mainWin = FindMainWindow()
 if mainWin then mainWin.Visible = false end
 
@@ -291,7 +290,6 @@ end
 
 onCloseRequest = function() confirmClose(true) end
 
--- Munculkan kembali window utama setelah jeda intro selesai
 task.spawn(function()
     task.wait(0.2)
     local m = FindMainWindow()
@@ -608,4 +606,4 @@ RunService.Heartbeat:Connect(function()
 end)
 
 VD_Notify("NO MERCY", "Violence District Loaded Successfully!", 4)
-print("[NO MERCY] Loaded with synchronized GitHub intro and global text glow!")
+print("[NO MERCY] Loaded with perfectly timed GitHub intro and global text glow!")
