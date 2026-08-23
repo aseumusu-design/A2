@@ -1,609 +1,691 @@
 --[[
-  NO MERCY — "VIOLENCE DISTRICT" (Synced Intro with Extended Timer)
-]]
+    ╔══════════════════════════════════════════════════════════════╗
+    ║              NEXUS UI LIBRARY - EXAMPLE USAGE                 ║
+    ║         Full Demo with All 60 Icons & Components              ║
+    ╚══════════════════════════════════════════════════════════════╝
+--]]
 
-local ICON = {
-    Info     = "rbxassetid://7733964719",
-    Crosshair= "rbxassetid://7733765307",
-    Swords   = "rbxassetid://7734056608",
-    Globe    = "rbxassetid://7733954760",
-    Axe      = "rbxassetid://7733674079",
-    User     = "rbxassetid://7743875962",
-    Eye      = "rbxassetid://7733774602",
-    Zap      = "rbxassetid://7733771628",
-    Settings = "rbxassetid://7734053495",
-    Logo     = "rbxassetid://113381647185328",
-    Banner   = "rbxassetid://117118608066997",
-}
+-- Load the library (replace with your actual URL or local path)
+local NexusUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/YOUR_USERNAME/NexusUI/main/NexusUI_Library.lua"))()
 
--- ===================== GLOBAL CONFIG & STATE =====================
-getgenv().VD = getgenv().VD or {
-    AutoSkillcheck        = false,
-    AutoSkillcheckMode    = "Normal",
-    SURV_FleeKiller       = false,
-    SURV_FleeDistance     = 40,
-    SURV_AutoParry        = false,
-    SURV_ParryMode        = "Legit",
-    SURV_ParryAnimId      = "rbxassetid://109133187196613",
-    SURV_ParryRange       = 12,
-    SURV_ShowParryCircle  = true,
-    Parry_Keybind         = "F3",
-    SURV_AntiKnock        = false,
-    SURV_FirstPerson      = false,
-    AUTO_ToFAim           = false,
-    AUTO_ToFAimRange      = 90,
-    AUTO_ToFDotThreshold  = 0.5,
-    AUTO_ToFTargetMode    = "Killer",
-    AUTO_ToFAimPart       = "HumanoidRootPart",
-    AUTO_ToFPredict       = true,
-    AUTO_ToFBulletSpeed   = 200,
-    AUTO_Attack           = false,
-    AUTO_AttackRange      = 12,
-    KILLER_DestroyPallets = false,
-    KILLER_AutoBreakGene  = false,
-    KILLER_BlockVaults    = false,
-    KILLER_AntiBlind      = false,
-    KILLER_DoubleTap      = false,
-    SPEAR_Aimbot          = false,
-    SPEAR_Gravity         = 50,
-    SPEAR_Speed           = 100,
-    KILLER_CustomMasked   = "Richard",
-    DRAWING_ESP           = false,
-    ESP_Skeleton          = false,
-    ESP_Offscreen         = false,
-    ESP_Velocity          = false,
-    MaxDistance           = 2000,
-    InstantHealSelf       = false,
-    AutoHealAll           = false,
-    Destroyed             = false,
-    SURV_GenBoost         = false,
-    SURV_DraggableGenBypass = false,
-    ESP_LowPerformance    = false,
-    Fullbright            = false,
-    NoFog                 = false,
-    SURV_AutoDropPallet   = false,
-    SURV_AutoDropPalletDist = 20,
-    SURV_AutoDropPalletMode = "Aggressive",
-    SURV_AutoVault        = false,
-    SURV_AutoPalletSlide  = false,
-}
+-- ═══════════════════════════════════════════════════════════════
+-- CREATE WINDOW
+-- ═══════════════════════════════════════════════════════════════
 
-local Players           = game:GetService("Players")
-local RunService        = game:GetService("RunService")
-local UserInputService  = game:GetService("UserInputService")
-local Lighting          = game:GetService("Lighting")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace         = game:GetService("Workspace")
-local GuiService        = game:GetService("GuiService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-local TweenService      = game:GetService("TweenService")
+local Window = NexusUI:CreateWindow({
+    Title = "NEXUS HUB",
+    SubTitle = "v2.0 • Premium",
+    Theme = "Dark", -- Options: Dark, Midnight, Crimson, Forest, Void
+    Size = UDim2.new(0, 780, 0, 520)
+})
 
-local LocalPlayer       = Players.LocalPlayer
-local Camera            = Workspace.CurrentCamera
-local VD                = getgenv().VD
-local isMobile          = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+-- ═══════════════════════════════════════════════════════════════
+-- TABS WITH 60 UNIQUE ICONS
+-- ═══════════════════════════════════════════════════════════════
 
-local function GetHolder()
-    return (gethui and gethui()) or game:GetService("CoreGui")
-end
+-- Tab 1: Farm (Icons 21-30)
+local FarmTab = Window:Tab({ 
+    Name = "Auto Farm", 
+    Icon = NexusUI.Icons[21].Icon, -- 🌾
+    Description = "Farming automation tools"
+})
 
-local function VD_Notify(title, content, duration)
-    pcall(function()
-        if OrionLib and OrionLib.MakeNotification then
-            OrionLib:MakeNotification({ Name = title, Content = content, Image = ICON.Logo, Time = duration or 3 })
+-- Tab 2: Speed (Icons 31-40)
+local SpeedTab = Window:Tab({ 
+    Name = "Movement", 
+    Icon = NexusUI.Icons[31].Icon, -- 🏃
+    Description = "Speed & movement hacks"
+})
+
+-- Tab 3: Combat (Icons 11-20)
+local CombatTab = Window:Tab({ 
+    Name = "Combat", 
+    Icon = NexusUI.Icons[11].Icon, -- ⚔️
+    Description = "Combat & aimbot tools"
+})
+
+-- Tab 4: Visual (Icons 41-50)
+local VisualTab = Window:Tab({ 
+    Name = "Visual", 
+    Icon = NexusUI.Icons[41].Icon, -- 👁️
+    Description = "ESP & visual enhancements"
+})
+
+-- Tab 5: Misc (Icons 51-60)
+local MiscTab = Window:Tab({ 
+    Name = "Misc", 
+    Icon = NexusUI.Icons[51].Icon, -- 💰
+    Description = "Utility & misc features"
+})
+
+-- Tab 6: Settings (Icon 2)
+local SettingsTab = Window:Tab({ 
+    Name = "Settings", 
+    Icon = NexusUI.Icons[2].Icon, -- ⚙️
+    Description = "Configuration options"
+})
+
+-- ═══════════════════════════════════════════════════════════════
+-- FARM TAB COMPONENTS
+-- ═══════════════════════════════════════════════════════════════
+
+FarmTab:Section("🌾 Auto Farm")
+
+FarmTab:Toggle({
+    Text = "Enable Auto Farm",
+    Default = false,
+    Flag = "AutoFarm",
+    Callback = function(Value)
+        print("Auto Farm:", Value)
+        if Value then
+            NexusUI:Notify({
+                Title = "Auto Farm",
+                Message = "Auto farming started!",
+                Type = "Success",
+                Duration = 3
+            })
+        end
+    end
+})
+
+FarmTab:Toggle({
+    Text = "Auto Collect Drops",
+    Default = false,
+    Flag = "AutoCollect",
+    Callback = function(Value)
+        print("Auto Collect:", Value)
+    end
+})
+
+FarmTab:Toggle({
+    Text = "Auto Sell Items",
+    Default = false,
+    Flag = "AutoSell",
+    Callback = function(Value)
+        print("Auto Sell:", Value)
+    end
+})
+
+FarmTab:Slider({
+    Text = "Farm Speed Multiplier",
+    Min = 1,
+    Max = 10,
+    Default = 1,
+    Increment = 0.5,
+    Suffix = "x",
+    Flag = "FarmSpeed",
+    Callback = function(Value)
+        print("Farm Speed:", Value)
+    end
+})
+
+FarmTab:Dropdown({
+    Text = "Farm Mode",
+    Options = {"Normal", "Fast", "Extreme", "Legit"},
+    Default = "Normal",
+    Flag = "FarmMode",
+    Callback = function(Value)
+        print("Farm Mode:", Value)
+        NexusUI:Notify({
+            Title = "Farm Mode",
+            Message = "Switched to " .. Value .. " mode",
+            Type = "Info",
+            Duration = 2
+        })
+    end
+})
+
+FarmTab:Section("🌲 Resource Farm")
+
+FarmTab:Toggle({
+    Text = "Auto Chop Trees",
+    Default = false,
+    Flag = "AutoChop",
+    Callback = function(Value)
+        print("Auto Chop:", Value)
+    end
+})
+
+FarmTab:Toggle({
+    Text = "Auto Mine Rocks",
+    Default = false,
+    Flag = "AutoMine",
+    Callback = function(Value)
+        print("Auto Mine:", Value)
+    end
+})
+
+FarmTab:Toggle({
+    Text = "Auto Fish",
+    Default = false,
+    Flag = "AutoFish",
+    Callback = function(Value)
+        print("Auto Fish:", Value)
+    end
+})
+
+-- ═══════════════════════════════════════════════════════════════
+-- SPEED TAB COMPONENTS
+-- ═══════════════════════════════════════════════════════════════
+
+SpeedTab:Section("🏃 Speed Hacks")
+
+SpeedTab:Toggle({
+    Text = "Enable Speed Hack",
+    Default = false,
+    Flag = "SpeedHack",
+    Callback = function(Value)
+        print("Speed Hack:", Value)
+        if Value then
+            game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Window:GetFlag("WalkSpeed") or 50
         else
-            print("[NO MERCY] " .. title .. " - " .. content)
-        end
-    end)
-end
-
-local function FindMainWindow()
-    local root = GetHolder()
-    if not root then return nil end
-    local marv = root:FindFirstChild("MarV")
-    if not marv then return nil end
-    for _, child in ipairs(marv:GetChildren()) do
-        if child:IsA("Frame") and child.AbsoluteSize.X > 300 then
-            return child
+            game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 16
         end
     end
-    return nil
-end
-
--- ============================================================
---  1. JALANKAN INTRO DULU & TUNGGU SAMPAI SELESAI
--- ============================================================
-local introSuccess = pcall(function()
-    local introSource = game:HttpGet("https://raw.githubusercontent.com/aseumusu-design/NoMercy_BladeBal/refs/heads/main/intro.lua")
-    local introFn = loadstring(introSource)
-    if introFn then
-        introFn()
-    end
-end)
-
--- Waktu tunggu diperpanjang menjadi 6.5 detik agar intro GitHub selesai sempurna
-task.wait(6.5) 
-
--- ============================================================
---  2. SETELAH INTRO SELESAI, MUAT UI UTAMA
--- ============================================================
-local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Marpiii/UiLib/refs/heads/main/source.lua"))()
-local onCloseRequest
-
-local Window = OrionLib:MakeWindow({
-    Name = "NO MERCY — VIOLENCE DISTRICT",
-    HidePremium = false,
-    SaveConfig = true,
-    ConfigFolder = "NoMercyViolenceFullZiaan",
-    IntroEnabled = false,
-    Icon = ICON.Logo,
-    CloseCallback = function()
-        if onCloseRequest then onCloseRequest() end
-    end,
 })
 
-local mainWin = FindMainWindow()
-if mainWin then mainWin.Visible = false end
-
--- ============================================================
---  BUBBLE LOGO & CONFIRM CLOSE
--- ============================================================
-local bubbleGui = nil
-local function makeBubble()
-    if bubbleGui then bubbleGui:Destroy() end
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "NoMercyBubble"
-    gui.ResetOnSpawn = false
-    gui.IgnoreGuiInset = true
-    gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-    gui.Parent = GetHolder()
-    if syn and syn.protect_gui then pcall(syn.protect_gui, gui) end
-
-    local btn = Instance.new("ImageButton")
-    btn.Parent = gui
-    btn.BackgroundColor3 = Color3.fromRGB(25, 30, 35)
-    btn.Position = UDim2.new(0.02, 0, 0.2, 0)
-    btn.Size = UDim2.fromOffset(48, 48)
-    btn.Image = ICON.Logo
-    btn.ScaleType = Enum.ScaleType.Fit
-    btn.Active = true
-    btn.Draggable = true
-    btn.ZIndex = 10
-
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(255, 255, 255)
-    stroke.Thickness = 2
-    stroke.Transparency = 0
-    stroke.Parent = btn
-
-    local bubblePulsing = true
-    task.spawn(function()
-        while bubblePulsing and stroke and stroke.Parent do
-            local t1 = TweenService:Create(stroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0.8, Thickness = 4 })
-            t1:Play(); t1.Completed:Wait()
-            if not bubblePulsing or not stroke or not stroke.Parent then break end
-            local t2 = TweenService:Create(stroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0, Thickness = 2 })
-            t2:Play(); t2.Completed:Wait()
-        end
-    end)
-
-    btn.MouseButton1Click:Connect(function()
-        bubblePulsing = false
-        local main = FindMainWindow()
-        if main then main.Visible = true end
-        bubbleGui:Destroy()
-        bubbleGui = nil
-    end)
-    bubbleGui = gui
-end
-
-local function closeUI()
-    local main = FindMainWindow()
-    if main then main.Visible = false end
-    makeBubble()
-end
-
-local function showUI()
-    local main = FindMainWindow()
-    if main then main.Visible = true end
-end
-
-local function confirmClose(fromCloseBtn)
-    if fromCloseBtn then showUI() end
-    local holder = GetHolder()
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "NoMercyConfirm"
-    gui.ResetOnSpawn = false
-    gui.IgnoreGuiInset = true
-    gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-    gui.Parent = holder
-    if syn and syn.protect_gui then pcall(syn.protect_gui, gui) end
-
-    local fade = Instance.new("Frame")
-    fade.Size = UDim2.new(1, 0, 1, 0)
-    fade.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    fade.BackgroundTransparency = 0.4
-    fade.ZIndex = 99
-    fade.Parent = gui
-
-    local box = Instance.new("Frame")
-    box.Size = UDim2.fromOffset(280, 150)
-    box.Position = UDim2.new(0.5, 0, 0.5, 0)
-    box.AnchorPoint = Vector2.new(0.5, 0.5)
-    box.BackgroundColor3 = Color3.fromRGB(28, 32, 38)
-    box.BorderSizePixel = 0
-    box.ZIndex = 100
-    box.Parent = gui
-
-    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 12)
-
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -40, 0, 30)
-    title.Position = UDim2.new(0, 20, 0, 15)
-    title.BackgroundTransparency = 1
-    title.Text = "Tutup NO MERCY?"
-    title.TextColor3 = Color3.fromRGB(240, 240, 240)
-    title.TextSize = 18
-    title.Font = Enum.Font.GothamBold
-    title.ZIndex = 101
-    title.Parent = box
-
-    local desc = Instance.new("TextLabel")
-    desc.Size = UDim2.new(1, -40, 0, 30)
-    desc.Position = UDim2.new(0, 20, 0, 48)
-    desc.BackgroundTransparency = 1
-    desc.Text = "Klik bubble untuk buka lagi."
-    desc.TextColor3 = Color3.fromRGB(150, 150, 150)
-    desc.TextSize = 14
-    desc.Font = Enum.Font.Gotham
-    desc.ZIndex = 101
-    desc.Parent = box
-
-    local function destroy() gui:Destroy() end
-    local function cancel() destroy(); if fromCloseBtn then showUI() end end
-
-    local btnYa = Instance.new("TextButton")
-    btnYa.Size = UDim2.fromOffset(90, 36)
-    btnYa.Position = UDim2.new(1, -200, 1, -50)
-    btnYa.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    btnYa.Text = "Ya"
-    btnYa.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btnYa.Font = Enum.Font.GothamBold
-    btnYa.ZIndex = 101
-    btnYa.Parent = box
-    Instance.new("UICorner", btnYa).CornerRadius = UDim.new(0, 8)
-    btnYa.MouseButton1Click:Connect(function() destroy(); closeUI() end)
-
-    local btnTidak = Instance.new("TextButton")
-    btnTidak.Size = UDim2.fromOffset(90, 36)
-    btnTidak.Position = UDim2.new(1, -100, 1, -50)
-    btnTidak.BackgroundColor3 = Color3.fromRGB(40, 45, 52)
-    btnTidak.Text = "Tidak"
-    btnTidak.TextColor3 = Color3.fromRGB(240, 240, 240)
-    btnTidak.Font = Enum.Font.GothamBold
-    btnTidak.ZIndex = 101
-    btnTidak.Parent = box
-    Instance.new("UICorner", btnTidak).CornerRadius = UDim.new(0, 8)
-    btnTidak.MouseButton1Click:Connect(cancel)
-end
-
-onCloseRequest = function() confirmClose(true) end
-
-task.spawn(function()
-    task.wait(0.2)
-    local m = FindMainWindow()
-    if m then m.Visible = true end
-end)
-
--- ============================================================
---  CORE BACKEND LOGIC
--- ============================================================
-local Character, Humanoid, Root
-local function updateChar(char)
-    Character = char or LocalPlayer.Character
-    if Character then
-        task.spawn(function()
-            Humanoid = Character:WaitForChild("Humanoid", 5)
-            Root     = Character:WaitForChild("HumanoidRootPart", 5)
-        end)
-    else
-        Humanoid, Root = nil, nil
-    end
-end
-updateChar()
-LocalPlayer.CharacterAdded:Connect(updateChar)
-
--- Auto Skillcheck Backend
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-local AutoSkill = { LastGoalRotation = nil, HasClickedThisGoal = false, LastLineRotation = nil, LastTick = nil, WasActive = false }
-
-local function VD_PressSkill()
-    if isMobile then
-        local btn = PlayerGui:FindFirstChild("check", true)
-        if btn and btn:IsA("GuiObject") then
-            local pos = btn.AbsolutePosition
-            local size = btn.AbsoluteSize
-            local inset = GuiService:GetGuiInset()
-            local x = pos.X + (size.X / 2) + inset.X
-            local y = pos.Y + (size.Y / 2) + inset.Y
-            pcall(function() VirtualInputManager:SendTouchEvent(8822, Enum.UserInputState.Begin.Value, x, y) end)
-            task.wait(0.01)
-            pcall(function() VirtualInputManager:SendTouchEvent(8822, Enum.UserInputState.End.Value, x, y) end)
-            if firesignal and btn.MouseButton1Click then firesignal(btn.MouseButton1Click) end
-        end
-    else
-        pcall(function() VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game) end)
-        task.wait(0.01)
-        pcall(function() VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game) end)
-    end
-end
-
-local function VD_GetSkillCheck()
-    for _, guiName in ipairs({ "SkillCheckPromptGui", "SkillCheckPromptGui-con" }) do
-        local gui = PlayerGui:FindFirstChild(guiName, true)
-        if gui then
-            local check = gui:FindFirstChild("Check", true)
-            if check and check.Visible then
-                local line = check:FindFirstChild("Line", true)
-                local goal = check:FindFirstChild("Goal", true)
-                if line and goal then return line, goal end
-            end
+SpeedTab:Slider({
+    Text = "Walk Speed",
+    Min = 16,
+    Max = 500,
+    Default = 50,
+    Suffix = " studs",
+    Flag = "WalkSpeed",
+    Callback = function(Value)
+        if Window:GetFlag("SpeedHack") then
+            game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
         end
     end
-end
+})
 
-local function VD_AngularDelta(from, to)
-    local d = to - from
-    if d > 180 then d = d - 360 end
-    if d < -180 then d = d + 360 end
-    return d
-end
-
-local function VD_CrossedZone(prevLr, lr, startPos, endPos)
-    local function inZone(r)
-        if startPos > endPos then return r >= startPos or r <= endPos end
-        return r >= startPos and r <= endPos
-    end
-    if inZone(lr) then return true end
-    if prevLr == nil then return false end
-    local delta = VD_AngularDelta(prevLr, lr)
-    local steps = math.abs(math.floor(delta))
-    if steps < 2 then return false end
-    local stepSize = delta / steps
-    for i = 1, steps do
-        if inZone((prevLr + stepSize * i) % 360) then return true end
-    end
-    return false
-end
-
-RunService.RenderStepped:Connect(function()
-    if not VD.AutoSkillcheck then return end
-    local line, goal = VD_GetSkillCheck()
-    if not (line and goal) then
-        AutoSkill.LastGoalRotation = nil
-        AutoSkill.HasClickedThisGoal = false
-        AutoSkill.LastLineRotation = nil
-        AutoSkill.LastTick = nil
-        AutoSkill.WasActive = false
-        return
-    end
-
-    local lr = line.Rotation % 360
-    local gr = goal.Rotation % 360
-    local now = os.clock()
-    if not AutoSkill.WasActive then
-        AutoSkill.WasActive = true
-        AutoSkill.HasClickedThisGoal = false
-        AutoSkill.LastGoalRotation = gr
-        AutoSkill.LastLineRotation = lr
-        AutoSkill.LastTick = now
-        return
-    end
-    if AutoSkill.LastGoalRotation and math.abs(VD_AngularDelta(AutoSkill.LastGoalRotation, gr)) > 5 then
-        AutoSkill.HasClickedThisGoal = false
-        AutoSkill.LastLineRotation = nil
-        AutoSkill.LastTick = nil
-    end
-    AutoSkill.LastGoalRotation = gr
-    if AutoSkill.HasClickedThisGoal then
-        AutoSkill.LastLineRotation = lr
-        AutoSkill.LastTick = now
-        return
-    end
-    if AutoSkill.LastLineRotation and AutoSkill.LastTick then
-        local dt = now - AutoSkill.LastTick
-        if dt > 0 then
-            local lineSpeed = VD_AngularDelta(AutoSkill.LastLineRotation, lr) / dt
-            local predicted = (lr + lineSpeed * dt * 0) % 360
-            if VD_CrossedZone(AutoSkill.LastLineRotation, predicted, (gr + 104) % 360, (gr + 109) % 360) then
-                AutoSkill.HasClickedThisGoal = true
-                task.spawn(function()
-                    task.wait(0.03)
-                    VD_PressSkill()
-                end)
-            end
+SpeedTab:Toggle({
+    Text = "Fly Mode",
+    Default = false,
+    Flag = "FlyMode",
+    Callback = function(Value)
+        print("Fly Mode:", Value)
+        if Value then
+            NexusUI:Notify({
+                Title = "Fly Mode",
+                Message = "Press SPACE to go up, LEFT SHIFT to go down",
+                Type = "Info",
+                Duration = 4
+            })
         end
     end
-    AutoSkill.LastLineRotation = lr
-    AutoSkill.LastTick = now
-end)
+})
 
--- ============================================================
---  BUAT TAB ORION
--- ============================================================
-local InfoTab     = Window:MakeTab({ Name = "Info", Icon = ICON.Info, PremiumOnly = false })
-local AimbotTab   = Window:MakeTab({ Name = "Aimbot", Icon = ICON.Crosshair, PremiumOnly = false })
-local ParryTab    = Window:MakeTab({ Name = "Parry", Icon = ICON.Swords, PremiumOnly = false })
-local TeleportTab = Window:MakeTab({ Name = "Teleport", Icon = ICON.Globe, PremiumOnly = false })
-local KillerTab   = Window:MakeTab({ Name = "Killer", Icon = ICON.Axe, PremiumOnly = false })
-local SurvivorTab = Window:MakeTab({ Name = "Survivor", Icon = ICON.User, PremiumOnly = false })
-local VisualTab   = Window:MakeTab({ Name = "Visual", Icon = ICON.Eye, PremiumOnly = false })
-local SpeedTab    = Window:MakeTab({ Name = "Speed", Icon = ICON.Zap, PremiumOnly = false })
-local SettingsTab = Window:MakeTab({ Name = "Pengaturan", Icon = ICON.Settings, PremiumOnly = false })
+SpeedTab:Slider({
+    Text = "Fly Speed",
+    Min = 10,
+    Max = 200,
+    Default = 50,
+    Suffix = " studs",
+    Flag = "FlySpeed",
+    Callback = function(Value)
+        print("Fly Speed:", Value)
+    end
+})
 
--- ============================================================
---  INFO TAB & BANNER
--- ============================================================
-local InfoSec = InfoTab:AddSection({ Name = "Tentang" })
-InfoSec:AddLabel("NO MERCY — Violence District")
-InfoSec:AddLabel("ZiaanHub X Full Backend Integrated")
-InfoSec:AddButton({
-    Name = "Copy Link Discord",
+SpeedTab:Keybind({
+    Text = "Fly Toggle Key",
+    Default = "F",
+    Flag = "FlyKey",
+    Callback = function(Key)
+        print("Fly Key pressed:", Key)
+    end
+})
+
+SpeedTab:Section("🚀 Teleport")
+
+SpeedTab:Button({
+    Text = "Teleport to Spawn",
+    Icon = NexusUI.Icons[34].Icon, -- ⚡
     Callback = function()
-        if setclipboard then setclipboard("https://discord.gg/pbg6g79Hp") end
-        VD_Notify("NO MERCY", "Link Discord di-copy!", 3)
-    end,
+        print("Teleporting to spawn...")
+        NexusUI:Notify({
+            Title = "Teleport",
+            Message = "Teleported to spawn!",
+            Type = "Success"
+        })
+    end
 })
 
-task.spawn(function()
-    task.wait(0.3)
-    local main = FindMainWindow()
-    if not main then return end
-    for _, v in ipairs(main:GetDescendants()) do
-        if v:IsA("TextLabel") and v.Text == "Tentang" then
-            local container = v.Parent.Parent
-            if container and container:IsA("ScrollingFrame") then
-                for _, child in ipairs(container:GetChildren()) do
-                    if child.Name == "AbsoluteTopBanner" then child:Destroy() end
-                end
-                local bannerFrame = Instance.new("Frame")
-                bannerFrame.Name = "AbsoluteTopBanner"
-                bannerFrame.Size = UDim2.new(1, -10, 0, 115)
-                bannerFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-                bannerFrame.BorderSizePixel = 0
-                bannerFrame.LayoutOrder = -999
-                bannerFrame.Parent = container
-
-                Instance.new("UICorner", bannerFrame).CornerRadius = UDim.new(0, 8)
-                local bannerImg = Instance.new("ImageLabel")
-                bannerImg.Size = UDim2.new(1, 0, 1, 0)
-                bannerImg.Image = ICON.Banner
-                bannerImg.BackgroundTransparency = 1
-                bannerImg.ScaleType = Enum.ScaleType.Fit
-                bannerImg.Parent = bannerFrame
-                Instance.new("UICorner", bannerImg).CornerRadius = UDim.new(0, 8)
-                break
-            end
-        end
+SpeedTab:Button({
+    Text = "Teleport to Safe Zone",
+    Icon = NexusUI.Icons[53].Icon, -- 🚪
+    Callback = function()
+        print("Teleporting to safe zone...")
     end
-end)
-
--- ============================================================
---  EFEK TEKS BERCAYA SEMUA (GLOBAL TEXT GLOW PULSE)
--- ============================================================
-task.spawn(function()
-    while true do
-        local main = FindMainWindow()
-        if main then
-            for _, obj in ipairs(main:GetDescendants()) do
-                if obj:IsA("TextLabel") then
-                    local alpha = (math.sin(os.clock() * 3) + 1) / 2
-                    obj.TextColor3 = Color3.fromRGB(240, 240, 240):Lerp(Color3.fromRGB(100, 210, 255), alpha)
-                end
-            end
-        end
-        RunService.RenderStepped:Wait()
-    end
-end)
-
--- ============================================================
---  AIMBOT TAB
--- ============================================================
-local AimbotSec = AimbotTab:AddSection({ Name = "Aimbot Settings" })
-AimbotSec:AddToggle({ Name = "Enable Aimbot", Default = false, Callback = function(v) VD.SPEAR_Aimbot = v end })
-AimbotSec:AddToggle({ Name = "Silent Aim Veil", Default = false, Callback = function(v) VD.AUTO_ToFAim = v end })
-AimbotSec:AddSlider({ Name = "FOV Radius", Min = 50, Max = 500, Default = 150, Increment = 10, Callback = function(v) VD.SPEAR_Speed = v end })
-
--- ============================================================
---  PARRY TAB
--- ============================================================
-local ParrySec = ParryTab:AddSection({ Name = "Auto Parry" })
-ParrySec:AddToggle({ Name = "Enable Auto Parry", Default = false, Callback = function(v) VD.SURV_AutoParry = v end })
-ParrySec:AddDropdown({ Name = "Parry Mode", Default = "Legit", Options = { "Legit", "Aggressive" }, Callback = function(v) VD.SURV_ParryMode = type(v) == "table" and v[1] or v end })
-ParrySec:AddSlider({ Name = "Parry Range", Min = 2, Max = 20, Default = 12, Increment = 0.5, Callback = function(v) VD.SURV_ParryRange = v end })
-
--- ============================================================
---  TELEPORT TAB
--- ============================================================
-local TeleSec = TeleportTab:AddSection({ Name = "Teleport" })
-TeleSec:AddButton({ Name = "Teleport to Safe Zone", Callback = function() VD_Notify("Teleport", "Safe Zone Teleported", 2) end })
-TeleSec:AddButton({ Name = "Teleport to Generator", Callback = function() print("TP to Gen") end })
-TeleSec:AddButton({ Name = "Teleport to Gate", Callback = function() print("TP to Gate") end })
-
--- ============================================================
---  KILLER TAB
--- ============================================================
-local KillSec = KillerTab:AddSection({ Name = "General Killer" })
-KillSec:AddToggle({ Name = "Auto Attack", Default = false, Callback = function(v) VD.AUTO_Attack = v end })
-KillSec:AddSlider({ Name = "Attack Range", Min = 5, Max = 20, Default = 12, Increment = 1, Callback = function(v) VD.AUTO_AttackRange = v end })
-KillSec:AddToggle({ Name = "Double Tap", Default = false, Callback = function(v) VD.KILLER_DoubleTap = v end })
-KillSec:AddToggle({ Name = "Auto Kick Pallet", Default = false, Callback = function(v) VD.KILLER_DestroyPallets = v end })
-KillSec:AddToggle({ Name = "Auto Kick Generator", Default = false, Callback = function(v) VD.KILLER_AutoBreakGene = v end })
-KillSec:AddToggle({ Name = "Block All Vaults", Default = false, Callback = function(v) VD.KILLER_BlockVaults = v end })
-
--- ============================================================
---  SURVIVOR TAB
--- ============================================================
-local SurvSec = SurvivorTab:AddSection({ Name = "General Survivor" })
-SurvSec:AddToggle({ Name = "Auto Skillcheck", Default = false, Callback = function(v) VD.AutoSkillcheck = v end })
-SurvSec:AddDropdown({ Name = "Skillcheck Mode", Default = "Normal", Options = { "Normal", "Perfect", "Instant" }, Callback = function(v) VD.AutoSkillcheckMode = type(v) == "table" and v[1] or v end })
-SurvSec:AddToggle({ Name = "Gen Boost (Bypass)", Default = false, Callback = function(v) VD.SURV_GenBoost = v end })
-SurvSec:AddToggle({ Name = "Auto Drop Pallet", Default = false, Callback = function(v) VD.SURV_AutoDropPallet = v end })
-SurvSec:AddToggle({ Name = "Auto Vault", Default = false, Callback = function(v) VD.SURV_AutoVault = v end })
-SurvSec:AddToggle({ Name = "Auto Pallet (Slide)", Default = false, Callback = function(v) VD.SURV_AutoPalletSlide = v end })
-
--- ============================================================
---  VISUAL TAB
--- ============================================================
-local VisSec = VisualTab:AddSection({ Name = "Drawing & Highlight ESP" })
-VisSec:AddToggle({ Name = "Master Turn On Drawing ESP", Default = false, Callback = function(v) VD.DRAWING_ESP = v end })
-VisSec:AddToggle({ Name = "ESP Skeleton", Default = false, Callback = function(v) VD.ESP_Skeleton = v end })
-VisSec:AddToggle({ Name = "ESP Velocity Arrows", Default = false, Callback = function(v) VD.ESP_Velocity = v end })
-VisSec:AddToggle({ Name = "Fullbright", Default = false, Callback = function(v) VD.Fullbright = v; Lighting.Brightness = v and 1 or 2 end })
-VisSec:AddToggle({ Name = "No Fog", Default = false, Callback = function(v) VD.NoFog = v; Lighting.FogEnd = v and 9999 or 100000 end })
-
--- ============================================================
---  SPEED TAB
--- ============================================================
-local SpeedSec = SpeedTab:AddSection({ Name = "WalkSpeed" })
-SpeedSec:AddSlider({
-    Name = "WalkSpeed", Min = 16, Max = 200, Default = 16, Increment = 1, ValueName = "speed",
-    Callback = function(v)
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChild("Humanoid") then char.Humanoid.WalkSpeed = v end
-    end,
 })
 
--- ============================================================
---  PENGATURAN TAB
--- ============================================================
-local SettingsSec = SettingsTab:AddSection({ Name = "Pengaturan" })
-SettingsSec:AddButton({ Name = "Tutup UI (Close)", Callback = function() confirmClose() end })
+-- ═══════════════════════════════════════════════════════════════
+-- COMBAT TAB COMPONENTS
+-- ═══════════════════════════════════════════════════════════════
 
--- ============================================================
---  BACKGROUND HEARTBEAT LOOP
--- ============================================================
-RunService.Heartbeat:Connect(function()
-    if VD.Destroyed then return end
-    if VD.AUTO_Attack and LocalPlayer.Team and LocalPlayer.Team.Name == "Killer" then
-        pcall(function()
-            local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if not root then return end
-            for _, player in ipairs(Players:GetPlayers()) do
-                if player ~= LocalPlayer and player.Team and player.Team.Name == "Survivors" and player.Character then
-                    local tRoot = player.Character:FindFirstChild("HumanoidRootPart")
-                    if tRoot and (tRoot.Position - root.Position).Magnitude <= VD.AUTO_AttackRange then
-                        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-                        local basicAtt = remotes and remotes:FindFirstChild("Attacks") and remotes.Attacks:FindFirstChild("BasicAttack")
-                        if basicAtt then basicAtt:FireServer(false) end
-                        break
-                    end
-                end
-            end
-        end)
+CombatTab:Section("⚔️ Aimbot")
+
+CombatTab:Toggle({
+    Text = "Enable Aimbot",
+    Default = false,
+    Flag = "Aimbot",
+    Callback = function(Value)
+        print("Aimbot:", Value)
     end
-end)
+})
 
-VD_Notify("NO MERCY", "Violence District Loaded Successfully!", 4)
-print("[NO MERCY] Loaded with perfectly timed GitHub intro and global text glow!")
+CombatTab:Toggle({
+    Text = "Silent Aim",
+    Default = false,
+    Flag = "SilentAim",
+    Callback = function(Value)
+        print("Silent Aim:", Value)
+    end
+})
+
+CombatTab:Toggle({
+    Text = "Team Check",
+    Default = true,
+    Flag = "TeamCheck",
+    Callback = function(Value)
+        print("Team Check:", Value)
+    end
+})
+
+CombatTab:Slider({
+    Text = "Aimbot FOV",
+    Min = 10,
+    Max = 500,
+    Default = 150,
+    Suffix = "°",
+    Flag = "AimFOV",
+    Callback = function(Value)
+        print("Aim FOV:", Value)
+    end
+})
+
+CombatTab:Slider({
+    Text = "Aim Smoothness",
+    Min = 1,
+    Max = 100,
+    Default = 50,
+    Suffix = "%",
+    Flag = "AimSmooth",
+    Callback = function(Value)
+        print("Aim Smooth:", Value)
+    end
+})
+
+CombatTab:Dropdown({
+    Text = "Aim Part",
+    Options = {"Head", "Torso", "UpperTorso", "LowerTorso", "HumanoidRootPart", "Legs"},
+    Default = "Head",
+    Flag = "AimPart",
+    Callback = function(Value)
+        print("Aim Part:", Value)
+    end
+})
+
+CombatTab:Section("🛡️ Combat Misc")
+
+CombatTab:Toggle({
+    Text = "Auto Parry",
+    Default = false,
+    Flag = "AutoParry",
+    Callback = function(Value)
+        print("Auto Parry:", Value)
+    end
+})
+
+CombatTab:Toggle({
+    Text = "Anti-Aim",
+    Default = false,
+    Flag = "AntiAim",
+    Callback = function(Value)
+        print("Anti-Aim:", Value)
+    end
+})
+
+CombatTab:Keybind({
+    Text = "Aimbot Key",
+    Default = "Q",
+    Flag = "AimKey",
+    Callback = function(Key)
+        print("Aim Key:", Key)
+    end
+})
+
+-- ═══════════════════════════════════════════════════════════════
+-- VISUAL TAB COMPONENTS
+-- ═══════════════════════════════════════════════════════════════
+
+VisualTab:Section("👁️ ESP Settings")
+
+VisualTab:Toggle({
+    Text = "Player ESP",
+    Default = false,
+    Flag = "PlayerESP",
+    Callback = function(Value)
+        print("Player ESP:", Value)
+    end
+})
+
+VisualTab:Toggle({
+    Text = "Box ESP",
+    Default = false,
+    Flag = "BoxESP",
+    Callback = function(Value)
+        print("Box ESP:", Value)
+    end
+})
+
+VisualTab:Toggle({
+    Text = "Tracer ESP",
+    Default = false,
+    Flag = "TracerESP",
+    Callback = function(Value)
+        print("Tracer ESP:", Value)
+    end
+})
+
+VisualTab:Toggle({
+    Text = "Name ESP",
+    Default = false,
+    Flag = "NameESP",
+    Callback = function(Value)
+        print("Name ESP:", Value)
+    end
+})
+
+VisualTab:Toggle({
+    Text = "Distance ESP",
+    Default = false,
+    Flag = "DistanceESP",
+    Callback = function(Value)
+        print("Distance ESP:", Value)
+    end
+})
+
+VisualTab:Toggle({
+    Text = "Health ESP",
+    Default = false,
+    Flag = "HealthESP",
+    Callback = function(Value)
+        print("Health ESP:", Value)
+    end
+})
+
+VisualTab:ColorPicker({
+    Text = "ESP Color",
+    Default = Color3.fromRGB(255, 0, 0),
+    Flag = "ESPColor",
+    Callback = function(Color)
+        print("ESP Color:", Color)
+    end
+})
+
+VisualTab:Section("🗺️ World Visuals")
+
+VisualTab:Toggle({
+    Text = "Full Bright",
+    Default = false,
+    Flag = "FullBright",
+    Callback = function(Value)
+        print("Full Bright:", Value)
+        if Value then
+            game.Lighting.Brightness = 10
+            game.Lighting.ClockTime = 12
+        else
+            game.Lighting.Brightness = 2
+        end
+    end
+})
+
+VisualTab:Toggle({
+    Text = "No Fog",
+    Default = false,
+    Flag = "NoFog",
+    Callback = function(Value)
+        print("No Fog:", Value)
+        if Value then
+            game.Lighting.FogEnd = 100000
+        end
+    end
+})
+
+VisualTab:Slider({
+    Text = "Field of View",
+    Min = 30,
+    Max = 120,
+    Default = 70,
+    Suffix = "°",
+    Flag = "FOV",
+    Callback = function(Value)
+        game.Workspace.CurrentCamera.FieldOfView = Value
+    end
+})
+
+-- ═══════════════════════════════════════════════════════════════
+-- MISC TAB COMPONENTS
+-- ═══════════════════════════════════════════════════════════════
+
+MiscTab:Section("💰 Economy")
+
+MiscTab:Toggle({
+    Text = "Auto Buy Items",
+    Default = false,
+    Flag = "AutoBuy",
+    Callback = function(Value)
+        print("Auto Buy:", Value)
+    end
+})
+
+MiscTab:Toggle({
+    Text = "Infinite Money",
+    Default = false,
+    Flag = "InfMoney",
+    Callback = function(Value)
+        print("Inf Money:", Value)
+    end
+})
+
+MiscTab:Section("🤖 Automation")
+
+MiscTab:Toggle({
+    Text = "Anti-AFK",
+    Default = false,
+    Flag = "AntiAFK",
+    Callback = function(Value)
+        print("Anti-AFK:", Value)
+    end
+})
+
+MiscTab:Toggle({
+    Text = "Auto Quest",
+    Default = false,
+    Flag = "AutoQuest",
+    Callback = function(Value)
+        print("Auto Quest:", Value)
+    end
+})
+
+MiscTab:Section("🛠️ Utilities")
+
+MiscTab:Button({
+    Text = "Rejoin Server",
+    Icon = NexusUI.Icons[9].Icon, -- ↻
+    Callback = function()
+        NexusUI:Notify({
+            Title = "Server",
+            Message = "Rejoining server...",
+            Type = "Warning"
+        })
+        game:GetService("TeleportService"):Teleport(game.PlaceId, game.Players.LocalPlayer)
+    end
+})
+
+MiscTab:Button({
+    Text = "Server Hop",
+    Icon = NexusUI.Icons[38].Icon, -- ⛵
+    Callback = function()
+        print("Server hopping...")
+        NexusUI:Notify({
+            Title = "Server",
+            Message = "Hopping to new server...",
+            Type = "Info"
+        })
+    end
+})
+
+MiscTab:Input({
+    Text = "Target Player",
+    Placeholder = "Enter player name...",
+    Flag = "TargetPlayer",
+    Callback = function(Text)
+        print("Target:", Text)
+    end
+})
+
+MiscTab:Button({
+    Text = "Copy Player List",
+    Icon = NexusUI.Icons[52].Icon, -- 🔑
+    Callback = function()
+        local players = {}
+        for _, p in pairs(game.Players:GetPlayers()) do
+            table.insert(players, p.Name)
+        end
+        print("Players:", table.concat(players, ", "))
+        NexusUI:Notify({
+            Title = "Players",
+            Message = #players .. " players in server",
+            Type = "Success"
+        })
+    end
+})
+
+-- ═══════════════════════════════════════════════════════════════
+-- SETTINGS TAB COMPONENTS
+-- ═══════════════════════════════════════════════════════════════
+
+SettingsTab:Section("⚙️ UI Settings")
+
+SettingsTab:Dropdown({
+    Text = "Theme",
+    Options = {"Dark", "Midnight", "Crimson", "Forest", "Void"},
+    Default = "Dark",
+    Callback = function(Value)
+        print("Theme changed to:", Value)
+        NexusUI:Notify({
+            Title = "Theme",
+            Message = "Theme set to " .. Value,
+            Type = "Success"
+        })
+    end
+})
+
+SettingsTab:Slider({
+    Text = "UI Scale",
+    Min = 50,
+    Max = 150,
+    Default = 100,
+    Suffix = "%",
+    Flag = "UIScale",
+    Callback = function(Value)
+        print("UI Scale:", Value .. "%")
+    end
+})
+
+SettingsTab:Toggle({
+    Text = "Show Notifications",
+    Default = true,
+    Flag = "ShowNotifs",
+    Callback = function(Value)
+        print("Notifications:", Value)
+    end
+})
+
+SettingsTab:Toggle({
+    Text = "Sound Effects",
+    Default = true,
+    Flag = "SoundFX",
+    Callback = function(Value)
+        print("Sound FX:", Value)
+    end
+})
+
+SettingsTab:Section("💾 Configuration")
+
+SettingsTab:Button({
+    Text = "Save Config",
+    Icon = "💾",
+    Callback = function()
+        -- Save flags to file or datastore
+        print("Saving config...")
+        print("Flags:", Window.Flags)
+        NexusUI:Notify({
+            Title = "Config Saved",
+            Message = "All settings saved successfully!",
+            Type = "Success",
+            Duration = 3
+        })
+    end
+})
+
+SettingsTab:Button({
+    Text = "Load Config",
+    Icon = "📂",
+    Callback = function()
+        print("Loading config...")
+        NexusUI:Notify({
+            Title = "Config Loaded",
+            Message = "Settings restored from save!",
+            Type = "Success"
+        })
+    end
+})
+
+SettingsTab:Button({
+    Text = "Reset to Default",
+    Icon = "↺",
+    Callback = function()
+        print("Resetting config...")
+        NexusUI:Notify({
+            Title = "Reset",
+            Message = "All settings reset to default!",
+            Type = "Warning"
+        })
+    end
+})
+
+SettingsTab:Keybind({
+    Text = "Toggle UI Key",
+    Default = "RightShift",
+    Flag = "ToggleUI",
+    Callback = function()
+        Window:ToggleVisibility()
+    end
+})
+
+SettingsTab:Label({
+    Text = "Nexus UI Library v2.0 | Made with ❤️",
+    Color = NexusUI.CurrentTheme.TextDark
+})
+
+-- ═══════════════════════════════════════════════════════════════
+-- WELCOME NOTIFICATION
+-- ═══════════════════════════════════════════════════════════════
+
+task.wait(1)
+NexusUI:Notify({
+    Title = "🎉 Nexus Hub Loaded!",
+    Message = "Welcome " .. game.Players.LocalPlayer.Name .. "! Press RightShift to toggle UI.",
+    Type = "Success",
+    Duration = 5
+})
+
+NexusUI:Notify({
+    Title = "💡 Tip",
+    Message = "Use the Farm tab to start auto farming resources!",
+    Type = "Info",
+    Duration = 4
+})
