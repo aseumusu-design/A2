@@ -1,430 +1,3 @@
- --[[
-  NO MERCY — "VIOLENCE DISTRICT"
-  UI: Orion (MarV) — hide/show via bubble + konfirmasi tutup
-]]
-
-local ICON = {
-    Info     = "rbxassetid://7733964719",
-    Crosshair= "rbxassetid://7733765307",
-    Swords   = "rbxassetid://7734056608",
-    Globe    = "rbxassetid://7733954760",
-    Axe      = "rbxassetid://7733674079",
-    User     = "rbxassetid://7743875962",
-    Eye      = "rbxassetid://7733774602",
-    Zap      = "rbxassetid://7733771628",
-    Settings = "rbxassetid://7734053495",
-    Logo     = "rbxassetid://102609928046926",
-    Banner   = "rbxassetid://138968189462646",
-}
-
-local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
-
-local function GetHolder()
-    return (gethui and gethui()) or game:GetService("CoreGui")
-end
-
--- ============================================================
---  WELCOME INTRO (Logo Bulat + Teks + Animasi Garis Stroke)
--- ============================================================
-local function ShowWelcomeIntro()
-    local holder = GetHolder()
-    
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "NoMercyWelcome"
-    gui.ResetOnSpawn = false
-    gui.IgnoreGuiInset = true
-    gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-    gui.Parent = holder
-    if syn and syn.protect_gui then pcall(syn.protect_gui, gui) end
-
-    local centerFrame = Instance.new("Frame")
-    centerFrame.Size = UDim2.fromOffset(260, 260)
-    centerFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-    centerFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-    centerFrame.BackgroundTransparency = 1
-    centerFrame.ZIndex = 999
-    centerFrame.Parent = gui
-
-    local img = Instance.new("ImageLabel")
-    img.Size = UDim2.fromOffset(0, 0)
-    img.Position = UDim2.new(0.5, 0, 0.4, 0)
-    img.AnchorPoint = Vector2.new(0.5, 0.5)
-    img.Image = ICON.Logo
-    img.BackgroundTransparency = 1
-    img.ZIndex = 999
-    img.Parent = centerFrame
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(1, 0)
-    corner.Parent = img
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(255, 255, 255)
-    stroke.Thickness = 4
-    stroke.Transparency = 1
-    stroke.Parent = img
-
-    local introText = Instance.new("TextLabel")
-    introText.Size = UDim2.new(1, 0, 0, 40)
-    introText.Position = UDim2.new(0.5, 0, 0.75, 0)
-    introText.AnchorPoint = Vector2.new(0.5, 0)
-    introText.BackgroundTransparency = 1
-    introText.Text = "WELCOME NO MERCY"
-    introText.TextColor3 = Color3.fromRGB(255, 255, 255)
-    introText.TextSize = 18
-    introText.Font = Enum.Font.GothamBold
-    introText.TextTransparency = 1
-    introText.ZIndex = 999
-    introText.Parent = centerFrame
-
-    -- Animasi Masuk
-    local tweenIn = TweenService:Create(img, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.fromOffset(150, 150)
-    })
-    local strokeIn = TweenService:Create(stroke, TweenInfo.new(0.4), { Transparency = 0 })
-    local textIn = TweenService:Create(introText, TweenInfo.new(0.4), { TextTransparency = 0 })
-    
-    tweenIn:Play()
-    strokeIn:Play()
-    textIn:Play()
-    tweenIn.Completed:Wait()
-
-    -- Animasi Garis Stroke Muncul & Hilang Berulang (Pulsing Glow)
-    local pulsing = true
-    task.spawn(function()
-        while pulsing do
-            local t1 = TweenService:Create(stroke, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0.8, Thickness = 6 })
-            t1:Play()
-            t1.Completed:Wait()
-            if not pulsing then break end
-            local t2 = TweenService:Create(stroke, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0, Thickness = 2 })
-            t2:Play()
-            t2.Completed:Wait()
-        end
-    end)
-
-    task.wait(1.5)
-    pulsing = false
-
-    -- Animasi Keluar
-    local tweenOut = TweenService:Create(img, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-        Size = UDim2.fromOffset(0, 0)
-    })
-    local strokeOut = TweenService:Create(stroke, TweenInfo.new(0.3), { Transparency = 1 })
-    local textOut = TweenService:Create(introText, TweenInfo.new(0.3), { TextTransparency = 1 })
-    
-    tweenOut:Play()
-    strokeOut:Play()
-    textOut:Play()
-    tweenOut.Completed:Wait()
-
-    gui:Destroy()
-end
-
-ShowWelcomeIntro()
-
-local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Marpiii/UiLib/refs/heads/main/source.lua"))()
-
-local onCloseRequest
-
-local Window = OrionLib:MakeWindow({
-    Name = "NO MERCY — VIOLENCE DISTRICT",
-    HidePremium = false,
-    SaveConfig = true,
-    ConfigFolder = "NoMercyViolence",
-    IntroEnabled = false,
-    Icon = ICON.Logo,
-    CloseCallback = function()
-        if onCloseRequest then onCloseRequest() end
-    end,
-})
-
-getgenv().__NO_MERCY_WINDOW = Window\ngetgenv().NoMercyConfirmClose = function() if onCloseRequest then onCloseRequest() end end\n\nlocal function FindMainWindow()
-    local root = GetHolder()
-    if not root then return nil end
-    local marv = root:FindFirstChild("MarV")
-    if not marv then return nil end
-
-    for _, child in ipairs(marv:GetChildren()) do
-        if child:IsA("Frame") and child.AbsoluteSize.X > 300 then
-            return child
-        end
-    end
-    return nil
-end
-
--- ============================================================
---  BUBBLE LOGO (Dengan Animasi Stroke Berdenyut Muncul/Hilang)
--- ============================================================
-local bubbleGui = nil
-
-local function makeBubble()
-    if bubbleGui then bubbleGui:Destroy() end
-
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "NoMercyBubble"
-    gui.ResetOnSpawn = false
-    gui.IgnoreGuiInset = true
-    gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-    gui.Parent = GetHolder()
-    if syn and syn.protect_gui then pcall(syn.protect_gui, gui) end
-
-    local btn = Instance.new("ImageButton")
-    btn.Parent = gui
-    btn.BackgroundColor3 = Color3.fromRGB(25, 30, 35)
-    btn.Position = UDim2.new(0.02, 0, 0.2, 0)
-    btn.Size = UDim2.fromOffset(48, 48)
-    btn.Image = ICON.Logo
-    btn.ScaleType = Enum.ScaleType.Fit
-    btn.Active = true
-    btn.Draggable = true
-    btn.ZIndex = 10
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = btn
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(255, 255, 255)
-    stroke.Thickness = 2
-    stroke.Transparency = 0
-    stroke.Parent = btn
-
-    -- Looping Animasi Garis Stroke Berdenyut (Muncul & Hilang) pada Bubble
-    local bubblePulsing = true
-    task.spawn(function()
-        while bubblePulsing and stroke and stroke.Parent do
-            local t1 = TweenService:Create(stroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0.8, Thickness = 4 })
-            t1:Play()
-            t1.Completed:Wait()
-            if not bubblePulsing or not stroke or not stroke.Parent then break end
-            local t2 = TweenService:Create(stroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0, Thickness = 2 })
-            t2:Play()
-            t2.Completed:Wait()
-        end
-    end)
-
-    btn.MouseButton1Click:Connect(function()
-        bubblePulsing = false
-        local main = FindMainWindow()
-        if main then
-            main.Visible = true
-        end
-        bubbleGui:Destroy()
-        bubbleGui = nil
-    end)
-
-    bubbleGui = gui
-end
-
-local function closeUI()
-    local main = FindMainWindow()
-    if main then
-        main.Visible = false
-    end
-    makeBubble()
-end
-
-local function showUI()
-    local main = FindMainWindow()
-    if main then
-        main.Visible = true
-    end
-end
-
-local function confirmClose(fromCloseBtn)
-    if fromCloseBtn then
-        showUI()
-    end
-
-    local holder = GetHolder()
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "NoMercyConfirm"
-    gui.ResetOnSpawn = false
-    gui.IgnoreGuiInset = true
-    gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-    gui.Parent = holder
-    if syn and syn.protect_gui then pcall(syn.protect_gui, gui) end
-
-    local fade = Instance.new("Frame")
-    fade.Size = UDim2.new(1, 0, 1, 0)
-    fade.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    fade.BackgroundTransparency = 0.4
-    fade.ZIndex = 99
-    fade.Parent = gui
-
-    local box = Instance.new("Frame")
-    box.Size = UDim2.fromOffset(280, 150)
-    box.Position = UDim2.new(0.5, 0, 0.5, 0)
-    box.AnchorPoint = Vector2.new(0.5, 0.5)
-    box.BackgroundColor3 = Color3.fromRGB(28, 32, 38)
-    box.BorderSizePixel = 0
-    box.ZIndex = 100
-    box.Parent = gui
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 12)
-    corner.Parent = box
-
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -40, 0, 30)
-    title.Position = UDim2.new(0, 20, 0, 15)
-    title.BackgroundTransparency = 1
-    title.Text = "Tutup NO MERCY?"
-    title.TextColor3 = Color3.fromRGB(240, 240, 240)
-    title.TextSize = 18
-    title.Font = Enum.Font.GothamBold
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.ZIndex = 101
-    title.Parent = box
-
-    local desc = Instance.new("TextLabel")
-    desc.Size = UDim2.new(1, -40, 0, 30)
-    desc.Position = UDim2.new(0, 20, 0, 48)
-    desc.BackgroundTransparency = 1
-    desc.Text = "Klik bubble untuk buka lagi."
-    desc.TextColor3 = Color3.fromRGB(150, 150, 150)
-    desc.TextSize = 14
-    desc.Font = Enum.Font.Gotham
-    desc.TextXAlignment = Enum.TextXAlignment.Left
-    desc.ZIndex = 101
-    desc.Parent = box
-
-    local function destroy()
-        gui:Destroy()
-    end
-
-    local function cancel()
-        destroy()
-        if fromCloseBtn then
-            showUI()
-        end
-    end
-
-    local btnYa = Instance.new("TextButton")
-    btnYa.Size = UDim2.fromOffset(90, 36)
-    btnYa.Position = UDim2.new(1, -200, 1, -50)
-    btnYa.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    btnYa.BorderSizePixel = 0
-    btnYa.Text = "Ya"
-    btnYa.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btnYa.TextSize = 15
-    btnYa.Font = Enum.Font.GothamBold
-    btnYa.ZIndex = 101
-    btnYa.Parent = box
-    local cYa = Instance.new("UICorner"); cYa.CornerRadius = UDim.new(0, 8); cYa.Parent = btnYa
-
-    btnYa.MouseButton1Click:Connect(function()
-        destroy()
-        closeUI()
-    end)
-
-    local btnTidak = Instance.new("TextButton")
-    btnTidak.Size = UDim2.fromOffset(90, 36)
-    btnTidak.Position = UDim2.new(1, -100, 1, -50)
-    btnTidak.BackgroundColor3 = Color3.fromRGB(40, 45, 52)
-    btnTidak.BorderSizePixel = 0
-    btnTidak.Text = "Tidak"
-    btnTidak.TextColor3 = Color3.fromRGB(240, 240, 240)
-    btnTidak.TextSize = 15
-    btnTidak.Font = Enum.Font.GothamBold
-    btnTidak.ZIndex = 101
-    btnTidak.Parent = box
-    local cT = Instance.new("UICorner"); cT.CornerRadius = UDim.new(0, 8); cT.Parent = btnTidak
-
-    btnTidak.MouseButton1Click:Connect(cancel)
-    fade.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then
-            cancel()
-        end
-    end)
-end
-
-onCloseRequest = function()
-    confirmClose(true)
-end
-
--- ============================================================
---  TAB (Ditambahkan Menu & Icon Aimbot)[span_0](start_span)[span_0](end_span)
--- ============================================================
-local InfoTab     = Window:MakeTab({ Name = "Info", Icon = ICON.Info, PremiumOnly = false })
-local AimbotTab   = Window:MakeTab({ Name = "Aimbot", Icon = ICON.Crosshair, PremiumOnly = false }) -- Icon Aimbot baru ditambahkan[span_1](start_span)[span_1](end_span)
-local ParryTab    = Window:MakeTab({ Name = "Parry", Icon = ICON.Swords, PremiumOnly = false })
-local TeleportTab = Window:MakeTab({ Name = "Teleport", Icon = ICON.Globe, PremiumOnly = false })
-local KillerTab   = Window:MakeTab({ Name = "Killer", Icon = ICON.Axe, PremiumOnly = false })
-local SurvivorTab = Window:MakeTab({ Name = "Survivor", Icon = ICON.User, PremiumOnly = false })
-local VisualTab   = Window:MakeTab({ Name = "Visual", Icon = ICON.Eye, PremiumOnly = false })
-local SpeedTab    = Window:MakeTab({ Name = "Speed", Icon = ICON.Zap, PremiumOnly = false })
-local SettingsTab = Window:MakeTab({ Name = "Pengaturan", Icon = ICON.Settings, PremiumOnly = false })
-
--- ============================================================
---  INFO (Banner Dijamin Utuh Menggunakan Fit ScaleType)
--- ============================================================
-local InfoSec = InfoTab:AddSection({ Name = "Tentang" })
-
-InfoSec:AddLabel("NO MERCY — Violence District")
-InfoSec:AddLabel("Game: Bola Pedang (Blade Ball)")
-InfoSec:AddButton({
-    Name = "Copy Link Discord",
-    Callback = function()
-        if setclipboard then setclipboard("https://discord.gg/pbg6g79Hp") end
-        OrionLib:MakeNotification({ Name = "NO MERCY", Content = "Link Discord di-copy!", Image = ICON.Logo, Time = 3 })
-    end,
-})
-
-task.spawn(function()
-    task.wait(0.3)
-    local main = FindMainWindow()
-    if not main then return end
-
-    for _, v in ipairs(main:GetDescendants()) do
-        if v:IsA("TextLabel") and v.Text == "Tentang" then
-            local container = v.Parent.Parent
-            if container and container:IsA("ScrollingFrame") then
-                for _, child in ipairs(container:GetChildren()) do
-                    if child.Name == "AbsoluteTopBanner" then
-                        child:Destroy()
-                    end
-                end
-
-                local bannerFrame = Instance.new("Frame")
-                bannerFrame.Name = "AbsoluteTopBanner"
-                bannerFrame.Size = UDim2.new(1, -10, 0, 115)
-                bannerFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-                bannerFrame.BorderSizePixel = 0
-                bannerFrame.LayoutOrder = -999
-                bannerFrame.Parent = container
-
-                local corner = Instance.new("UICorner")
-                corner.CornerRadius = UDim.new(0, 8)
-                corner.Parent = bannerFrame
-
-                local bannerImg = Instance.new("ImageLabel")
-                bannerImg.Size = UDim2.new(1, 0, 1, 0)
-                bannerImg.Image = ICON.Banner
-                bannerImg.BackgroundTransparency = 1
-                bannerImg.ScaleType = Enum.ScaleType.Fit
-                bannerImg.Parent = bannerFrame
-
-                local imgCorner = Instance.new("UICorner")
-                imgCorner.CornerRadius = UDim.new(0, 8)
-                imgCorner.Parent = bannerImg
-                break
-            end
-        end
-    end
-end)
-
--- ============================================================
-
-
---[[
-BAGIAN 4 / 4  —  ZIAANHUB X - VIOLENCE DISTRICT v1.4.7 (SCRIPT UTAMA)
-Sumber: https://ziaanclient.vercel.app/loader/game/violence/main67
-]]
-------------------------------------------------------------------------------------------------------
-
 --[[
   ZiaanHub X - Violence District v1.4.7 (Optimized ESP + Fullbright/No Fog)
   Updated for smooth & low-lag ESP
@@ -497,6 +70,684 @@ getgenv().VD = getgenv().VD or {
     SURV_AutoPalletSlide = false,
 }
 
+-- ============================================================
+--  NO MERCY — "VIOLENCE DISTRICT"
+--  UI: Orion (MarV) — full ZiaanHub X feature set
+-- ============================================================
+
+local ICON = {
+    Info     = "rbxassetid://7733964719",
+    Crosshair= "rbxassetid://7733765307",
+    Swords   = "rbxassetid://7734056608",
+    Globe    = "rbxassetid://7733954760",
+    Axe      = "rbxassetid://7733674079",
+    User     = "rbxassetid://7743875962",
+    Eye      = "rbxassetid://7733774602",
+    Zap      = "rbxassetid://7733771628",
+    Settings = "rbxassetid://7734053495",
+    Logo     = "rbxassetid://102609928046926",
+    Banner   = "rbxassetid://138968189462646",
+}
+
+local TweenService = game:GetService("TweenService")
+
+local function GetHolder()
+    return (gethui and gethui()) or game:GetService("CoreGui")
+end
+
+-- ============================================================
+--  WELCOME INTRO
+-- ============================================================
+local function ShowWelcomeIntro()
+    local holder = GetHolder()
+
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "NoMercyWelcome"
+    gui.ResetOnSpawn = false
+    gui.IgnoreGuiInset = true
+    gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+    gui.Parent = holder
+    if syn and syn.protect_gui then pcall(syn.protect_gui, gui) end
+
+    local centerFrame = Instance.new("Frame")
+    centerFrame.Size = UDim2.fromOffset(260, 260)
+    centerFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+    centerFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+    centerFrame.BackgroundTransparency = 1
+    centerFrame.ZIndex = 999
+    centerFrame.Parent = gui
+
+    local img = Instance.new("ImageLabel")
+    img.Size = UDim2.fromOffset(0, 0)
+    img.Position = UDim2.new(0.5, 0, 0.4, 0)
+    img.AnchorPoint = Vector2.new(0.5, 0.5)
+    img.Image = ICON.Logo
+    img.BackgroundTransparency = 1
+    img.ZIndex = 999
+    img.Parent = centerFrame
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = img
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(255, 255, 255)
+    stroke.Thickness = 4
+    stroke.Transparency = 1
+    stroke.Parent = img
+
+    local introText = Instance.new("TextLabel")
+    introText.Size = UDim2.new(1, 0, 0, 40)
+    introText.Position = UDim2.new(0.5, 0, 0.75, 0)
+    introText.AnchorPoint = Vector2.new(0.5, 0)
+    introText.BackgroundTransparency = 1
+    introText.Text = "WELCOME NO MERCY"
+    introText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    introText.TextSize = 18
+    introText.Font = Enum.Font.GothamBold
+    introText.TextTransparency = 1
+    introText.ZIndex = 999
+    introText.Parent = centerFrame
+
+    local tweenIn = TweenService:Create(img, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.fromOffset(150, 150)
+    })
+    local strokeIn = TweenService:Create(stroke, TweenInfo.new(0.4), { Transparency = 0 })
+    local textIn = TweenService:Create(introText, TweenInfo.new(0.4), { TextTransparency = 0 })
+
+    tweenIn:Play(); strokeIn:Play(); textIn:Play()
+    tweenIn.Completed:Wait()
+
+    local pulsing = true
+    task.spawn(function()
+        while pulsing do
+            local t1 = TweenService:Create(stroke, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0.8, Thickness = 6 })
+            t1:Play(); t1.Completed:Wait()
+            if not pulsing then break end
+            local t2 = TweenService:Create(stroke, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0, Thickness = 2 })
+            t2:Play(); t2.Completed:Wait()
+        end
+    end)
+
+    task.wait(1.5)
+    pulsing = false
+
+    local tweenOut = TweenService:Create(img, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        Size = UDim2.fromOffset(0, 0)
+    })
+    local strokeOut = TweenService:Create(stroke, TweenInfo.new(0.3), { Transparency = 1 })
+    local textOut = TweenService:Create(introText, TweenInfo.new(0.3), { TextTransparency = 1 })
+
+    tweenOut:Play(); strokeOut:Play(); textOut:Play()
+    tweenOut.Completed:Wait()
+
+    gui:Destroy()
+end
+
+ShowWelcomeIntro()
+
+local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Marpiii/UiLib/refs/heads/main/source.lua"))()
+
+local onCloseRequest
+
+local OrionWindow = OrionLib:MakeWindow({
+    Name = "NO MERCY — VIOLENCE DISTRICT",
+    HidePremium = false,
+    SaveConfig = true,
+    ConfigFolder = "NoMercyViolence",
+    IntroEnabled = false,
+    Icon = ICON.Logo,
+    CloseCallback = function()
+        if onCloseRequest then onCloseRequest() end
+    end,
+})
+
+local function FindMainWindow()
+    local root = GetHolder()
+    if not root then return nil end
+    local marv = root:FindFirstChild("MarV")
+    if not marv then return nil end
+    for _, child in ipairs(marv:GetChildren()) do
+        if child:IsA("Frame") and child.AbsoluteSize.X > 300 then
+            return child
+        end
+    end
+    return nil
+end
+
+-- ============================================================
+--  BUBBLE LOGO
+-- ============================================================
+local bubbleGui = nil
+
+local function makeBubble()
+    if bubbleGui then bubbleGui:Destroy() end
+
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "NoMercyBubble"
+    gui.ResetOnSpawn = false
+    gui.IgnoreGuiInset = true
+    gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+    gui.Parent = GetHolder()
+    if syn and syn.protect_gui then pcall(syn.protect_gui, gui) end
+
+    local btn = Instance.new("ImageButton")
+    btn.Parent = gui
+    btn.BackgroundColor3 = Color3.fromRGB(25, 30, 35)
+    btn.Position = UDim2.new(0.02, 0, 0.2, 0)
+    btn.Size = UDim2.fromOffset(48, 48)
+    btn.Image = ICON.Logo
+    btn.ScaleType = Enum.ScaleType.Fit
+    btn.Active = true
+    btn.Draggable = true
+    btn.ZIndex = 10
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = btn
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(255, 255, 255)
+    stroke.Thickness = 2
+    stroke.Transparency = 0
+    stroke.Parent = btn
+
+    local bubblePulsing = true
+    task.spawn(function()
+        while bubblePulsing and stroke and stroke.Parent do
+            local t1 = TweenService:Create(stroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0.8, Thickness = 4 })
+            t1:Play(); t1.Completed:Wait()
+            if not bubblePulsing or not stroke or not stroke.Parent then break end
+            local t2 = TweenService:Create(stroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Transparency = 0, Thickness = 2 })
+            t2:Play(); t2.Completed:Wait()
+        end
+    end)
+
+    btn.MouseButton1Click:Connect(function()
+        bubblePulsing = false
+        local main = FindMainWindow()
+        if main then main.Visible = true end
+        bubbleGui:Destroy()
+        bubbleGui = nil
+    end)
+
+    bubbleGui = gui
+end
+
+local function closeUI()
+    local main = FindMainWindow()
+    if main then main.Visible = false end
+    makeBubble()
+end
+
+local function showUI()
+    local main = FindMainWindow()
+    if main then main.Visible = true end
+end
+
+local function confirmClose(fromCloseBtn)
+    if fromCloseBtn then showUI() end
+
+    local holder = GetHolder()
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "NoMercyConfirm"
+    gui.ResetOnSpawn = false
+    gui.IgnoreGuiInset = true
+    gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+    gui.Parent = holder
+    if syn and syn.protect_gui then pcall(syn.protect_gui, gui) end
+
+    local fade = Instance.new("Frame")
+    fade.Size = UDim2.new(1, 0, 1, 0)
+    fade.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    fade.BackgroundTransparency = 0.4
+    fade.ZIndex = 99
+    fade.Parent = gui
+
+    local box = Instance.new("Frame")
+    box.Size = UDim2.fromOffset(280, 150)
+    box.Position = UDim2.new(0.5, 0, 0.5, 0)
+    box.AnchorPoint = Vector2.new(0.5, 0.5)
+    box.BackgroundColor3 = Color3.fromRGB(28, 32, 38)
+    box.BorderSizePixel = 0
+    box.ZIndex = 100
+    box.Parent = gui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 12)
+    corner.Parent = box
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, -40, 0, 30)
+    title.Position = UDim2.new(0, 20, 0, 15)
+    title.BackgroundTransparency = 1
+    title.Text = "Tutup NO MERCY?"
+    title.TextColor3 = Color3.fromRGB(240, 240, 240)
+    title.TextSize = 18
+    title.Font = Enum.Font.GothamBold
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.ZIndex = 101
+    title.Parent = box
+
+    local desc = Instance.new("TextLabel")
+    desc.Size = UDim2.new(1, -40, 0, 30)
+    desc.Position = UDim2.new(0, 20, 0, 48)
+    desc.BackgroundTransparency = 1
+    desc.Text = "Klik bubble untuk buka lagi."
+    desc.TextColor3 = Color3.fromRGB(150, 150, 150)
+    desc.TextSize = 14
+    desc.Font = Enum.Font.Gotham
+    desc.TextXAlignment = Enum.TextXAlignment.Left
+    desc.ZIndex = 101
+    desc.Parent = box
+
+    local function destroy() gui:Destroy() end
+
+    local function cancel()
+        destroy()
+        if fromCloseBtn then showUI() end
+    end
+
+    local btnYa = Instance.new("TextButton")
+    btnYa.Size = UDim2.fromOffset(90, 36)
+    btnYa.Position = UDim2.new(1, -200, 1, -50)
+    btnYa.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    btnYa.BorderSizePixel = 0
+    btnYa.Text = "Ya"
+    btnYa.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btnYa.TextSize = 15
+    btnYa.Font = Enum.Font.GothamBold
+    btnYa.ZIndex = 101
+    btnYa.Parent = box
+    local cYa = Instance.new("UICorner"); cYa.CornerRadius = UDim.new(0, 8); cYa.Parent = btnYa
+
+    btnYa.MouseButton1Click:Connect(function()
+        destroy()
+        closeUI()
+    end)
+
+    local btnTidak = Instance.new("TextButton")
+    btnTidak.Size = UDim2.fromOffset(90, 36)
+    btnTidak.Position = UDim2.new(1, -100, 1, -50)
+    btnTidak.BackgroundColor3 = Color3.fromRGB(40, 45, 52)
+    btnTidak.BorderSizePixel = 0
+    btnTidak.Text = "Tidak"
+    btnTidak.TextColor3 = Color3.fromRGB(240, 240, 240)
+    btnTidak.TextSize = 15
+    btnTidak.Font = Enum.Font.GothamBold
+    btnTidak.ZIndex = 101
+    btnTidak.Parent = box
+    local cT = Instance.new("UICorner"); cT.CornerRadius = UDim.new(0, 8); cT.Parent = btnTidak
+
+    btnTidak.MouseButton1Click:Connect(cancel)
+    fade.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            cancel()
+        end
+    end)
+end
+
+onCloseRequest = function()
+    confirmClose(true)
+end
+
+-- ============================================================
+--  INFO TAB (banner + tentang)
+-- ============================================================
+local InfoTab = OrionWindow:MakeTab({ Name = "Info", Icon = ICON.Info, PremiumOnly = false })
+local InfoSec = InfoTab:AddSection({ Name = "Tentang" })
+
+InfoSec:AddLabel("NO MERCY — Violence District")
+InfoSec:AddLabel("Fitur: ZiaanHub X v1.4.7 (full port)")
+InfoSec:AddLabel("Survivor • Killer • Visual • Player • Parry")
+InfoSec:AddButton({
+    Name = "Copy Discord",
+    Callback = function()
+        if setclipboard then setclipboard("https://discord.gg/pbg6g79Hp") end
+        OrionLib:MakeNotification({ Name = "NO MERCY", Content = "Link Discord di-copy!", Image = ICON.Logo, Time = 3 })
+    end,
+})
+InfoSec:AddButton({
+    Name = "Tutup UI (Close)",
+    Callback = function() confirmClose() end,
+})
+
+task.spawn(function()
+    task.wait(0.3)
+    local main = FindMainWindow()
+    if not main then return end
+
+    for _, v in ipairs(main:GetDescendants()) do
+        if v:IsA("TextLabel") and v.Text == "Tentang" then
+            local container = v.Parent.Parent
+            if container and container:IsA("ScrollingFrame") then
+                for _, child in ipairs(container:GetChildren()) do
+                    if child.Name == "AbsoluteTopBanner" then child:Destroy() end
+                end
+
+                local bannerFrame = Instance.new("Frame")
+                bannerFrame.Name = "AbsoluteTopBanner"
+                bannerFrame.Size = UDim2.new(1, -10, 0, 115)
+                bannerFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+                bannerFrame.BorderSizePixel = 0
+                bannerFrame.LayoutOrder = -999
+                bannerFrame.Parent = container
+
+                local corner = Instance.new("UICorner")
+                corner.CornerRadius = UDim.new(0, 8)
+                corner.Parent = bannerFrame
+
+                local bannerImg = Instance.new("ImageLabel")
+                bannerImg.Size = UDim2.new(1, 0, 1, 0)
+                bannerImg.Image = ICON.Banner
+                bannerImg.BackgroundTransparency = 1
+                bannerImg.ScaleType = Enum.ScaleType.Fit
+                bannerImg.Parent = bannerFrame
+
+                local imgCorner = Instance.new("UICorner")
+                imgCorner.CornerRadius = UDim.new(0, 8)
+                imgCorner.Parent = bannerImg
+                break
+            end
+        end
+    end
+end)
+
+-- ============================================================
+--  ADAPTER: API ZiaanHub (ModernV2) -> OrionLib
+-- ============================================================
+local NM_TabIcons = {
+    Player = ICON.User,
+    Survivor = ICON.User,
+    Killer = ICON.Axe,
+    Visual = ICON.Eye,
+}
+
+local NM_Window
+local NM_ConfigElements = {}
+
+local function NM_Notify(title, content, duration)
+    OrionLib:MakeNotification({
+        Name = title or "NO MERCY",
+        Content = content or "",
+        Image = ICON.Logo,
+        Time = duration or 3,
+    })
+end
+
+local function NM_Register(flag, element)
+    if flag and element then NM_ConfigElements[flag] = element end
+end
+
+local NM_MakeSection
+
+local function NM_KeyCodeFromString(str)
+    if typeof(str) == "EnumItem" then return str end
+    local ok, key = pcall(function() return Enum.KeyCode[tostring(str)] end)
+    if ok and key then return key end
+    return Enum.KeyCode.F3
+end
+
+NM_MakeSection = function(orionTab, sectionName)
+    local sec = orionTab:AddSection({ Name = sectionName or "Menu" })
+    local self = {}
+
+    self.__orionTab = orionTab
+    self.__orionSection = sec
+
+    function self:AddSection(cfg)
+        local name = (type(cfg) == "table" and cfg.Name) or tostring(cfg or "")
+        if name ~= "" then
+            return NM_MakeSection(orionTab, name)
+        end
+        return self
+    end
+
+    function self:AddDivider(cfg)
+        local text = (type(cfg) == "table" and (cfg.Text or cfg.Name)) or tostring(cfg or "")
+        pcall(function() sec:AddLabel("— " .. text .. " —") end)
+        return self
+    end
+
+    function self:AddLabel(cfg)
+        local text = (type(cfg) == "table" and (cfg.Text or cfg.Name)) or tostring(cfg or "")
+        local lbl
+        pcall(function() lbl = sec:AddLabel(text) end)
+        return lbl
+    end
+    self.AddParagraph = self.AddLabel
+
+    function self:AddToggle(cfg)
+        cfg = cfg or {}
+        local element
+        pcall(function()
+            element = sec:AddToggle({
+                Name = cfg.Name or "Toggle",
+                Default = cfg.Default and true or false,
+                Callback = function(v)
+                    if cfg.Callback then pcall(cfg.Callback, v) end
+                end,
+            })
+        end)
+        NM_Register(cfg.Flag or cfg.Name, element)
+        return element
+    end
+
+    function self:AddSlider(cfg)
+        cfg = cfg or {}
+        local element
+        pcall(function()
+            element = sec:AddSlider({
+                Name = cfg.Name or "Slider",
+                Min = cfg.Min or 0,
+                Max = cfg.Max or 100,
+                Default = cfg.Default or cfg.Min or 0,
+                Increment = cfg.Increment or 1,
+                ValueName = cfg.Suffix or "",
+                Color = Color3.fromRGB(200, 200, 200),
+                Callback = function(v)
+                    if cfg.Callback then pcall(cfg.Callback, v) end
+                end,
+            })
+        end)
+        NM_Register(cfg.Flag or cfg.Name, element)
+        return element
+    end
+
+    function self:AddButton(cfg)
+        cfg = cfg or {}
+        local element
+        pcall(function()
+            element = sec:AddButton({
+                Name = cfg.Name or "Button",
+                Callback = function()
+                    if cfg.Callback then pcall(cfg.Callback) end
+                end,
+            })
+        end)
+        return element
+    end
+
+    function self:AddDropdown(cfg)
+        cfg = cfg or {}
+        local values = cfg.Values or cfg.Options or {}
+
+        if cfg.Multi then
+            -- Orion tidak punya multi-select: pakai toggle per opsi
+            local state = {}
+            pcall(function() sec:AddLabel(cfg.Name or "Options") end)
+            if type(cfg.Default) == "table" then
+                for _, v in pairs(cfg.Default) do state[v] = true end
+            end
+            local api = { __state = state }
+            for _, option in ipairs(values) do
+                pcall(function()
+                    sec:AddToggle({
+                        Name = option,
+                        Default = state[option] and true or false,
+                        Callback = function(v)
+                            state[option] = v
+                            if cfg.Callback then pcall(cfg.Callback, state) end
+                        end,
+                    })
+                end)
+            end
+            function api:Set(tbl)
+                if type(tbl) ~= "table" then return end
+                for k in pairs(state) do state[k] = false end
+                for k, v in pairs(tbl) do
+                    if type(k) == "number" then state[v] = true else state[k] = v end
+                end
+                if cfg.Callback then pcall(cfg.Callback, state) end
+            end
+            function api:SetValues() end
+            NM_Register(cfg.Flag or cfg.Name, api)
+            return api
+        end
+
+        local default = cfg.Default
+        if type(default) == "table" then default = default[1] end
+        if default == nil then default = values[1] end
+
+        local element
+        pcall(function()
+            element = sec:AddDropdown({
+                Name = cfg.Name or "Dropdown",
+                Default = default,
+                Options = values,
+                Callback = function(v)
+                    if cfg.Callback then pcall(cfg.Callback, v) end
+                end,
+            })
+        end)
+
+        local api = {}
+        function api:Set(v) pcall(function() element:Set(v) end) end
+        function api:SetValues(newValues)
+            pcall(function() element:Refresh(newValues or {}, true) end)
+        end
+        api.Refresh = api.SetValues
+        NM_Register(cfg.Flag or cfg.Name, api)
+        return api
+    end
+
+    function self:AddTextInput(cfg)
+        cfg = cfg or {}
+        local element
+        pcall(function()
+            element = sec:AddTextbox({
+                Name = cfg.Name or "Input",
+                Default = tostring(cfg.Default or ""),
+                TextDisappear = false,
+                Callback = function(v)
+                    if cfg.Callback then pcall(cfg.Callback, v) end
+                end,
+            })
+        end)
+        return element
+    end
+    self.AddInput = self.AddTextInput
+    self.AddTextbox = self.AddTextInput
+
+    function self:AddKeybind(cfg)
+        cfg = cfg or {}
+        local element
+        pcall(function()
+            element = sec:AddBind({
+                Name = cfg.Name or "Keybind",
+                Default = NM_KeyCodeFromString(cfg.Default),
+                Hold = false,
+                Callback = function()
+                    if cfg.Callback then pcall(cfg.Callback) end
+                end,
+            })
+        end)
+        NM_Register(cfg.Flag or cfg.Name, element)
+        return element
+    end
+    self.AddBind = self.AddKeybind
+
+    function self:AddColorPicker(cfg)
+        cfg = cfg or {}
+        local element
+        pcall(function()
+            element = sec:AddColorpicker({
+                Name = cfg.Name or "Color",
+                Default = cfg.Default or Color3.fromRGB(255, 255, 255),
+                Callback = function(c)
+                    if cfg.Callback then pcall(cfg.Callback, c) end
+                end,
+            })
+        end)
+        NM_Register(cfg.Flag or cfg.Name, element)
+        return element
+    end
+    self.AddColorpicker = self.AddColorPicker
+
+    function self:AddCenterTabbox(name)
+        return NM_MakeTabbox(orionTab, name)
+    end
+
+    return self
+end
+
+function NM_MakeTabbox(orionTab, boxName)
+    local box = {}
+    if boxName and boxName ~= "" then
+        pcall(function()
+            orionTab:AddSection({ Name = tostring(boxName) })
+        end)
+    end
+    function box:AddTab(cfg)
+        local name = (type(cfg) == "table" and cfg.Name) or tostring(cfg or "Tab")
+        return NM_MakeSection(orionTab, name)
+    end
+    return box
+end
+
+NM_Window = {
+    ConfigElements = NM_ConfigElements,
+}
+
+function NM_Window:Notify(cfg)
+    cfg = cfg or {}
+    NM_Notify(cfg.Title, cfg.Content, cfg.Duration)
+end
+
+function NM_Window:AddTab(cfg)
+    cfg = cfg or {}
+    local name = cfg.Name or "Tab"
+    local orionTab = OrionWindow:MakeTab({
+        Name = name,
+        Icon = NM_TabIcons[name] or ICON.Settings,
+        PremiumOnly = false,
+    })
+
+    local tab = {}
+    tab.__orionTab = orionTab
+
+    function tab:AddSection(scfg)
+        local sname = (type(scfg) == "table" and scfg.Name) or tostring(scfg or "Menu")
+        return NM_MakeSection(orionTab, sname)
+    end
+    function tab:AddCenterTabbox(name) return NM_MakeTabbox(orionTab, name) end
+    tab.AddTabbox = tab.AddCenterTabbox
+    function tab:AddDivider(dcfg)
+        local text = (type(dcfg) == "table" and (dcfg.Text or dcfg.Name)) or tostring(dcfg or "")
+        pcall(function() orionTab:AddSection({ Name = text }) end)
+        return tab
+    end
+    function tab:AddParagraph() end
+
+    return tab
+end
+
+function NM_Window:SetAccount() end
+function NM_Window:AttachMenuIcon() end
+function NM_Window:CreateHomeTab() end
+function NM_Window:Dialog() end
+
+
 local function __ZiaanHub_Init_Main__()
     local Players           = game:GetService("Players")
     local RunService        = game:GetService("RunService")
@@ -532,10 +783,12 @@ local function __ZiaanHub_Init_Main__()
     end
 
     -- ============================================================
-    -- NO MERCY ORION ADAPTER
+    --  UI: memakai library Orion (NO MERCY) via adapter
     -- ============================================================
-    local Window = getgenv().__NO_MERCY_WINDOW
     local ModernV2 = nil
+    local MenuIcon = nil
+    local Window = NM_Window
+    if isMobile then UI.Mobile = true end
 
     -- PC CURSOR UNLOCK (ALT key toggle)
     if not isMobile then
@@ -3750,8 +4003,865 @@ local function __ZiaanHub_Init_Main__()
     end
 
     -- ======================================================================
-    -- ZIAN UI REMOVED: implementation is retained and wired to NO MERCY.
+    -- UI TABS
     -- ======================================================================
+    local function makeModernAdapter(section)
+        local adapter = {}
+        setmetatable(adapter, {
+            __index = function(t, k)
+                if k == "AddSection" then
+                    return function(self, cfg)
+                        if cfg and cfg.Name then
+                            pcall(function() section:AddDivider({ Text = cfg.Name }) end)
+                        end
+                        return adapter
+                    end
+                end
+                if k == "AddSlider" then
+                    return function(self, cfg)
+                        if cfg and cfg.Name then
+                            local modernCfg = {
+                                Name = cfg.Name,
+                                Flag = cfg.Flag or cfg.Name,
+                                Min = cfg.Min or 0,
+                                Max = cfg.Max or 100,
+                                Default = cfg.Default or cfg.Min or 0,
+                                Value = cfg.Default or cfg.Min or 0,
+                                Increment = cfg.Increment or 1,
+                            }
+                            local isFloat = false
+                            if modernCfg.Increment < 1 or (math.floor(modernCfg.Min) ~= modernCfg.Min) or (math.floor(modernCfg.Max) ~= modernCfg.Max) then
+                                isFloat = true
+                            end
+                            if isFloat then
+                                modernCfg.Rounding = 1
+                                if modernCfg.Increment <= 0.01 then
+                                    modernCfg.Rounding = 2
+                                end
+                            else
+                                modernCfg.Rounding = 0
+                            end
+                            modernCfg.Callback = function(Value)
+                                if cfg.Callback then
+                                    pcall(function() cfg.Callback(Value) end)
+                                end
+                            end
+                            pcall(function() section:AddSlider(modernCfg) end)
+                        end
+                        return adapter
+                    end
+                end
+
+                if type(section[k]) == "function" then
+                    return function(self, ...)
+                        return section[k](section, ...)
+                    end
+                end
+                return section[k]
+            end
+        })
+        return adapter
+    end
+
+    local function adaptTab(tab)
+        local adapter = {}
+        setmetatable(adapter, {
+            __index = function(t, k)
+                if k == "AddSection" then
+                    return function(self, cfg)
+                        if cfg and cfg.Name then
+                            pcall(function() tab:AddDivider({ Text = cfg.Name }) end)
+                        end
+                        return makeModernAdapter(tab)
+                    end
+                end
+                return tab[k]
+            end
+        })
+        return adapter
+    end
+
+    local function addCenterFeatureTabbox(tab, name, entries)
+        local tabbox = tab:AddCenterTabbox(name)
+        local created = {}
+
+        for _, entry in ipairs(entries) do
+            created[entry.Key] = makeModernAdapter(tabbox:AddTab({
+                Name = entry.Name,
+                Icon = entry.Icon,
+            }))
+        end
+
+        return created
+    end
+
+    if Window then
+        local Tabs = {
+            Player = Window:AddTab({ Name = "Player", Icon = "lucide:user", Type = "Single" }),
+            Survivor = Window:AddTab({ Name = "Survivor", Icon = "solar:shield-bold", Type = "Single" }),
+            Killer = Window:AddTab({ Name = "Killer", Icon = "solar:danger-bold", Type = "Single" }),
+            Visual = Window:AddTab({ Name = "Visual", Icon = "lucide:eye", Type = "Single" }),
+        }
+
+        -- Player Tab
+        local PlayerTab = Tabs.Player
+        local PlayerTabbox1 = addCenterFeatureTabbox(PlayerTab, "Player Features 1", {
+            { Key = "Teleport", Name = "Teleport", Icon = "solar:map-point-bold" },
+            { Key = "Fling", Name = "Fling", Icon = "solar:wind-bold" },
+            { Key = "Fun", Name = "Fun", Icon = "solar:gamepad-bold" },
+        })
+        local PlayerTabbox2 = addCenterFeatureTabbox(PlayerTab, "Player Features 2", {
+            { Key = "Streamer", Name = "Streamer Mode", Icon = "solar:settings-bold" },
+        })
+
+        -- Survivor Tab
+        local SurvivorTab = Tabs.Survivor
+        local SurvivorTabbox1 = addCenterFeatureTabbox(SurvivorTab, "Survivor Features", {
+            { Key = "General", Name = "General", Icon = "solar:shield-bold" },
+            { Key = "Healing", Name = "Healing", Icon = "solar:heart-bold" },
+            { Key = "Offensive", Name = "Offensive", Icon = "solar:target-bold" },
+        })
+        local SurvivorTabbox2 = addCenterFeatureTabbox(SurvivorTab, "Survivor Misc", {
+            { Key = "Parry", Name = "Parry", Icon = "solar:sword-bold" },
+            { Key = "GenBoost", Name = "Gen Boost", Icon = "solar:plug-bold" },
+            { Key = "Pallet", Name = "Auto Drop Pallet", Icon = "solar:box-bold" },
+            { Key = "Movement", Name = "Movement", Icon = "solar:walk-bold" },  -- ADDED
+        })
+
+        -- Killer Tab
+        local KillerTab = Tabs.Killer
+        local KillerTabbox1 = addCenterFeatureTabbox(KillerTab, "Killer Features", {
+            { Key = "General", Name = "General", Icon = "solar:danger-bold" },
+            { Key = "SilentAim", Name = "Silent Aim", Icon = "solar:crosshair-bold" },
+        })
+        local KillerTabbox2 = addCenterFeatureTabbox(KillerTab, "Killer Customization", {
+            { Key = "Customization", Name = "Customization", Icon = "solar:palette-bold" },
+        })
+
+        -- Visual Tab
+        local VisualTab = Tabs.Visual
+        local VisualTabbox = addCenterFeatureTabbox(VisualTab, "Visual Features", {
+            { Key = "ESP", Name = "ESP", Icon = "lucide:eye" },
+            { Key = "Highlight", Name = "Highlight ESP", Icon = "lucide:glasses" },
+            { Key = "Lighting", Name = "Lighting", Icon = "lucide:sun" },
+        })
+
+        -- Player Teleport
+        local TeleportTab = PlayerTabbox1.Teleport
+        local tpSection = TeleportTab:AddSection({
+            Position = "Center",
+            Name = "Teleport",
+            Icon = "solar:map-point-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+        local function getTeleportPlayerNames()
+            local names = {}
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer then table.insert(names, p.Name) end
+            end
+            table.sort(names)
+            return names
+        end
+
+        local tpPlayerDropdown = tpSection:AddDropdown({
+            Name = "Select Player to Teleport",
+            Flag = "TP_TargetPlayer",
+            Values = getTeleportPlayerNames(),
+            Multi = false,
+            Callback = function(option)
+                if type(option) == "table" then option = option[1] end
+                VD.TP_TargetPlayer = option or ""
+            end
+        })
+
+        tpSection:AddButton({ Name = "Refresh Players", Callback = function()
+            pcall(function() tpPlayerDropdown:SetValues(getTeleportPlayerNames()) end)
+        end })
+
+        tpSection:AddButton({ Name = "Teleport to Player", Callback = function()
+            pcall(function()
+                local targetName = VD.TP_TargetPlayer
+                if not targetName or targetName == "" then return end
+                local player = Players:FindFirstChild(targetName)
+                local root = Root
+                local targetRoot = player and player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                if root and targetRoot then
+                    root.CFrame = targetRoot.CFrame * CFrame.new(0, 0, 3)
+                end
+            end)
+        end })
+
+        tpSection:AddButton({ Name = "TP to Gen", Callback = function() pcall(function() IYAN_TeleportToGenerator(1) end) end })
+        tpSection:AddButton({ Name = "TP to Gate", Callback = function() pcall(IYAN_TeleportToGate) end })
+        tpSection:AddButton({ Name = "TP to Hook", Callback = function() pcall(IYAN_TeleportToHook) end })
+
+        -- Fling
+        local FlingTab = PlayerTabbox1.Fling
+        local flingSection = FlingTab:AddSection({
+            Position = "Center",
+            Name = "Fling",
+            Icon = "solar:wind-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+        flingSection:AddToggle({ Default = false, Name = "Enable Fling", Flag = "Enable Fling", Callback = function(v) VD.FLING_Enabled = v end })
+        flingSection:AddSlider({
+            Name = "Fling Strength", Flag = "Fling Strength",
+            Min = 1000, Max = 50000, Default = 10000,
+            Callback = function(v) VD.FLING_Strength = v end
+        })
+        flingSection:AddButton({ Name = "Fling Nearest", Callback = function() pcall(function() IYAN_FlingNearest() end) end })
+        flingSection:AddButton({ Name = "Fling All", Callback = function() pcall(IYAN_FlingAll) end })
+
+        -- Fun
+        local FunTab = PlayerTabbox1.Fun
+        local funSection = FunTab:AddSection({
+            Position = "Center",
+            Name = "Spoof Stats [Visual Only]",
+            Icon = "solar:gamepad-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = true,
+        })
+        local spoofLevel, spoofGears, spoofScrews = "0", "0", "0"
+        funSection:AddTextInput({
+            Name = "Set Level",
+            Flag = "SpoofLevel",
+            Numeric = true,
+            Default = "0",
+            Callback = function(value) spoofLevel = value end
+        })
+        funSection:AddTextInput({
+            Name = "Set Gears",
+            Flag = "SpoofGears",
+            Numeric = true,
+            Default = "0",
+            Callback = function(value) spoofGears = value end
+        })
+        funSection:AddTextInput({
+            Name = "Set Screws",
+            Flag = "SpoofScrews",
+            Numeric = true,
+            Default = "0",
+            Callback = function(value) spoofScrews = value end
+        })
+        funSection:AddButton({
+            Name = "Apply Spoof Data",
+            Callback = function()
+                local p = LocalPlayer
+                if p then
+                    p:SetAttribute("Level", tonumber(spoofLevel) or 0)
+                    p:SetAttribute("Gears", tonumber(spoofGears) or 0)
+                    p:SetAttribute("Screws", tonumber(spoofScrews) or 0)
+                end
+            end
+        })
+
+        -- Streamer
+        local StreamerTab = PlayerTabbox2.Streamer
+        local streamerSection = StreamerTab:AddSection({
+            Position = "Center",
+            Name = "Streamer Mode",
+            Icon = "solar:settings-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+        local FakeNameConnection = nil
+        local function shouldHideNameObject(object)
+            local ok, isTextObj = pcall(function()
+                return object:IsA("TextLabel") or object:IsA("TextButton") or object:IsA("TextBox")
+            end)
+            if not ok or not isTextObj then
+                return false
+            end
+            local text = ""
+            pcall(function() text = tostring(object.Text or "") end)
+            return text == LocalPlayer.Name or text == LocalPlayer.DisplayName or text:find(LocalPlayer.Name, 1, true) ~= nil
+        end
+        local function enableFakeName(enabled)
+            if FakeNameConnection then
+                pcall(function() FakeNameConnection:Disconnect() end)
+                FakeNameConnection = nil
+            end
+            local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+            if not playerGui then
+                return
+            end
+            local function process(object)
+                if shouldHideNameObject(object) then
+                    object.Visible = not enabled
+                end
+            end
+            for _, descendant in ipairs(playerGui:GetDescendants()) do
+                process(descendant)
+            end
+            if enabled then
+                FakeNameConnection = playerGui.DescendantAdded:Connect(function(object)
+                    task.defer(process, object)
+                end)
+            end
+        end
+        streamerSection:AddToggle({
+            Default = false,
+            Name = "Hide Name",
+            Flag = "Hide Name",
+            Callback = function(v)
+                pcall(enableFakeName, v)
+            end
+        })
+
+        -- Survivor General
+        local GeneralTab = SurvivorTabbox1.General
+        local genSection = GeneralTab:AddSection({
+            Position = "Center",
+            Name = "General Survivor",
+            Icon = "solar:shield-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+        genSection:AddToggle({ Default = false, Name = "Auto Skillcheck", Flag = "Auto Skillcheck", Callback = function(v) VD_SetAutoSkillcheck(v) end })
+        genSection:AddDropdown({
+            Name = "Skillcheck Mode",
+            Flag = "Skillcheck Mode",
+            Values = { "Normal", "Perfect", "Instant" },
+            Default = "Normal",
+            Multi = false,
+            Callback = function(option)
+                if type(option) == "table" then option = option[1] end
+                VD.AutoSkillcheckMode = option or "Normal"
+                if VD.AutoSkillcheckMode ~= "Instant" and AutoSkill.InstantRotationConnection then
+                    AutoSkill.InstantRotationConnection:Disconnect()
+                    AutoSkill.InstantRotationConnection = nil
+                    AutoSkill.InstantHasClicked = false
+                end
+            end
+        })
+        genSection:AddToggle({ Default = false, Name = "Flee Killer", Flag = "Flee Killer", Callback = function(v) VD.SURV_FleeKiller = v end })
+        genSection:AddSlider({
+            Name = "Flee Distance", Flag = "Flee Distance",
+            Min = 15, Max = 80, Default = 40,
+            Callback = function(v) VD.SURV_FleeDistance = v end
+        })
+        local antiKnockConnection = nil
+        genSection:AddToggle({
+            Default = false,
+            Name = "Anti Knock",
+            Flag = "Anti Knock",
+            Callback = function(v)
+                VD.SURV_AntiKnock = v
+                if v then
+                    if antiKnockConnection then
+                        antiKnockConnection:Disconnect()
+                        antiKnockConnection = nil
+                    end
+                    local char = LocalPlayer.Character
+                    if char then
+                        local hum = char:FindFirstChildOfClass("Humanoid")
+                        if hum then
+                            antiKnockConnection = hum.HealthChanged:Connect(function()
+                                hum.Health = 100
+                            end)
+                        end
+                    end
+                else
+                    if antiKnockConnection then
+                        antiKnockConnection:Disconnect()
+                        antiKnockConnection = nil
+                    end
+                end
+            end
+        })
+        genSection:AddToggle({ Default = false, Name = "First Person Camera (Survivor)", Flag = "First Person Camera (Survivor)", Callback = function(v)
+            VD.SURV_FirstPerson = v
+            if not v then
+                pcall(RestoreFirstPersonCamera)
+            end
+        end })
+
+        -- Healing
+        local HealingTab = SurvivorTabbox1.Healing
+        local healSection = HealingTab:AddSection({
+            Position = "Center",
+            Name = "Healing",
+            Icon = "solar:heart-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+        healSection:AddToggle({ Default = false, Name = "Auto Heal Self", Flag = "Instant Heal (Self)", Callback = function(v) setInstantHealSelf(v) end })
+        healSection:AddToggle({ Default = false, Name = "Auto Heal All", Flag = "Auto Heal All", Callback = function(v) setAutoHealAll(v) end })
+
+        -- Offensive (ToF)
+        local OffensiveTab = SurvivorTabbox1.Offensive
+        local offSection = OffensiveTab:AddSection({
+            Position = "Center",
+            Name = "Silent Aim Twist Of Fate",
+            Icon = "solar:target-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+        offSection:AddToggle({ Default = false, Name = "Silent Aim Twist Of Fate", Flag = "Silent Aim Twist Of Fate", Callback = function(v) VD.AUTO_ToFAim = v end })
+        offSection:AddDropdown({
+            Name = "ToF Target Mode",
+            Flag = "ToF Target Mode",
+            Values = { "Killer", "Survivor", "SCP" },
+            Default = VD.AUTO_ToFTargetMode or "Killer",
+            Multi = false,
+            Callback = function(v)
+                if type(v) == "table" then v = v[1] end
+                VD.AUTO_ToFTargetMode = v or "Killer"
+            end
+        })
+        offSection:AddDropdown({
+            Name = "ToF Aim Part",
+            Flag = "ToF Aim Part",
+            Values = { "HumanoidRootPart", "Head", "Torso" },
+            Default = VD.AUTO_ToFAimPart or "HumanoidRootPart",
+            Multi = false,
+            Callback = function(v)
+                if type(v) == "table" then v = v[1] end
+                VD.AUTO_ToFAimPart = v or "HumanoidRootPart"
+            end
+        })
+        offSection:AddToggle({
+            Default = true,
+            Name = "ToF Prediction",
+            Flag = "ToF Prediction",
+            Callback = function(v) VD.AUTO_ToFPredict = v end
+        })
+        offSection:AddSlider({
+            Name = "ToF Bullet Speed",
+            Flag = "ToF Bullet Speed",
+            Min = 50, Max = 1000, Default = 200,
+            Callback = function(v) VD.AUTO_ToFBulletSpeed = v end
+        })
+        offSection:AddSlider({
+            Name = "ToF Aim Range (studs)", Flag = "ToF Aim Range (studs)",
+            Min = 10, Max = 300, Default = 90,
+            Callback = function(v) VD.AUTO_ToFAimRange = v end
+        })
+        offSection:AddSlider({
+            Name = "Safe FOV (Dot Threshold)", Flag = "Aim Strictness",
+            Min = -1, Max = 1, Default = 0.5, Increment = 0.05,
+            Callback = function(v) VD.AUTO_ToFDotThreshold = v end
+        })
+
+        -- Parry subtab
+        local ParryTab = SurvivorTabbox2.Parry
+        local parrySection = ParryTab:AddSection({
+            Position = "Center",
+            Name = "Auto Parry",
+            Icon = "solar:sword-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+
+        parrySection:AddToggle({
+            Name = "Enable Auto Parry",
+            Flag = "Auto Parry",
+            Default = VD.SURV_AutoParry,
+            Callback = function(v)
+                VD.SURV_AutoParry = v
+                if not v then
+                    VD_ParryRange.Transparency = 1
+                    ResetCooldown()
+                end
+            end
+        })
+
+        parrySection:AddDropdown({
+            Name = "Parry Mode",
+            Flag = "Parry Mode",
+            Values = { "Legit", "Aggressive" },
+            Default = VD.SURV_ParryMode or "Legit",
+            Multi = false,
+            Callback = function(v)
+                if type(v) == "table" then v = v[1] end
+                VD.SURV_ParryMode = v or "Legit"
+            end
+        })
+
+        parrySection:AddDropdown({
+            Name = "Parry Animation",
+            Flag = "Parry Animation",
+            Values = {
+                "Default",
+                "Shield",
+                "Robot",
+                "Katana",
+                "Fish",
+                "Watcher"
+            },
+            Default = "Default",
+            Multi = false,
+            Callback = function(v)
+                if type(v) == "table" then v = v[1] end
+                local animMap = {
+                    Default = "rbxassetid://109133187196613",
+                    Shield  = "rbxassetid://75939529748815",
+                    Robot   = "rbxassetid://126894569253341",
+                    Katana  = "rbxassetid://127096285501517",
+                    Fish    = "rbxassetid://123307242865945",
+                    Watcher = "rbxassetid://81793464499285",
+                }
+                VD.SURV_ParryAnimId = animMap[v] or animMap.Default
+            end
+        })
+
+        parrySection:AddSlider({
+            Name = "Parry Range",
+            Flag = "Parry Range",
+            Min = 2,
+            Max = 20,
+            Default = VD.SURV_ParryRange or 12,
+            Increment = 0.5,
+            Callback = function(v)
+                VD.SURV_ParryRange = v
+                VD_ParryRange.Radius = v
+                VD_ParryRange.InnerRadius = math.max(0.1, v - 0.15)
+            end
+        })
+
+        parrySection:AddKeybind({
+            Name = "Toggle Keybind",
+            Flag = "Parry Keybind",
+            Default = VD.Parry_Keybind or "F3",
+            Callback = function()
+                VD.SURV_AutoParry = not VD.SURV_AutoParry
+                if not VD.SURV_AutoParry then
+                    VD_ParryRange.Transparency = 1
+                    ResetCooldown()
+                end
+                pcall(function()
+                    if Window and Window.ConfigElements and Window.ConfigElements["Auto Parry"] then
+                        Window.ConfigElements["Auto Parry"]:Set(VD.SURV_AutoParry)
+                    end
+                end)
+            end
+        })
+
+        parrySection:AddToggle({
+            Name = "Show Parry Range Circle",
+            Flag = "Show Parry Circle",
+            Default = VD.SURV_ShowParryCircle,
+            Callback = function(v)
+                VD.SURV_ShowParryCircle = v
+                if not v then VD_ParryRange.Transparency = 1 end
+            end
+        })
+
+        -- Gen Boost subtab
+        local GenBoostTab = SurvivorTabbox2.GenBoost
+        local genBoostSection = GenBoostTab:AddSection({
+            Position = "Center",
+            Name = "Generator Boost",
+            Icon = "solar:plug-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+
+        genBoostSection:AddToggle({
+            Name = "Gen Boost (BEST)",
+            Flag = "Gen_Boost",
+            Callback = function(v)
+                VD.SURV_GenBoost = v
+                if v then
+                    startGenBoost()
+                else
+                    stopGenBoost()
+                end
+            end
+        })
+
+        genBoostSection:AddToggle({
+            Name = "Draggable Mode (Gen Bypass Button)",
+            Flag = "Draggable_Gen_Bypass",
+            Callback = function(v)
+                VD.SURV_DraggableGenBypass = v
+            end
+        })
+
+        -- Auto Drop Pallet subtab
+        local PalletTab = SurvivorTabbox2.Pallet
+        local palletSection = PalletTab:AddSection({
+            Position = "Center",
+            Name = "Auto Drop Pallet",
+            Icon = "solar:box-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+
+        palletSection:AddToggle({
+            Name = "Auto Drop Pallet",
+            Flag = "Auto_Drop_Pallet",
+            Default = false,
+            Callback = function(v)
+                VD.SURV_AutoDropPallet = v
+                if v then
+                    VD_Notify("Auto Drop Pallet", "Enabled (" .. (VD.SURV_AutoDropPalletMode or "Aggressive") .. " Mode)", 2)
+                else
+                    VD_Notify("Auto Drop Pallet", "Disabled", 2)
+                end
+            end
+        })
+
+        palletSection:AddSlider({
+            Name = "Killer Detection Range (studs)",
+            Flag = "Pallet_Trigger_Range",
+            Min = 5,
+            Max = 50,
+            Default = 20,
+            Increment = 1,
+            Callback = function(v)
+                VD.SURV_AutoDropPalletDist = v
+            end
+        })
+
+        palletSection:AddDropdown({
+            Name = "Mode",
+            Flag = "Auto_Drop_Pallet_Mode",
+            Values = { "Aggressive", "Safe" },
+            Default = "Aggressive",
+            Multi = false,
+            Callback = function(value)
+                if type(value) == "table" then value = value[1] end
+                VD.SURV_AutoDropPalletMode = value
+                VD_Notify("Auto Drop Pallet", "Mode set to " .. value, 2)
+            end
+        })
+
+        -- ============================================================
+        -- NEW: Movement subtab (Auto Vault & Auto Pallet Slide)
+        -- ============================================================
+        local MovementTab = SurvivorTabbox2.Movement
+        local movementSection = MovementTab:AddSection({
+            Position = "Center",
+            Name = "Movement",
+            Icon = "solar:walk-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+
+        movementSection:AddToggle({
+            Name = "Auto Vault",
+            Flag = "Auto_Vault",
+            Default = false,
+            Callback = function(v)
+                VD.SURV_AutoVault = v
+                VD_Notify("Auto Vault", v and "Enabled" or "Disabled", 2)
+            end
+        })
+
+        movementSection:AddToggle({
+            Name = "Auto Pallet (Slide)",
+            Flag = "Auto_Pallet_Slide",
+            Default = false,
+            Callback = function(v)
+                VD.SURV_AutoPalletSlide = v
+                VD_Notify("Auto Pallet Slide", v and "Enabled" or "Disabled", 2)
+            end
+        })
+
+        -- Killer General
+        local KillerGeneralTab = KillerTabbox1.General
+        local kgSection = KillerGeneralTab:AddSection({
+            Position = "Center",
+            Name = "General Killer",
+            Icon = "solar:danger-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+        kgSection:AddToggle({ Default = false, Name = "Auto Attack", Flag = "Auto Attack", Callback = function(v) VD.AUTO_Attack = v end })
+        kgSection:AddSlider({
+            Name = "Attack Range", Flag = "Attack Range",
+            Min = 5, Max = 20, Default = 12,
+            Callback = function(v) VD.AUTO_AttackRange = v end
+        })
+        kgSection:AddToggle({ Default = false, Name = "Double Tap", Flag = "Double Tap", Callback = function(v) VD.KILLER_DoubleTap = v end })
+        kgSection:AddToggle({ Default = false, Name = "Auto Kick Pallet", Flag = "Destroy Pallets", Callback = function(v) VD.KILLER_DestroyPallets = v end })
+        kgSection:AddToggle({ Default = false, Name = "Auto Kick Generator", Flag = "Auto Kick Generator", Callback = function(v) VD.KILLER_AutoBreakGene = v end })
+        kgSection:AddToggle({ Default = false, Name = "Block All Vaults", Flag = "Block All Vaults", Callback = function(v) VD.KILLER_BlockVaults = v end })
+        kgSection:AddToggle({ Default = false, Name = "Anti Blind (Flashlight)", Flag = "Anti Blind (Flashlight)", Callback = function(v)
+            VD.KILLER_AntiBlind = v; pcall(SetupAntiBlind)
+        end })
+
+        -- Silent Aim (Veil)
+        local SilentAimTab = KillerTabbox1.SilentAim
+        local saSection = SilentAimTab:AddSection({
+            Position = "Center",
+            Name = "Silent Aim Veil",
+            Icon = "solar:crosshair-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+        saSection:AddToggle({ Default = false, Name = "Silent Aim Veil", Flag = "Silent Aim Veil", Callback = function(v) VeilConfig.Enabled = v end })
+        saSection:AddToggle({ Default = true, Name = "Show FOV Circle", Flag = "Show FOV Circle", Callback = function(v) VeilConfig.ShowFOV = v end })
+        saSection:AddSlider({ Name = "FOV Radius", Flag = "FOV Radius", Min = 50, Max = 500, Default = 150, Callback = function(v) VeilConfig.FOV = v end })
+        saSection:AddToggle({ Default = false, Name = "Auto Predict", Flag = "Auto Predict", Callback = function(v) VeilConfig.AutoPredict = v end })
+        saSection:AddSlider({ Name = "Spear Speed", Flag = "Spear Speed", Min = 50, Max = 300, Default = 165, Callback = function(v) VeilConfig.SpearSpeed = v end })
+        saSection:AddSlider({ Name = "Gravity", Flag = "Gravity", Min = 0, Max = 300, Default = math.floor(workspace.Gravity * 0.5), Callback = function(v) VeilConfig.Gravity = v end })
+        saSection:AddSlider({ Name = "Horizontal Vector", Flag = "Horizontal Vector", Min = 0, Max = 10, Default = 2.8, Decimals = 1, Callback = function(v) VeilConfig.HorizontalPredictFactor = v end })
+        saSection:AddDropdown({ Name = "Target Part", Flag = "Target Part", Values = {"Torso", "Head", "Root"}, Default = "Torso", Multi = false, Callback = function(v)
+            if type(v) == "table" then v = v[1] end
+            VeilConfig.TargetPart = v
+        end })
+
+        -- Customization
+        local CustomizationTab = KillerTabbox2.Customization
+        local custSection = CustomizationTab:AddSection({
+            Position = "Center",
+            Name = "Custom Masked",
+            Icon = "solar:palette-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+        local customMaskedMasks = {"Richard", "Tony", "Brandon", "Jake", "Richter", "Graham", "Alex"}
+        custSection:AddDropdown({
+            Name = "Custom Masked",
+            Flag = "Custom Masked",
+            Values = customMaskedMasks,
+            Multi = false,
+            Default = VD.KILLER_CustomMasked or "Richard",
+            Callback = function(v)
+                if type(v) == "table" then v = v[1] end
+                VD.KILLER_CustomMasked = v or "Richard"
+            end
+        })
+        custSection:AddButton({
+            Name = "Apply Custom Masked",
+            Callback = function()
+                pcall(IYAN_ApplyCustomMasked, VD.KILLER_CustomMasked)
+            end
+        })
+        custSection:AddButton({
+            Name = "Random Custom Masked",
+            Callback = function()
+                local mask = customMaskedMasks[math.random(1, #customMaskedMasks)]
+                VD.KILLER_CustomMasked = mask
+                pcall(IYAN_ApplyCustomMasked, mask)
+            end
+        })
+
+        -- Visual: ESP subtab
+        local ESPTab = VisualTabbox.ESP
+        local espSection = ESPTab:AddSection({
+            Position = "Center",
+            Name = "Drawing ESP (PC Only)",
+            Icon = "lucide:eye",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+        espSection:AddToggle({ Default = false, Name = "Master Turn On Drawing ESP", Flag = "Master Turn On Drawing ESP", Callback = function(v) VD.DRAWING_ESP = v end })
+        espSection:AddToggle({ Default = false, Name = "Low Performance Mode (disable skeleton & velocity)", Flag = "Low Performance Mode", Callback = function(v)
+            VD.ESP_LowPerformance = v
+            if v then
+                VD.ESP_Skeleton = false
+                VD.ESP_Velocity = false
+                VD.ESP_Offscreen = false
+                pcall(function()
+                    if Window and Window.ConfigElements then
+                        local skelElem = Window.ConfigElements["ESP Skeleton"]
+                        if skelElem and skelElem.Set then skelElem:Set(false) end
+                        local velElem = Window.ConfigElements["ESP Velocity Arrows"]
+                        if velElem and velElem.Set then velElem:Set(false) end
+                        local offElem = Window.ConfigElements["ESP Offscreen Arrows"]
+                        if offElem and offElem.Set then offElem:Set(false) end
+                    end
+                end)
+            end
+        end })
+        espSection:AddSlider({
+            Name = "Max ESP Distance", Flag = "Max ESP Distance",
+            Min = 500, Max = 5000, Default = 2000,
+            Callback = function(v) VD.MaxDistance = v end
+        })
+        espSection:AddToggle({ Default = false, Name = "ESP Skeleton (PC Only!)", Flag = "ESP Skeleton", Callback = function(v)
+            if VD.ESP_LowPerformance and v then
+                pcall(function()
+                    if Window and Window.Notify then
+                        Window:Notify({ Title = "ESP", Content = "Skeleton disabled in Low Performance mode", Duration = 2 })
+                    end
+                end)
+                return
+            end
+            VD.ESP_Skeleton = v
+        end })
+        espSection:AddToggle({ Default = false, Name = "ESP Velocity Arrows (PC Only!)", Flag = "ESP Velocity Arrows", Callback = function(v)
+            if VD.ESP_LowPerformance and v then
+                pcall(function()
+                    if Window and Window.Notify then
+                        Window:Notify({ Title = "ESP", Content = "Velocity disabled in Low Performance mode", Duration = 2 })
+                    end
+                end)
+                return
+            end
+            VD.ESP_Velocity = v
+        end })
+        espSection:AddToggle({ Default = false, Name = "ESP Offscreen Arrows (PC Only!)", Flag = "ESP Offscreen Arrows", Callback = function(v)
+            if VD.ESP_LowPerformance and v then
+                pcall(function()
+                    if Window and Window.Notify then
+                        Window:Notify({ Title = "ESP", Content = "Offscreen disabled in Low Performance mode", Duration = 2 })
+                    end
+                end)
+                return
+            end
+            VD.ESP_Offscreen = v
+        end })
+
+        -- Highlight ESP subtab
+        local HighlightTab = VisualTabbox.Highlight
+        pcall(function()
+            if getgenv().IYAN_AddVisualESPControls then
+                getgenv().IYAN_AddVisualESPControls(HighlightTab)
+            end
+        end)
+
+        -- Lighting subtab
+        local LightingTab = VisualTabbox.Lighting
+        local lightSection = LightingTab:AddSection({
+            Position = "Center",
+            Name = "Lighting Controls",
+            Icon = "lucide:sun",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+
+        lightSection:AddToggle({
+            Name = "Fullbright",
+            Flag = "Fullbright (lighting preset)",
+            Default = false,
+            Callback = function(state)
+                VD.Fullbright = state
+                applyFullbright(state)
+            end
+        })
+
+        lightSection:AddToggle({
+            Name = "No Fog",
+            Flag = "No Fog",
+            Default = false,
+            Callback = function(state)
+                VD.NoFog = state
+                applyNoFog(state)
+            end
+        })
+    end
 
     -- =====================================================
     -- REMAINING FUNCTIONS (unchanged)
@@ -4914,119 +6024,268 @@ local function __ZiaanHub_Init_Main__()
         end
     end)
 
-    -- ============================================================
-    -- NO MERCY ORION UI — FULL FEATURE WIRING
-    -- ============================================================
-    local function S(tab,name) return tab:AddSection({Name=name}) end
-
-    local AimbotTab=Window:MakeTab({Name="Aimbot",Icon=ICON.Crosshair,PremiumOnly=false})
-    local a=S(AimbotTab,"Targeting")
-    a:AddToggle({Name="Enable Aimbot",Default=VD.AIM_Enabled or false,Callback=function(v) VD.AIM_Enabled=v end})
-    a:AddToggle({Name="Visibility Check",Default=VD.AIM_VisCheck or false,Callback=function(v) VD.AIM_VisCheck=v end})
-    a:AddSlider({Name="Aim Range",Min=10,Max=500,Default=VD.AUTO_ToFAimRange or 90,Increment=5,Callback=function(v) VD.AUTO_ToFAimRange=v end})
-    a:AddSlider({Name="Aim Strictness",Min=0,Max=1,Default=VD.AUTO_ToFDotThreshold or .5,Increment=.05,Callback=function(v) VD.AUTO_ToFDotThreshold=v end})
-    a:AddDropdown({Name="Target Mode",Options={"Killer","Survivor","Player"},Default=VD.AUTO_ToFTargetMode or "Killer",Callback=function(v) if type(v)=="table" then v=v[1] end VD.AUTO_ToFTargetMode=v end})
-    a:AddDropdown({Name="Target Part",Options={"HumanoidRootPart","Head","Torso"},Default=VD.AUTO_ToFAimPart or "HumanoidRootPart",Callback=function(v) if type(v)=="table" then v=v[1] end VD.AUTO_ToFAimPart=v end})
-    a:AddToggle({Name="Prediction",Default=VD.AUTO_ToFPredict~=false,Callback=function(v) VD.AUTO_ToFPredict=v end})
-    a:AddSlider({Name="Bullet Speed",Min=50,Max=500,Default=VD.AUTO_ToFBulletSpeed or 200,Increment=5,Callback=function(v) VD.AUTO_ToFBulletSpeed=v end})
-
-    local ParryTab=Window:MakeTab({Name="Parry",Icon=ICON.Swords,PremiumOnly=false})
-    local p=S(ParryTab,"Auto Parry")
-    p:AddToggle({Name="Auto Parry",Default=VD.SURV_AutoParry or false,Callback=function(v) VD.SURV_AutoParry=v end})
-    p:AddDropdown({Name="Parry Mode",Options={"Legit","Aggressive"},Default=VD.SURV_ParryMode or "Legit",Callback=function(v) if type(v)=="table" then v=v[1] end VD.SURV_ParryMode=v end})
-    p:AddSlider({Name="Parry Range",Min=5,Max=50,Default=VD.SURV_ParryRange or 12,Increment=1,Callback=function(v) VD.SURV_ParryRange=v end})
-    p:AddToggle({Name="Show Parry Circle",Default=VD.SURV_ShowParryCircle~=false,Callback=function(v) VD.SURV_ShowParryCircle=v end})
-    p:AddDropdown({Name="Parry Keybind",Options={"F1","F2","F3","F4","F5"},Default=VD.Parry_Keybind or "F3",Callback=function(v) if type(v)=="table" then v=v[1] end VD.Parry_Keybind=v end})
-
-    local TeleportTab=Window:MakeTab({Name="Teleport",Icon=ICON.Globe,PremiumOnly=false})
-    local t=S(TeleportTab,"Locations")
-    local function playerNames() local x={} for _,pl in ipairs(Players:GetPlayers()) do if pl~=LocalPlayer then table.insert(x,pl.Name) end end table.sort(x) return x end
-    t:AddDropdown({Name="Select Player",Options=playerNames(),Default=playerNames()[1] or "",Callback=function(v) if type(v)=="table" then v=v[1] end VD.TP_TargetPlayer=v end})
-    t:AddButton({Name="Refresh Players",Callback=function() end})
-    t:AddButton({Name="Teleport to Player",Callback=function() local pl=Players:FindFirstChild(VD.TP_TargetPlayer or ""); local tr=pl and pl.Character and pl.Character:FindFirstChild("HumanoidRootPart"); if Root and tr then Root.CFrame=tr.CFrame*CFrame.new(0,0,3) end end})
-    t:AddButton({Name="TP to Generator",Callback=function() pcall(function() IYAN_TeleportToGenerator(1) end) end})
-    t:AddButton({Name="TP to Gate",Callback=function() pcall(IYAN_TeleportToGate) end})
-    t:AddButton({Name="TP to Hook",Callback=function() pcall(IYAN_TeleportToHook) end})
-
-    local KillerTab=Window:MakeTab({Name="Killer",Icon=ICON.Axe,PremiumOnly=false})
-    local k=S(KillerTab,"General")
-    k:AddToggle({Name="Auto Attack",Default=VD.AUTO_Attack or false,Callback=function(v) VD.AUTO_Attack=v end})
-    k:AddSlider({Name="Attack Range",Min=5,Max=20,Default=VD.AUTO_AttackRange or 12,Increment=1,Callback=function(v) VD.AUTO_AttackRange=v end})
-    k:AddToggle({Name="Double Tap",Default=VD.KILLER_DoubleTap or false,Callback=function(v) VD.KILLER_DoubleTap=v end})
-    k:AddToggle({Name="Auto Kick Pallet",Default=VD.KILLER_DestroyPallets or false,Callback=function(v) VD.KILLER_DestroyPallets=v end})
-    k:AddToggle({Name="Auto Kick Generator",Default=VD.KILLER_AutoBreakGene or false,Callback=function(v) VD.KILLER_AutoBreakGene=v end})
-    k:AddToggle({Name="Block All Vaults",Default=VD.KILLER_BlockVaults or false,Callback=function(v) VD.KILLER_BlockVaults=v end})
-    k:AddToggle({Name="Anti Blind",Default=VD.KILLER_AntiBlind or false,Callback=function(v) VD.KILLER_AntiBlind=v; pcall(SetupAntiBlind) end})
-    local ks=S(KillerTab,"Silent Aim")
-    ks:AddToggle({Name="Silent Aim Veil",Default=VD.SPEAR_Aimbot or false,Callback=function(v) VD.SPEAR_Aimbot=v; if VeilConfig then VeilConfig.Enabled=v end end})
-    ks:AddToggle({Name="Show FOV",Default=true,Callback=function(v) if VeilConfig then VeilConfig.ShowFOV=v end end})
-    ks:AddSlider({Name="FOV Radius",Min=50,Max=500,Default=150,Increment=10,Callback=function(v) if VeilConfig then VeilConfig.FOV=v end end})
-    ks:AddToggle({Name="Auto Predict",Default=false,Callback=function(v) if VeilConfig then VeilConfig.AutoPredict=v end end})
-    ks:AddSlider({Name="Spear Speed",Min=50,Max=300,Default=VD.SPEAR_Speed or 100,Increment=5,Callback=function(v) VD.SPEAR_Speed=v; if VeilConfig then VeilConfig.SpearSpeed=v end end})
-    ks:AddSlider({Name="Gravity",Min=0,Max=300,Default=VD.SPEAR_Gravity or 50,Increment=5,Callback=function(v) VD.SPEAR_Gravity=v; if VeilConfig then VeilConfig.Gravity=v end end})
-    ks:AddDropdown({Name="Target Part",Options={"Torso","Head","Root"},Default="Torso",Callback=function(v) if type(v)=="table" then v=v[1] end if VeilConfig then VeilConfig.TargetPart=v end end})
-    local kc=S(KillerTab,"Customization")
-    local masks={"Richard","Tony","Brandon","Jake","Richter","Graham","Alex"}
-    kc:AddDropdown({Name="Custom Masked",Options=masks,Default=VD.KILLER_CustomMasked or "Richard",Callback=function(v) if type(v)=="table" then v=v[1] end VD.KILLER_CustomMasked=v end})
-    kc:AddButton({Name="Apply Custom Masked",Callback=function() pcall(IYAN_ApplyCustomMasked,VD.KILLER_CustomMasked) end})
-    kc:AddButton({Name="Random Custom Masked",Callback=function() local m=masks[math.random(#masks)]; VD.KILLER_CustomMasked=m; pcall(IYAN_ApplyCustomMasked,m) end})
-
-    local SurvivorTab=Window:MakeTab({Name="Survivor",Icon=ICON.User,PremiumOnly=false})
-    local g=S(SurvivorTab,"Generator")
-    g:AddToggle({Name="Gen Boost",Default=VD.SURV_GenBoost or false,Callback=function(v) VD.SURV_GenBoost=v; if v then startGenBoost() else stopGenBoost() end end})
-    g:AddToggle({Name="Gen Boost BEST",Default=VD.SURV_GenBoost or false,Callback=function(v) VD.SURV_GenBoost=v; if v then startGenBoost() else stopGenBoost() end end})
-    g:AddToggle({Name="Generator Bypass",Default=VD.SURV_DraggableGenBypass or false,Callback=function(v) VD.SURV_DraggableGenBypass=v; if v then createBypassButton() else destroyBypassButton() end end})
-    g:AddButton({Name="Start Generator",Callback=function() VD.SURV_GenBoost=true; startGenBoost() end})
-    g:AddButton({Name="Stop Generator",Callback=function() VD.SURV_GenBoost=false; stopGenBoost() end})
-
-    local PlayerTab=Window:MakeTab({Name="Player",Icon=ICON.User,PremiumOnly=false})
-    local pf=S(PlayerTab,"Fling")
-    pf:AddToggle({Name="Enable Fling",Default=VD.FLING_Enabled or false,Callback=function(v) VD.FLING_Enabled=v end})
-    pf:AddSlider({Name="Fling Strength",Min=1000,Max=50000,Default=VD.FLING_Strength or 10000,Increment=1000,Callback=function(v) VD.FLING_Strength=v end})
-    pf:AddButton({Name="Fling Nearest",Callback=function() pcall(IYAN_FlingNearest) end})
-    pf:AddButton({Name="Fling All",Callback=function() pcall(IYAN_FlingAll) end})
-    local ps=S(PlayerTab,"Streamer")
-    local fakeNameConnection
-    ps:AddToggle({Name="Hide Name",Default=false,Callback=function(v) if fakeNameConnection then fakeNameConnection:Disconnect(); fakeNameConnection=nil end; local pg=LocalPlayer:FindFirstChildOfClass("PlayerGui"); if not pg then return end; local function f(o) if o:IsA("TextLabel") or o:IsA("TextButton") or o:IsA("TextBox") then local tx=tostring(o.Text or ""); if tx==LocalPlayer.Name or tx==LocalPlayer.DisplayName or tx:find(LocalPlayer.Name,1,true) then o.Visible=not v end end end; for _,o in ipairs(pg:GetDescendants()) do f(o) end; if v then fakeNameConnection=pg.DescendantAdded:Connect(function(o) task.defer(f,o) end) end end})
-
-    local VisualTab=Window:MakeTab({Name="Visual",Icon=ICON.Eye,PremiumOnly=false})
-    local es=S(VisualTab,"ESP")
-    es:AddToggle({Name="Master ESP",Default=VD.DRAWING_ESP or false,Callback=function(v) VD.DRAWING_ESP=v end})
-    es:AddToggle({Name="Skeleton",Default=VD.ESP_Skeleton or false,Callback=function(v) if not VD.ESP_LowPerformance then VD.ESP_Skeleton=v end end})
-    es:AddToggle({Name="Velocity Arrows",Default=VD.ESP_Velocity or false,Callback=function(v) if not VD.ESP_LowPerformance then VD.ESP_Velocity=v end end})
-    es:AddToggle({Name="Offscreen Arrows",Default=VD.ESP_Offscreen or false,Callback=function(v) if not VD.ESP_LowPerformance then VD.ESP_Offscreen=v end end})
-    es:AddToggle({Name="Low Performance",Default=VD.ESP_LowPerformance or false,Callback=function(v) VD.ESP_LowPerformance=v end})
-    es:AddSlider({Name="Max ESP Distance",Min=500,Max=5000,Default=VD.MaxDistance or 2000,Increment=100,Callback=function(v) VD.MaxDistance=v end})
-    local li=S(VisualTab,"Lighting")
-    li:AddToggle({Name="Fullbright",Default=VD.Fullbright or false,Callback=function(v) VD.Fullbright=v; applyFullbright(v) end})
-    li:AddToggle({Name="No Fog",Default=VD.NoFog or false,Callback=function(v) VD.NoFog=v; applyNoFog(v) end})
-    local co=S(VisualTab,"ESP Colors")
-    local colorOptions={"Blue","Red","Yellow","Purple","Green","White","Cyan","Orange"}
-    local colorValues={Blue=Color3.fromRGB(0,170,255),Red=Color3.fromRGB(255,50,50),Yellow=Color3.fromRGB(255,220,0),Purple=Color3.fromRGB(180,80,255),Green=Color3.fromRGB(50,255,100),White=Color3.fromRGB(255,255,255),Cyan=Color3.fromRGB(0,255,255),Orange=Color3.fromRGB(255,140,0)}
-    VD.ESPColors=VD.ESPColors or {}
-    for _,name in ipairs({"Survivor","Killer","Generator","Hook","Gate","Player","ESP Text","ESP Outline","FOV"}) do
-        co:AddDropdown({Name=name.." Color",Options=colorOptions,Default=VD.ESPColors[name] or "Blue",Callback=function(v) if type(v)=="table" then v=v[1] end VD.ESPColors[name]=v end})
-    end
-
-    local SpeedTab=Window:MakeTab({Name="Speed",Icon=ICON.Zap,PremiumOnly=false})
-    local sp=S(SpeedTab,"Movement")
-    sp:AddSlider({Name="WalkSpeed",Min=16,Max=200,Default=VD.SpeedValue or 16,Increment=1,Callback=function(v) VD.SpeedValue=v; if Humanoid then Humanoid.WalkSpeed=v end end})
-    sp:AddToggle({Name="Auto Vault",Default=VD.SURV_AutoVault or false,Callback=function(v) VD.SURV_AutoVault=v end})
-    sp:AddToggle({Name="Auto Pallet Slide",Default=VD.SURV_AutoPalletSlide or false,Callback=function(v) VD.SURV_AutoPalletSlide=v end})
-
-    local SettingsTab=Window:MakeTab({Name="Pengaturan",Icon=ICON.Settings,PremiumOnly=false})
-    local set=S(SettingsTab,"Config")
-    set:AddButton({Name="Save Config",Callback=function() pcall(function() if OrionLib.SaveConfig then OrionLib:SaveConfig() end end) end})
-    set:AddButton({Name="Export Settings",Callback=function() if setclipboard then pcall(function() setclipboard(HttpService:JSONEncode(VD)) end) end end})
-    set:AddButton({Name="Copy Config",Callback=function() if setclipboard then pcall(function() setclipboard(HttpService:JSONEncode(VD)) end) end end})
-    set:AddButton({Name="Close UI",Callback=function() if getgenv().NoMercyConfirmClose then getgenv().NoMercyConfirmClose() end end})
-
-    pcall(IYAN_ScanMap)
-    task.defer(function() pcall(function() if getgenv().IYAN_SyncLoadedFeatures then getgenv().IYAN_SyncLoadedFeatures() end; if VD.Fullbright then applyFullbright(true) end; if VD.NoFog then applyNoFog(true) end end) end)
-
     -- CLEANUP ON DESTROY
 end
 
 __ZiaanHub_Init_Main__()
+-- ============================================================
+--  SPEED TAB (mobile friendly)
+-- ============================================================
+do
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local UserInputService = game:GetService("UserInputService")
+    local LocalPlayer = Players.LocalPlayer
 
+    local VD = getgenv().VD
+    VD.SpeedEnabled   = VD.SpeedEnabled or false
+    VD.SpeedValue     = VD.SpeedValue or 16
+    VD.JumpEnabled    = VD.JumpEnabled or false
+    VD.JumpValue      = VD.JumpValue or 50
+    VD.InfiniteJump   = VD.InfiniteJump or false
+    VD.NoClipEnabled  = VD.NoClipEnabled or false
 
+    local SpeedTab = OrionWindow:MakeTab({ Name = "Speed", Icon = ICON.Settings, PremiumOnly = false })
+    local SpeedSec = SpeedTab:AddSection({ Name = "Movement" })
+
+    local function getHum()
+        local char = LocalPlayer.Character
+        return char and char:FindFirstChildOfClass("Humanoid"), char
+    end
+
+    SpeedSec:AddToggle({
+        Name = "Enable Speed Hack", Default = VD.SpeedEnabled, Flag = "NM_SpeedEnabled", Save = true,
+        Callback = function(v)
+            VD.SpeedEnabled = v
+            if not v then local h = getHum(); if h then h.WalkSpeed = 16 end end
+        end,
+    })
+    SpeedSec:AddSlider({
+        Name = "Speed Value", Min = 16, Max = 200, Default = VD.SpeedValue, Increment = 1,
+        ValueName = "studs/s", Flag = "NM_SpeedValue", Save = true,
+        Callback = function(v) VD.SpeedValue = v end,
+    })
+    SpeedSec:AddToggle({
+        Name = "Enable Jump Power", Default = VD.JumpEnabled, Flag = "NM_JumpEnabled", Save = true,
+        Callback = function(v)
+            VD.JumpEnabled = v
+            if not v then local h = getHum(); if h then h.JumpPower = 50 end end
+        end,
+    })
+    SpeedSec:AddSlider({
+        Name = "Jump Power", Min = 50, Max = 300, Default = VD.JumpValue, Increment = 1,
+        ValueName = "power", Flag = "NM_JumpValue", Save = true,
+        Callback = function(v) VD.JumpValue = v end,
+    })
+    SpeedSec:AddToggle({
+        Name = "Infinite Jump", Default = VD.InfiniteJump, Flag = "NM_InfiniteJump", Save = true,
+        Callback = function(v) VD.InfiniteJump = v end,
+    })
+    SpeedSec:AddToggle({
+        Name = "NoClip", Default = VD.NoClipEnabled, Flag = "NM_NoClip", Save = true,
+        Callback = function(v) VD.NoClipEnabled = v end,
+    })
+
+    task.spawn(function()
+        while task.wait(0.2) do
+            if VD.Destroyed then break end
+            pcall(function()
+                local h = getHum()
+                if not h then return end
+                if VD.SpeedEnabled then h.WalkSpeed = VD.SpeedValue end
+                if VD.JumpEnabled then
+                    h.UseJumpPower = true
+                    h.JumpPower = VD.JumpValue
+                end
+            end)
+        end
+    end)
+
+    RunService.Stepped:Connect(function()
+        if not VD.NoClipEnabled or VD.Destroyed then return end
+        local _, char = getHum()
+        if not char then return end
+        for _, p in ipairs(char:GetDescendants()) do
+            if p:IsA("BasePart") and p.CanCollide then p.CanCollide = false end
+        end
+    end)
+
+    UserInputService.JumpRequest:Connect(function()
+        if not VD.InfiniteJump or VD.Destroyed then return end
+        local h = getHum()
+        if h then h:ChangeState(Enum.HumanoidStateType.Jumping) end
+    end)
+end
+
+-- ============================================================
+--  SETTINGS TAB (Auto Save / Auto Load / Export / Import / Share / Reset / Profiles)
+-- ============================================================
+do
+    local HttpService = game:GetService("HttpService")
+    local VD = getgenv().VD
+
+    local FOLDER = "NoMercyViolence"
+    if makefolder and isfolder and not isfolder(FOLDER) then
+        pcall(function() makefolder(FOLDER) end)
+    end
+
+    getgenv().NM_CurrentProfile = getgenv().NM_CurrentProfile or "Default"
+    getgenv().NM_AutoSave = (getgenv().NM_AutoSave ~= false)
+
+    local function notify(t, c) OrionLib:MakeNotification({ Name = t, Content = c, Image = ICON.Logo, Time = 4 }) end
+
+    local function serialize()
+        local out = {}
+        for k, v in pairs(VD) do
+            local tv = typeof(v)
+            if tv == "number" or tv == "string" or tv == "boolean" then out[k] = v end
+        end
+        return out
+    end
+
+    local function profilePath(name) return FOLDER .. "/" .. (name or "Default") .. ".json" end
+
+    local function saveProfile(name)
+        name = (name and name ~= "" and name) or getgenv().NM_CurrentProfile
+        local ok = pcall(function()
+            if writefile then writefile(profilePath(name), HttpService:JSONEncode(serialize())) end
+        end)
+        if ok then notify("NO MERCY", "Config tersimpan: " .. name)
+        else notify("NO MERCY", "Gagal menyimpan config") end
+    end
+
+    local function loadProfile(name)
+        name = (name and name ~= "" and name) or getgenv().NM_CurrentProfile
+        local ok = pcall(function()
+            if isfile and readfile and isfile(profilePath(name)) then
+                local data = HttpService:JSONDecode(readfile(profilePath(name)))
+                for k, v in pairs(data) do VD[k] = v end
+            else
+                error("not found")
+            end
+        end)
+        if ok then
+            getgenv().NM_CurrentProfile = name
+            notify("NO MERCY", "Config dimuat: " .. name .. " (reload UI untuk sinkron penuh)")
+        else
+            notify("NO MERCY", "Config tidak ditemukan: " .. tostring(name))
+        end
+    end
+
+    local function listProfiles()
+        local list = {}
+        pcall(function()
+            if listfiles and isfolder and isfolder(FOLDER) then
+                for _, f in ipairs(listfiles(FOLDER)) do
+                    if f:sub(-5) == ".json" then
+                        local n = f:match("([^/\\]+)%.json$")
+                        if n then table.insert(list, n) end
+                    end
+                end
+            end
+        end)
+        if #list == 0 then table.insert(list, "Default") end
+        return list
+    end
+
+    local SettingsTab = OrionWindow:MakeTab({ Name = "Settings", Icon = ICON.Settings, PremiumOnly = false })
+    local ConfSec = SettingsTab:AddSection({ Name = "Config" })
+
+    ConfSec:AddToggle({
+        Name = "Auto Save", Default = getgenv().NM_AutoSave, Flag = "NM_AutoSaveToggle", Save = true,
+        Callback = function(v) getgenv().NM_AutoSave = v end,
+    })
+    ConfSec:AddToggle({
+        Name = "Auto Load (saat script dijalankan)", Default = true, Flag = "NM_AutoLoadToggle", Save = true,
+        Callback = function(v) getgenv().NM_AutoLoad = v end,
+    })
+
+    local profileNameInput = getgenv().NM_CurrentProfile
+    ConfSec:AddTextbox({
+        Name = "Nama Profile", Default = profileNameInput, TextDisappear = false,
+        Callback = function(v) profileNameInput = v end,
+    })
+    ConfSec:AddButton({ Name = "Save Config", Callback = function() saveProfile(profileNameInput) end })
+    ConfSec:AddButton({ Name = "Load Config", Callback = function() loadProfile(profileNameInput) end })
+
+    local profileDrop
+    profileDrop = ConfSec:AddDropdown({
+        Name = "Profiles", Default = getgenv().NM_CurrentProfile, Options = listProfiles(),
+        Callback = function(v) profileNameInput = v; getgenv().NM_CurrentProfile = v end,
+    })
+    ConfSec:AddButton({
+        Name = "Refresh Profile List",
+        Callback = function() pcall(function() profileDrop:Refresh(listProfiles(), true) end) end,
+    })
+
+    local ShareSec = SettingsTab:AddSection({ Name = "Export / Import / Share" })
+
+    ShareSec:AddButton({
+        Name = "Export Config (copy JSON)",
+        Callback = function()
+            local json = HttpService:JSONEncode(serialize())
+            if setclipboard then setclipboard(json) end
+            notify("NO MERCY", "Config JSON di-copy ke clipboard")
+        end,
+    })
+
+    local importBuffer = ""
+    ShareSec:AddTextbox({
+        Name = "Paste JSON di sini", Default = "", TextDisappear = false,
+        Callback = function(v) importBuffer = v end,
+    })
+    ShareSec:AddButton({
+        Name = "Import Config",
+        Callback = function()
+            local ok = pcall(function()
+                local data = HttpService:JSONDecode(importBuffer)
+                for k, v in pairs(data) do VD[k] = v end
+            end)
+            notify("NO MERCY", ok and "Config berhasil di-import" or "JSON tidak valid")
+        end,
+    })
+    ShareSec:AddButton({
+        Name = "Share Config (copy share code)",
+        Callback = function()
+            local json = HttpService:JSONEncode({ hub = "NoMercyViolence", profile = getgenv().NM_CurrentProfile, data = serialize() })
+            if setclipboard then setclipboard(json) end
+            notify("NO MERCY", "Share code di-copy")
+        end,
+    })
+    ShareSec:AddButton({
+        Name = "Reset Config (default)",
+        Callback = function()
+            for k, v in pairs(VD) do
+                local tv = typeof(v)
+                if tv == "boolean" then VD[k] = false end
+            end
+            notify("NO MERCY", "Config direset — reload script disarankan")
+        end,
+    })
+
+    -- AUTO LOAD
+    task.spawn(function()
+        task.wait(1)
+        if getgenv().NM_AutoLoad ~= false then
+            pcall(function()
+                if isfile and isfile(profilePath(getgenv().NM_CurrentProfile)) then
+                    loadProfile(getgenv().NM_CurrentProfile)
+                end
+            end)
+        end
+    end)
+
+    -- AUTO SAVE
+    task.spawn(function()
+        while task.wait(20) do
+            if VD.Destroyed then break end
+            if getgenv().NM_AutoSave then
+                pcall(function()
+                    if writefile then writefile(profilePath(getgenv().NM_CurrentProfile), HttpService:JSONEncode(serialize())) end
+                end)
+            end
+        end
+    end)
+end
+
+OrionLib:Init()
