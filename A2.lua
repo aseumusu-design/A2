@@ -1,5 +1,5 @@
 --[[
-  — VIOLENCE DISTRICT A2 (Mobile L + Generator Progress)
+  NO MERCY — VIOLENCE DISTRICT A2 (Mobile Lite + Generator Progress)
   Updated for smooth & low-lag ESP
   FIX: Drawing ESP performance improvements
   AUTO PARRY REPLACED with new improved version (WalkSpeed sequence, Legit/Aggressive, animations)
@@ -201,7 +201,7 @@ local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Marp
 local onCloseRequest
 
 local OrionWindow = OrionLib:MakeWindow({
-    Name = "NO MERCY — VIOLENCE DISTRICT",
+    Name = "NO MERCY — A2 VIOLENCE DISTRICT",
     HidePremium = false,
     SaveConfig = true,
     ConfigFolder = "NoMercyViolenceFullZiaan",
@@ -407,8 +407,8 @@ end
 local InfoTab = OrionWindow:MakeTab({ Name = "Info", Icon = ICON.Info, PremiumOnly = false })
 local InfoSec = InfoTab:AddSection({ Name = "Tentang" })
 
-InfoSec:AddLabel("NO MERCY — Violence District")
-InfoSec:AddLabel("A2 Official Script — Full Mobile Build")
+InfoSec:AddLabel("A2 — Violence District")
+InfoSec:AddLabel("A2 Official Script — Full Mobile Build (All Features)")
 InfoSec:AddLabel("Survivor • Killer • Visual • Player • Parry")
 InfoSec:AddButton({
     Name = "Copy Discord",
@@ -462,6 +462,70 @@ task.spawn(function()
         end
     end
 end)
+
+-- ============================================================
+--  EFEK TEKS BERCAHAYA (GLOBAL TEXT GLOW + STROKE PULSE)
+--  Berlaku untuk SEMUA teks UI: judul, tab, toggle, slider,
+--  dropdown, label, textbox — termasuk yang muncul belakangan.
+-- ============================================================
+do
+    local RunServiceGlow = game:GetService("RunService")
+    local GLOW_BASE   = Color3.fromRGB(240, 240, 240)
+    local GLOW_ACCENT = Color3.fromRGB(100, 210, 255)
+    local tracked = {}
+
+    local function applyGlow(obj)
+        if not (obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox")) then return end
+        if obj:GetAttribute("VD_Glow") then return end
+        obj:SetAttribute("VD_Glow", true)
+        local stroke = obj:FindFirstChild("VD_TextStroke")
+        if not stroke then
+            stroke = Instance.new("UIStroke")
+            stroke.Name = "VD_TextStroke"
+            stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+            stroke.Color = GLOW_ACCENT
+            stroke.Thickness = 1
+            stroke.Transparency = 0.5
+            stroke.Parent = obj
+        end
+        tracked[obj] = stroke
+        obj.Destroying:Connect(function() tracked[obj] = nil end)
+    end
+
+    local hooked = {}
+    local function hookGlow(root)
+        if not root or hooked[root] then return end
+        hooked[root] = true
+        for _, v in ipairs(root:GetDescendants()) do applyGlow(v) end
+        root.DescendantAdded:Connect(applyGlow)
+    end
+
+    task.spawn(function()
+        while not VD.Destroyed do
+            pcall(function()
+                hookGlow(GetHolder())
+                hookGlow(FindMainWindow())
+            end)
+            task.wait(1)
+        end
+    end)
+
+    RunServiceGlow.RenderStepped:Connect(function()
+        local alpha = (math.sin(os.clock() * 3) + 1) / 2
+        local color = GLOW_BASE:Lerp(GLOW_ACCENT, alpha)
+        for obj, st in pairs(tracked) do
+            if obj.Parent then
+                obj.TextColor3 = color
+                if st and st.Parent then
+                    st.Thickness = 1 + alpha
+                    st.Transparency = 0.75 - (alpha * 0.35)
+                end
+            else
+                tracked[obj] = nil
+            end
+        end
+    end)
+end
 
 -- ============================================================
 --  ADAPTER: API ZiaanHub (ModernV2) -> OrionLib
