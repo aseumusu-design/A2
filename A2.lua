@@ -1,5 +1,5 @@
 --[[
-  NO MERCY - Violence District v1.4.7 (Optimized ESP + Fullbright/No Fog)
+  — VIOLENCE DISTRICT A2 (Mobile L + Generator Progress)
   Updated for smooth & low-lag ESP
   FIX: Drawing ESP performance improvements
   AUTO PARRY REPLACED with new improved version (WalkSpeed sequence, Legit/Aggressive, animations)
@@ -58,6 +58,7 @@ getgenv().VD = getgenv().VD or {
     SURV_DraggableGenBypass = false,
     -- Performance
     ESP_LowPerformance   = false,
+    GeneratorProgressESP = false,
     -- Lighting
     Fullbright           = false,
     NoFog                = false,
@@ -72,7 +73,7 @@ getgenv().VD = getgenv().VD or {
 
 -- ============================================================
 --  NO MERCY — "VIOLENCE DISTRICT"
---  UI: Orion (MarV) — full feature set
+--  UI: Orion (MarV) — full ZiaanHub X feature set
 -- ============================================================
 
 local ICON = {
@@ -85,8 +86,8 @@ local ICON = {
     Eye      = "rbxassetid://7733774602",
     Zap      = "rbxassetid://7733771628",
     Settings = "rbxassetid://7734053495",
-    Logo     = "rbxassetid://102609928046926",
-    Banner   = "rbxassetid://138968189462646",
+    Logo     = "rbxassetid://113381647185328",
+    Banner   = "rbxassetid://117118608066997",
 }
 
 local TweenService = game:GetService("TweenService")
@@ -184,7 +185,16 @@ local function ShowWelcomeIntro()
     gui:Destroy()
 end
 
-ShowWelcomeIntro()
+local introLoaded = pcall(function()
+    local introSource = game:HttpGet("https://raw.githubusercontent.com/aseumusu-design/NoMercy_BladeBal/refs/heads/main/intro.lua")
+    local introFn = loadstring(introSource)
+    if introFn then introFn() end
+end)
+if introLoaded then
+    task.wait(6.5)
+else
+    ShowWelcomeIntro()
+end
 
 local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Marpiii/UiLib/refs/heads/main/source.lua"))()
 
@@ -194,7 +204,7 @@ local OrionWindow = OrionLib:MakeWindow({
     Name = "NO MERCY — VIOLENCE DISTRICT",
     HidePremium = false,
     SaveConfig = true,
-    ConfigFolder = "NoMercyViolence",
+    ConfigFolder = "NoMercyViolenceFullZiaan",
     IntroEnabled = false,
     Icon = ICON.Logo,
     CloseCallback = function()
@@ -398,7 +408,7 @@ local InfoTab = OrionWindow:MakeTab({ Name = "Info", Icon = ICON.Info, PremiumOn
 local InfoSec = InfoTab:AddSection({ Name = "Tentang" })
 
 InfoSec:AddLabel("NO MERCY — Violence District")
-InfoSec:AddLabel("Fitur: NO MERCY v1.4.7 (full port)")
+InfoSec:AddLabel("A2 Official Script — Full Mobile Build")
 InfoSec:AddLabel("Survivor • Killer • Visual • Player • Parry")
 InfoSec:AddButton({
     Name = "Copy Discord",
@@ -454,37 +464,302 @@ task.spawn(function()
 end)
 
 -- ============================================================
+--  ADAPTER: API ZiaanHub (ModernV2) -> OrionLib
 -- ============================================================
---  ORION UI HELPERS (minimal, native)
---  Semua UI dibangun LANGSUNG lewat Orion native:
---  OrionLib:MakeWindow -> Window:MakeTab -> Tab:AddSection
---  -> AddToggle/AddSlider/AddButton/AddDropdown/AddBind/
---     AddColorpicker/AddLabel/AddTextbox.
---  Tidak ada adapter. Hanya 2 helper kecil di bawah.
--- ============================================================
+local NM_TabIcons = {
+    Player = ICON.User,
+    Survivor = ICON.User,
+    Killer = ICON.Axe,
+    Visual = ICON.Eye,
+    Parry = ICON.Swords,
+}
 
--- Notifikasi wrapper ke OrionLib:MakeNotification.
+local NM_Window
+local NM_ConfigElements = {}
+
 local function NM_Notify(title, content, duration)
-    pcall(function()
-        if OrionLib and OrionLib.MakeNotification then
-            OrionLib:MakeNotification({
-                Name = title or "NO MERCY",
-                Content = content or "",
-                Image = ICON.Logo,
-                Time = duration or 3,
-            })
-        end
-    end)
+    OrionLib:MakeNotification({
+        Name = title or "NO MERCY",
+        Content = content or "",
+        Image = ICON.Logo,
+        Time = duration or 3,
+    })
 end
 
--- Konversi string "F3" -> Enum.KeyCode.F3 (untuk AddBind default).
+local function NM_Register(flag, element)
+    if flag and element then NM_ConfigElements[flag] = element end
+end
+
+local NM_MakeSection
+
 local function NM_KeyCodeFromString(str)
     if typeof(str) == "EnumItem" then return str end
     local ok, key = pcall(function() return Enum.KeyCode[tostring(str)] end)
     if ok and key then return key end
     return Enum.KeyCode.F3
 end
-local function __NM_Init_Main__()
+
+NM_MakeSection = function(orionTab, sectionName)
+    local sec = orionTab:AddSection({ Name = sectionName or "Menu" })
+    local self = {}
+
+    self.__orionTab = orionTab
+    self.__orionSection = sec
+
+    function self:AddSection(cfg)
+        local name = (type(cfg) == "table" and cfg.Name) or tostring(cfg or "")
+        if name ~= "" then
+            return NM_MakeSection(orionTab, name)
+        end
+        return self
+    end
+
+    function self:AddDivider(cfg)
+        local text = (type(cfg) == "table" and (cfg.Text or cfg.Name)) or tostring(cfg or "")
+        pcall(function() sec:AddLabel("— " .. text .. " —") end)
+        return self
+    end
+
+    function self:AddLabel(cfg)
+        local text = (type(cfg) == "table" and (cfg.Text or cfg.Name)) or tostring(cfg or "")
+        local lbl
+        pcall(function() lbl = sec:AddLabel(text) end)
+        return lbl
+    end
+    self.AddParagraph = self.AddLabel
+
+    function self:AddToggle(cfg)
+        cfg = cfg or {}
+        local element
+        pcall(function()
+            element = sec:AddToggle({
+                Name = cfg.Name or "Toggle",
+                Default = cfg.Default and true or false,
+                Callback = function(v)
+                    if cfg.Callback then pcall(cfg.Callback, v) end
+                end,
+            })
+        end)
+        NM_Register(cfg.Flag or cfg.Name, element)
+        return element
+    end
+
+    function self:AddSlider(cfg)
+        cfg = cfg or {}
+        local element
+        pcall(function()
+            element = sec:AddSlider({
+                Name = cfg.Name or "Slider",
+                Min = cfg.Min or 0,
+                Max = cfg.Max or 100,
+                Default = cfg.Default or cfg.Min or 0,
+                Increment = cfg.Increment or 1,
+                ValueName = cfg.Suffix or "",
+                Color = Color3.fromRGB(200, 200, 200),
+                Callback = function(v)
+                    if cfg.Callback then pcall(cfg.Callback, v) end
+                end,
+            })
+        end)
+        NM_Register(cfg.Flag or cfg.Name, element)
+        return element
+    end
+
+    function self:AddButton(cfg)
+        cfg = cfg or {}
+        local element
+        pcall(function()
+            element = sec:AddButton({
+                Name = cfg.Name or "Button",
+                Callback = function()
+                    if cfg.Callback then pcall(cfg.Callback) end
+                end,
+            })
+        end)
+        return element
+    end
+
+    function self:AddDropdown(cfg)
+        cfg = cfg or {}
+        local values = cfg.Values or cfg.Options or {}
+
+        if cfg.Multi then
+            -- Orion tidak punya multi-select: pakai toggle per opsi
+            local state = {}
+            pcall(function() sec:AddLabel(cfg.Name or "Options") end)
+            if type(cfg.Default) == "table" then
+                for _, v in pairs(cfg.Default) do state[v] = true end
+            end
+            local api = { __state = state }
+            for _, option in ipairs(values) do
+                pcall(function()
+                    sec:AddToggle({
+                        Name = option,
+                        Default = state[option] and true or false,
+                        Callback = function(v)
+                            state[option] = v
+                            if cfg.Callback then pcall(cfg.Callback, state) end
+                        end,
+                    })
+                end)
+            end
+            function api:Set(tbl)
+                if type(tbl) ~= "table" then return end
+                for k in pairs(state) do state[k] = false end
+                for k, v in pairs(tbl) do
+                    if type(k) == "number" then state[v] = true else state[k] = v end
+                end
+                if cfg.Callback then pcall(cfg.Callback, state) end
+            end
+            function api:SetValues() end
+            NM_Register(cfg.Flag or cfg.Name, api)
+            return api
+        end
+
+        local default = cfg.Default
+        if type(default) == "table" then default = default[1] end
+        if default == nil then default = values[1] end
+
+        local element
+        pcall(function()
+            element = sec:AddDropdown({
+                Name = cfg.Name or "Dropdown",
+                Default = default,
+                Options = values,
+                Callback = function(v)
+                    if cfg.Callback then pcall(cfg.Callback, v) end
+                end,
+            })
+        end)
+
+        local api = {}
+        function api:Set(v) pcall(function() element:Set(v) end) end
+        function api:SetValues(newValues)
+            pcall(function() element:Refresh(newValues or {}, true) end)
+        end
+        api.Refresh = api.SetValues
+        NM_Register(cfg.Flag or cfg.Name, api)
+        return api
+    end
+
+    function self:AddTextInput(cfg)
+        cfg = cfg or {}
+        local element
+        pcall(function()
+            element = sec:AddTextbox({
+                Name = cfg.Name or "Input",
+                Default = tostring(cfg.Default or ""),
+                TextDisappear = false,
+                Callback = function(v)
+                    if cfg.Callback then pcall(cfg.Callback, v) end
+                end,
+            })
+        end)
+        return element
+    end
+    self.AddInput = self.AddTextInput
+    self.AddTextbox = self.AddTextInput
+
+    function self:AddKeybind(cfg)
+        cfg = cfg or {}
+        local element
+        pcall(function()
+            element = sec:AddBind({
+                Name = cfg.Name or "Keybind",
+                Default = NM_KeyCodeFromString(cfg.Default),
+                Hold = false,
+                Callback = function()
+                    if cfg.Callback then pcall(cfg.Callback) end
+                end,
+            })
+        end)
+        NM_Register(cfg.Flag or cfg.Name, element)
+        return element
+    end
+    self.AddBind = self.AddKeybind
+
+    function self:AddColorPicker(cfg)
+        cfg = cfg or {}
+        local element
+        pcall(function()
+            element = sec:AddColorpicker({
+                Name = cfg.Name or "Color",
+                Default = cfg.Default or Color3.fromRGB(255, 255, 255),
+                Callback = function(c)
+                    if cfg.Callback then pcall(cfg.Callback, c) end
+                end,
+            })
+        end)
+        NM_Register(cfg.Flag or cfg.Name, element)
+        return element
+    end
+    self.AddColorpicker = self.AddColorPicker
+
+    function self:AddCenterTabbox(name)
+        return NM_MakeTabbox(orionTab, name)
+    end
+
+    return self
+end
+
+function NM_MakeTabbox(orionTab, boxName)
+    local box = {}
+    if boxName and boxName ~= "" then
+        pcall(function()
+            orionTab:AddSection({ Name = tostring(boxName) })
+        end)
+    end
+    function box:AddTab(cfg)
+        local name = (type(cfg) == "table" and cfg.Name) or tostring(cfg or "Tab")
+        return NM_MakeSection(orionTab, name)
+    end
+    return box
+end
+
+NM_Window = {
+    ConfigElements = NM_ConfigElements,
+}
+
+function NM_Window:Notify(cfg)
+    cfg = cfg or {}
+    NM_Notify(cfg.Title, cfg.Content, cfg.Duration)
+end
+
+function NM_Window:AddTab(cfg)
+    cfg = cfg or {}
+    local name = cfg.Name or "Tab"
+    local orionTab = OrionWindow:MakeTab({
+        Name = name,
+        Icon = NM_TabIcons[name] or ICON.Settings,
+        PremiumOnly = false,
+    })
+
+    local tab = {}
+    tab.__orionTab = orionTab
+
+    function tab:AddSection(scfg)
+        local sname = (type(scfg) == "table" and scfg.Name) or tostring(scfg or "Menu")
+        return NM_MakeSection(orionTab, sname)
+    end
+    function tab:AddCenterTabbox(name) return NM_MakeTabbox(orionTab, name) end
+    tab.AddTabbox = tab.AddCenterTabbox
+    function tab:AddDivider(dcfg)
+        local text = (type(dcfg) == "table" and (dcfg.Text or dcfg.Name)) or tostring(dcfg or "")
+        pcall(function() orionTab:AddSection({ Name = text }) end)
+        return tab
+    end
+    function tab:AddParagraph() end
+
+    return tab
+end
+
+function NM_Window:SetAccount() end
+function NM_Window:AttachMenuIcon() end
+function NM_Window:CreateHomeTab() end
+function NM_Window:Dialog() end
+
+
+local function __ZiaanHub_Init_Main__()
     local Players           = game:GetService("Players")
     local RunService        = game:GetService("RunService")
     local UserInputService  = game:GetService("UserInputService")
@@ -502,6 +777,10 @@ local function __NM_Init_Main__()
     local Camera            = Workspace.CurrentCamera
 
     local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+    if isMobile then
+        VD.ESP_LowPerformance = true
+        VD.MaxDistance = math.min(tonumber(VD.MaxDistance) or 900, 900)
+    end
 
     local UI = {}
 
@@ -513,7 +792,7 @@ local function __NM_Init_Main__()
             if Window and Window.Notify then
                 Window:Notify({ Title = title, Content = content, Duration = duration or 2, Icon = "rbxassetid://84095759576517" })
             else
-                print("[NO MERCY] " .. title .. " - " .. content)
+                print("[ZiaanHub] " .. title .. " - " .. content)
             end
         end)
     end
@@ -523,7 +802,7 @@ local function __NM_Init_Main__()
     -- ============================================================
     local ModernV2 = nil
     local MenuIcon = nil
-    local Window = OrionWindow
+    local Window = NM_Window
     if isMobile then UI.Mobile = true end
 
     -- PC CURSOR UNLOCK (ALT key toggle)
@@ -632,6 +911,124 @@ local function __NM_Init_Main__()
         end
         VD_ChamsFolder = f
         return f
+    end
+
+    local ConfigFolderName = "ZiaanHubX_VD"
+
+    if makefolder and isfolder and not isfolder(ConfigFolderName) then
+        makefolder(ConfigFolderName)
+    end
+
+    getgenv().CurrentConfigName = "Default"
+
+    local function GetConfigList()
+        local list = {}
+        if listfiles and isfolder and isfolder(ConfigFolderName) then
+            for _, file in pairs(listfiles(ConfigFolderName)) do
+                if file:sub(-5) == ".json" then
+                    local filename = file:match("([^/\\]+)%.json$")
+                    if filename then
+                        table.insert(list, filename)
+                    end
+                end
+            end
+        end
+        if #list == 0 then table.insert(list, "Default") end
+        return list
+    end
+
+    local function Ziaan_SaveConfig(name)
+        name = (name and name ~= "") and name or getgenv().CurrentConfigName
+        if not name or name == "" then name = "Default" end
+        local path = ConfigFolderName .. "/" .. name .. ".json"
+        pcall(function()
+            if writefile then
+                writefile(path, HttpService:JSONEncode(VD))
+            end
+        end)
+    end
+
+    local VD_To_Flag = {
+        InfiniteJump = "Infinite Jump",
+        KILLER_AntiBlind = "Anti Blind (Flashlight)",
+        Fullbright = "Fullbright (lighting preset)",
+        NoFog = "No Fog",
+        AIM_VisCheck = "Visibility Check",
+        AutoSkillcheck = "Auto Skillcheck",
+        AutoSkillcheckMode = "Skillcheck Mode",
+        SpeedValue = "Speed Value",
+        AIM_Enabled = "Enable Aimbot",
+        SURV_FleeKiller = "Flee Killer",
+        SURV_FleeDistance = "Flee Distance",
+        SURV_AutoParry      = "Auto Parry",
+        SURV_ParryMode      = "Parry Mode",
+        SURV_ParryRange     = "Parry Range",
+        SURV_ShowParryCircle = "Show Parry Circle",
+        Parry_Keybind       = "Parry Keybind",
+        SURV_AntiKnock = "Anti Knock",
+        MaxDistance = "Max ESP Distance",
+        KILLER_DestroyPallets = "Destroy Pallets",
+        KILLER_AutoBreakGene  = "Auto Kick Generator",
+        KILLER_BlockVaults    = "Block All Vaults",
+        KILLER_CustomMasked = "Custom Masked",
+        ESP_Offscreen = "ESP Offscreen Arrows",
+        KILLER_DoubleTap = "Double Tap",
+        ESP_Skeleton = "ESP Skeleton",
+        AUTO_ToFAim = "Silent Aim Twist Of Fate",
+        AUTO_ToFAimRange = "ToF Aim Range (studs)",
+        AUTO_ToFDotThreshold = "Aim Strictness",
+        AUTO_AttackRange = "Attack Range",
+        DRAWING_ESP = "Master Turn On Drawing ESP",
+        AUTO_ToFTargetMode = "ToF Target Mode",
+        AUTO_ToFAimPart = "ToF Aim Part",
+        AUTO_ToFPredict = "ToF Prediction",
+        AUTO_ToFBulletSpeed = "ToF Bullet Speed",
+        SPEAR_Speed = "Spear Speed",
+        SPEAR_Aimbot = "Silent Aim Veil",
+        SURV_FirstPerson = "First Person Camera (Survivor)",
+        AUTO_Attack = "Auto Attack",
+        ESP_Velocity = "ESP Velocity Arrows",
+        InstantHealSelf = "Instant Heal (Self)",
+        AutoHealAll = "Auto Heal All",
+        ESP_LowPerformance = "Low Performance Mode",
+        SURV_AutoDropPallet = "Auto Drop Pallet",
+        SURV_AutoDropPalletDist = "Pallet Trigger Range",
+        SURV_AutoDropPalletMode = "Auto Drop Pallet Mode",
+        SURV_AutoVault = "Auto Vault",
+        SURV_AutoPalletSlide = "Auto Pallet (Slide)",
+    }
+
+    local function Ziaan_LoadConfig(name)
+        name = (name and name ~= "") and name or getgenv().CurrentConfigName
+        if not name or name == "" then name = "Default" end
+        local path = ConfigFolderName .. "/" .. name .. ".json"
+        pcall(function()
+            if readfile and isfile and isfile(path) then
+                local data = HttpService:JSONDecode(readfile(path))
+                for key, value in pairs(data) do
+                    VD[key] = value
+                    local flagName = VD_To_Flag[key]
+                    if flagName and Window and Window.ConfigElements and Window.ConfigElements[flagName] then
+                        pcall(function()
+                            local elem = Window.ConfigElements[flagName]
+                            if elem.Set then elem:Set(value) end
+                        end)
+                    end
+                end
+                if getgenv().IYAN_SyncLoadedFeatures then pcall(getgenv().IYAN_SyncLoadedFeatures) end
+            end
+        end)
+    end
+
+    local function Ziaan_DeleteConfig(name)
+        name = (name and name ~= "") and name or getgenv().CurrentConfigName
+        if not name or name == "" or name == "Default" then return end
+        local path = ConfigFolderName .. "/" .. name .. ".json"
+        pcall(function()
+            if isfile and isfile(path) and delfile then
+                delfile(path)
+            end
+        end)
     end
 
     -- CHARACTER REFS
@@ -930,6 +1327,8 @@ local function __NM_Init_Main__()
             WindowColor = Color3.fromRGB(255, 255, 255),
             PalletColor = Color3.fromRGB(255, 140, 0),
             SCPZombieColor = Color3.fromRGB(128, 0, 128),
+            MobileLite = isMobile or VD.ESP_LowPerformance,
+            MaxActiveWorldTags = isMobile and 28 or 80,
         }
 
         getgenv().IYAN_VD_VisualESP_State = IYAN_ESPState
@@ -1017,7 +1416,7 @@ local function __NM_Init_Main__()
             end
 
             local parent = IYAN_GetESPParent()
-            local old = parent:FindFirstChild("IYAN_VisualESP") or parent:FindFirstChild("NM_ESP")
+            local old = parent:FindFirstChild("IYAN_VisualESP") or parent:FindFirstChild("ZiaanHub_ESP")
             if old then old:Destroy() end
 
             local folder = Instance.new("Folder")
@@ -1343,7 +1742,7 @@ local function __NM_Init_Main__()
             IYAN_PlayerLoopThread = task.spawn(function()
                 while not IYAN_Dead and IYAN_ESPState.PlayerMasterESP do
                     IYAN_RefreshAllPlayers()
-                    task.wait(0.25)
+                    task.wait(IYAN_ESPState.MobileLite and 0.65 or 0.3)
                 end
                 IYAN_PlayerLoopThread = nil
             end)
@@ -1519,7 +1918,12 @@ local function __NM_Init_Main__()
             if cat == "Palletwrong" and IYAN_IsPalletGone(model) then return end
             local part = IYAN_PickWorldPart(model, cat)
             if not IYAN_ValidPart(part) then return end
-            IYAN_WorldReg[cat][model] = { part = part }
+            local centerOffset = Vector3.zero
+            if model:IsA("Model") then
+                local ok, cf = pcall(function() return model:GetBoundingBox() end)
+                if ok and cf then centerOffset = cf.Position - part.Position end
+            end
+            IYAN_WorldReg[cat][model] = { part = part, centerOffset = centerOffset }
         end
 
         local function IYAN_RegisterWorldDescendant(obj)
@@ -1661,20 +2065,8 @@ local function __NM_Init_Main__()
                 return
             end
 
-            local totalPos = Vector3.zero
-            local count = 0
-            for _, child in ipairs(model:GetDescendants()) do
-                if child:IsA("BasePart") and IYAN_Alive(child) then
-                    totalPos = totalPos + child.Position
-                    count = count + 1
-                end
-            end
-
-            local centerOffset = Vector3.zero
-            if count > 0 then
-                local center = totalPos / count
-                centerOffset = center - part.Position
-            end
+            local entry = IYAN_WorldReg[cat] and IYAN_WorldReg[cat][model]
+            local centerOffset = (entry and entry.centerOffset) or Vector3.zero
 
             local lines = {}
             local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
@@ -1777,9 +2169,17 @@ local function __NM_Init_Main__()
                                     end
 
                                     if IYAN_ValidPart(part) then
-                                        local key = IYAN_WorldKey(cat, model)
-                                        IYAN_EnsureHighlight(key .. "_HL", model, color, false)
-                                        IYAN_UpdateWorldTag(cat, model, part, color)
+                                        local localRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+                                        local maxDistance = IYAN_ESPState.MobileLite and 900 or math.max(900, tonumber(VD.MaxDistance) or 2000)
+                                        local inRange = not localRoot or (part.Position - localRoot.Position).Magnitude <= maxDistance
+                                        local withinLimit = n < IYAN_ESPState.MaxActiveWorldTags
+                                        if inRange and withinLimit then
+                                            local key = IYAN_WorldKey(cat, model)
+                                            IYAN_EnsureHighlight(key .. "_HL", model, color, false)
+                                            IYAN_UpdateWorldTag(cat, model, part, color)
+                                        else
+                                            IYAN_ClearWorldVisual(cat, model)
+                                        end
                                     else
                                         IYAN_RemoveWorldEntry(cat, model)
                                     end
@@ -1796,7 +2196,7 @@ local function __NM_Init_Main__()
                             end
                         end
                     end
-                    task.wait(0.25)
+                    task.wait(IYAN_ESPState.MobileLite and 0.65 or 0.35)
                 end
                 IYAN_WorldLoopThread = nil
             end)
@@ -1809,6 +2209,22 @@ local function __NM_Init_Main__()
                 if value == name then return true end
             end
             return false
+        end
+
+        getgenv().IYAN_SetGeneratorProgressESP = function(state)
+            VD.GeneratorProgressESP = state == true
+            IYAN_ESPState.GeneratorESP = state == true
+            IYAN_ESPState.WorldMasterESP = state == true or IYAN_ESPState.WorldMasterESP
+            IYAN_ESPState.WorldNametags = state == true or IYAN_ESPState.WorldNametags
+            if state then
+                IYAN_RefreshESPRoots()
+                IYAN_StartWorldLoop()
+                NM_Notify("Generator Progress", "Progress generator aktif", 2)
+            else
+                for model in pairs(IYAN_WorldReg.Generator) do
+                    IYAN_ClearWorldVisual("Generator", model)
+                end
+            end
         end
 
         getgenv().IYAN_AddVisualESPControls = function(VisualTabRef)
@@ -3404,7 +3820,7 @@ local function __NM_Init_Main__()
         if bypassButtonGui then bypassButtonGui:Destroy() end
 
         bypassButtonGui = Instance.new("ScreenGui")
-        bypassButtonGui.Name = "NM_GenBypassGui"
+        bypassButtonGui.Name = "ZiaanHub_GenBypassGui"
         bypassButtonGui.ResetOnSpawn = false
         bypassButtonGui.IgnoreGuiInset = true
         bypassButtonGui.DisplayOrder = 999
@@ -3678,34 +4094,159 @@ local function __NM_Init_Main__()
     end
 
     -- ======================================================================
-    -- UI TABS  (Orion native langsung — cepat, tanpa adapter)
-    -- Semua fitur dibangun langsung lewat MakeTab/AddSection/AddToggle/
-    -- AddSlider/AddButton/AddDropdown/AddColorpicker/AddBind/AddLabel.
-    -- Config sync: SettingsTab profile system (JSON save/load ke VD).
-    -- Parry keybind & ESP low-perf sync pakai closure reference elemen.
+    -- UI TABS
     -- ======================================================================
-    if Window then
-        -- ============================================================
-        --  TABS (native Orion: Window:MakeTab langsung)
-        -- ============================================================
-        local Tabs = {
-            Player   = Window:MakeTab({ Name = "Player",   Icon = ICON.User, PremiumOnly = false }),
-            Survivor = Window:MakeTab({ Name = "Survivor", Icon = ICON.User, PremiumOnly = false }),
-            Killer   = Window:MakeTab({ Name = "Killer",   Icon = ICON.Axe, PremiumOnly = false }),
-            Visual   = Window:MakeTab({ Name = "Visual",   Icon = ICON.Eye, PremiumOnly = false }),
-            Parry    = Window:MakeTab({ Name = "Parry",    Icon = ICON.Swords, PremiumOnly = false }),
-        }
+    local function makeModernAdapter(section)
+        local adapter = {}
+        setmetatable(adapter, {
+            __index = function(t, k)
+                if k == "AddSection" then
+                    return function(self, cfg)
+                        if cfg and cfg.Name then
+                            pcall(function() section:AddDivider({ Text = cfg.Name }) end)
+                        end
+                        return adapter
+                    end
+                end
+                if k == "AddSlider" then
+                    return function(self, cfg)
+                        if cfg and cfg.Name then
+                            local modernCfg = {
+                                Name = cfg.Name,
+                                Flag = cfg.Flag or cfg.Name,
+                                Min = cfg.Min or 0,
+                                Max = cfg.Max or 100,
+                                Default = cfg.Default or cfg.Min or 0,
+                                Value = cfg.Default or cfg.Min or 0,
+                                Increment = cfg.Increment or 1,
+                            }
+                            local isFloat = false
+                            if modernCfg.Increment < 1 or (math.floor(modernCfg.Min) ~= modernCfg.Min) or (math.floor(modernCfg.Max) ~= modernCfg.Max) then
+                                isFloat = true
+                            end
+                            if isFloat then
+                                modernCfg.Rounding = 1
+                                if modernCfg.Increment <= 0.01 then
+                                    modernCfg.Rounding = 2
+                                end
+                            else
+                                modernCfg.Rounding = 0
+                            end
+                            modernCfg.Callback = function(Value)
+                                if cfg.Callback then
+                                    pcall(function() cfg.Callback(Value) end)
+                                end
+                            end
+                            pcall(function() section:AddSlider(modernCfg) end)
+                        end
+                        return adapter
+                    end
+                end
 
-        -- Helper kecil: unwrap option dropdown (Orion native single-select).
-        local function opt(v)
-            if type(v) == "table" then return v[1] end
-            return v
+                if type(section[k]) == "function" then
+                    return function(self, ...)
+                        return section[k](section, ...)
+                    end
+                end
+                return section[k]
+            end
+        })
+        return adapter
+    end
+
+    local function adaptTab(tab)
+        local adapter = {}
+        setmetatable(adapter, {
+            __index = function(t, k)
+                if k == "AddSection" then
+                    return function(self, cfg)
+                        if cfg and cfg.Name then
+                            pcall(function() tab:AddDivider({ Text = cfg.Name }) end)
+                        end
+                        return makeModernAdapter(tab)
+                    end
+                end
+                return tab[k]
+            end
+        })
+        return adapter
+    end
+
+    local function addCenterFeatureTabbox(tab, name, entries)
+        local tabbox = tab:AddCenterTabbox(name)
+        local created = {}
+
+        for _, entry in ipairs(entries) do
+            created[entry.Key] = makeModernAdapter(tabbox:AddTab({
+                Name = entry.Name,
+                Icon = entry.Icon,
+            }))
         end
 
-        -- ===================== PLAYER: TELEPORT =====================
-        local TeleportTab = Tabs.Player
-        local tpSection = TeleportTab:AddSection({ Name = "Teleport" })
+        return created
+    end
 
+    if Window then
+        local Tabs = {
+            Player = Window:AddTab({ Name = "Player", Icon = "lucide:user", Type = "Single" }),
+            Survivor = Window:AddTab({ Name = "Survivor", Icon = "solar:shield-bold", Type = "Single" }),
+            Killer = Window:AddTab({ Name = "Killer", Icon = "solar:danger-bold", Type = "Single" }),
+            Visual = Window:AddTab({ Name = "Visual", Icon = "lucide:eye", Type = "Single" }),
+            Parry = Window:AddTab({ Name = "Parry", Icon = "solar:sword-bold", Type = "Single" }),
+        }
+
+        -- Player Tab
+        local PlayerTab = Tabs.Player
+        local PlayerTabbox1 = addCenterFeatureTabbox(PlayerTab, "Player Features 1", {
+            { Key = "Teleport", Name = "Teleport", Icon = "solar:map-point-bold" },
+            { Key = "Fling", Name = "Fling", Icon = "solar:wind-bold" },
+            { Key = "Fun", Name = "Fun", Icon = "solar:gamepad-bold" },
+        })
+        local PlayerTabbox2 = addCenterFeatureTabbox(PlayerTab, "Player Features 2", {
+            { Key = "Streamer", Name = "Streamer Mode", Icon = "solar:settings-bold" },
+        })
+
+        -- Survivor Tab
+        local SurvivorTab = Tabs.Survivor
+        local SurvivorTabbox1 = addCenterFeatureTabbox(SurvivorTab, "Survivor Features", {
+            { Key = "General", Name = "General", Icon = "solar:shield-bold" },
+            { Key = "Healing", Name = "Healing", Icon = "solar:heart-bold" },
+            { Key = "Offensive", Name = "Offensive", Icon = "solar:target-bold" },
+        })
+        local SurvivorTabbox2 = addCenterFeatureTabbox(SurvivorTab, "Survivor Misc", {
+            { Key = "GenBoost", Name = "Gen Boost", Icon = "solar:plug-bold" },
+            { Key = "Pallet", Name = "Auto Drop Pallet", Icon = "solar:box-bold" },
+            { Key = "Movement", Name = "Movement", Icon = "solar:walk-bold" },  -- ADDED
+        })
+
+        -- Killer Tab
+        local KillerTab = Tabs.Killer
+        local KillerTabbox1 = addCenterFeatureTabbox(KillerTab, "Killer Features", {
+            { Key = "General", Name = "General", Icon = "solar:danger-bold" },
+            { Key = "SilentAim", Name = "Silent Aim", Icon = "solar:crosshair-bold" },
+        })
+        local KillerTabbox2 = addCenterFeatureTabbox(KillerTab, "Killer Customization", {
+            { Key = "Customization", Name = "Customization", Icon = "solar:palette-bold" },
+        })
+
+        -- Visual Tab
+        local VisualTab = Tabs.Visual
+        local VisualTabbox = addCenterFeatureTabbox(VisualTab, "Visual Features", {
+            { Key = "ESP", Name = "ESP", Icon = "lucide:eye" },
+            { Key = "Highlight", Name = "Highlight ESP", Icon = "lucide:glasses" },
+            { Key = "Lighting", Name = "Lighting", Icon = "lucide:sun" },
+        })
+
+        -- Player Teleport
+        local TeleportTab = PlayerTabbox1.Teleport
+        local tpSection = TeleportTab:AddSection({
+            Position = "Center",
+            Name = "Teleport",
+            Icon = "solar:map-point-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
         local function getTeleportPlayerNames()
             local names = {}
             for _, p in ipairs(Players:GetPlayers()) do
@@ -3717,15 +4258,17 @@ local function __NM_Init_Main__()
 
         local tpPlayerDropdown = tpSection:AddDropdown({
             Name = "Select Player to Teleport",
-            Default = "",
-            Options = getTeleportPlayerNames(),
+            Flag = "TP_TargetPlayer",
+            Values = getTeleportPlayerNames(),
+            Multi = false,
             Callback = function(option)
-                VD.TP_TargetPlayer = opt(option) or ""
-            end,
+                if type(option) == "table" then option = option[1] end
+                VD.TP_TargetPlayer = option or ""
+            end
         })
 
         tpSection:AddButton({ Name = "Refresh Players", Callback = function()
-            pcall(function() tpPlayerDropdown:Refresh(getTeleportPlayerNames(), true) end)
+            pcall(function() tpPlayerDropdown:SetValues(getTeleportPlayerNames()) end)
         end })
 
         tpSection:AddButton({ Name = "Teleport to Player", Callback = function()
@@ -3749,38 +4292,61 @@ local function __NM_Init_Main__()
             end
         end
 
-        tpSection:AddButton({ Name = "TP to Gen",  Callback = function() tpRun("Generator", IYAN_TeleportToGenerator, 1) end })
+        tpSection:AddButton({ Name = "TP to Gen", Callback = function() tpRun("Generator", IYAN_TeleportToGenerator, 1) end })
         tpSection:AddButton({ Name = "TP to Gate", Callback = function() tpRun("Gate", IYAN_TeleportToGate) end })
         tpSection:AddButton({ Name = "TP to Exit", Callback = function() tpRun("Exit", IYAN_TeleportToExit) end })
         tpSection:AddButton({ Name = "TP to Hook", Callback = function() tpRun("Hook", IYAN_TeleportToHook) end })
 
-        -- ===================== PLAYER: FLING =====================
-        local flingSection = TeleportTab:AddSection({ Name = "Fling" })
-        flingSection:AddToggle({
-            Name = "Enable Fling", Default = false,
-            Callback = function(v) VD.FLING_Enabled = v end,
+        -- Fling
+        local FlingTab = PlayerTabbox1.Fling
+        local flingSection = FlingTab:AddSection({
+            Position = "Center",
+            Name = "Fling",
+            Icon = "solar:wind-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
         })
+        flingSection:AddToggle({ Default = false, Name = "Enable Fling", Flag = "Enable Fling", Callback = function(v) VD.FLING_Enabled = v end })
         flingSection:AddSlider({
-            Name = "Fling Strength", Min = 1000, Max = 50000, Default = 10000, Increment = 500,
-            Callback = function(v) VD.FLING_Strength = v end,
+            Name = "Fling Strength", Flag = "Fling Strength",
+            Min = 1000, Max = 50000, Default = 10000,
+            Callback = function(v) VD.FLING_Strength = v end
         })
         flingSection:AddButton({ Name = "Fling Nearest", Callback = function() pcall(function() IYAN_FlingNearest() end) end })
-        flingSection:AddButton({ Name = "Fling All",     Callback = function() pcall(IYAN_FlingAll) end })
+        flingSection:AddButton({ Name = "Fling All", Callback = function() pcall(IYAN_FlingAll) end })
 
-        -- ===================== PLAYER: FUN (Spoof Stats) =====================
-        local funSection = TeleportTab:AddSection({ Name = "Spoof Stats [Visual Only]" })
+        -- Fun
+        local FunTab = PlayerTabbox1.Fun
+        local funSection = FunTab:AddSection({
+            Position = "Center",
+            Name = "Spoof Stats [Visual Only]",
+            Icon = "solar:gamepad-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = true,
+        })
         local spoofLevel, spoofGears, spoofScrews = "0", "0", "0"
-        funSection:AddTextbox({
-            Name = "Set Level", Default = "0", TextDisappear = false,
-            Callback = function(value) spoofLevel = value end,
+        funSection:AddTextInput({
+            Name = "Set Level",
+            Flag = "SpoofLevel",
+            Numeric = true,
+            Default = "0",
+            Callback = function(value) spoofLevel = value end
         })
-        funSection:AddTextbox({
-            Name = "Set Gears", Default = "0", TextDisappear = false,
-            Callback = function(value) spoofGears = value end,
+        funSection:AddTextInput({
+            Name = "Set Gears",
+            Flag = "SpoofGears",
+            Numeric = true,
+            Default = "0",
+            Callback = function(value) spoofGears = value end
         })
-        funSection:AddTextbox({
-            Name = "Set Screws", Default = "0", TextDisappear = false,
-            Callback = function(value) spoofScrews = value end,
+        funSection:AddTextInput({
+            Name = "Set Screws",
+            Flag = "SpoofScrews",
+            Numeric = true,
+            Default = "0",
+            Callback = function(value) spoofScrews = value end
         })
         funSection:AddButton({
             Name = "Apply Spoof Data",
@@ -3791,17 +4357,27 @@ local function __NM_Init_Main__()
                     p:SetAttribute("Gears", tonumber(spoofGears) or 0)
                     p:SetAttribute("Screws", tonumber(spoofScrews) or 0)
                 end
-            end,
+            end
         })
 
-        -- ===================== PLAYER: STREAMER MODE =====================
-        local streamerSection = TeleportTab:AddSection({ Name = "Streamer Mode" })
+        -- Streamer
+        local StreamerTab = PlayerTabbox2.Streamer
+        local streamerSection = StreamerTab:AddSection({
+            Position = "Center",
+            Name = "Streamer Mode",
+            Icon = "solar:settings-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
         local FakeNameConnection = nil
         local function shouldHideNameObject(object)
             local ok, isTextObj = pcall(function()
                 return object:IsA("TextLabel") or object:IsA("TextButton") or object:IsA("TextBox")
             end)
-            if not ok or not isTextObj then return false end
+            if not ok or not isTextObj then
+                return false
+            end
             local text = ""
             pcall(function() text = tostring(object.Text or "") end)
             return text == LocalPlayer.Name or text == LocalPlayer.DisplayName or text:find(LocalPlayer.Name, 1, true) ~= nil
@@ -3812,11 +4388,17 @@ local function __NM_Init_Main__()
                 FakeNameConnection = nil
             end
             local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
-            if not playerGui then return end
-            local function process(object)
-                if shouldHideNameObject(object) then object.Visible = not enabled end
+            if not playerGui then
+                return
             end
-            for _, descendant in ipairs(playerGui:GetDescendants()) do process(descendant) end
+            local function process(object)
+                if shouldHideNameObject(object) then
+                    object.Visible = not enabled
+                end
+            end
+            for _, descendant in ipairs(playerGui:GetDescendants()) do
+                process(descendant)
+            end
             if enabled then
                 FakeNameConnection = playerGui.DescendantAdded:Connect(function(object)
                     task.defer(process, object)
@@ -3824,46 +4406,70 @@ local function __NM_Init_Main__()
             end
         end
         streamerSection:AddToggle({
-            Name = "Hide Name", Default = false,
-            Callback = function(v) pcall(enableFakeName, v) end,
+            Default = false,
+            Name = "Hide Name",
+            Flag = "Hide Name",
+            Callback = function(v)
+                pcall(enableFakeName, v)
+            end
         })
 
-        -- ===================== SURVIVOR: GENERAL =====================
-        local genSection = Tabs.Survivor:AddSection({ Name = "General Survivor" })
+        -- Survivor General
+        local GeneralTab = SurvivorTabbox1.General
+        local genSection = GeneralTab:AddSection({
+            Position = "Center",
+            Name = "General Survivor",
+            Icon = "solar:shield-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+        genSection:AddToggle({ Default = false, Name = "Auto Skillcheck", Flag = "Auto Skillcheck", Callback = function(v) VD_SetAutoSkillcheck(v) end })
         genSection:AddToggle({
-            Name = "Auto Skillcheck", Default = false,
-            Callback = function(v) VD_SetAutoSkillcheck(v) end,
+            Default = false,
+            Name = "Check Generator Progress",
+            Flag = "Check Generator Progress",
+            Callback = function(v)
+                VD.GeneratorProgressESP = v
+                if getgenv().IYAN_SetGeneratorProgressESP then
+                    getgenv().IYAN_SetGeneratorProgressESP(v)
+                end
+            end
         })
         genSection:AddDropdown({
-            Name = "Skillcheck Mode", Default = "Normal", Options = { "Normal", "Perfect", "Instant" },
+            Name = "Skillcheck Mode",
+            Flag = "Skillcheck Mode",
+            Values = { "Normal", "Perfect", "Instant" },
+            Default = "Normal",
+            Multi = false,
             Callback = function(option)
-                local v = opt(option)
-                VD.AutoSkillcheckMode = v or "Normal"
+                if type(option) == "table" then option = option[1] end
+                VD.AutoSkillcheckMode = option or "Normal"
                 if VD.AutoSkillcheckMode ~= "Instant" and AutoSkill.InstantRotationConnection then
                     AutoSkill.InstantRotationConnection:Disconnect()
                     AutoSkill.InstantRotationConnection = nil
                     AutoSkill.InstantHasClicked = false
                 end
-            end,
+            end
         })
-        genSection:AddToggle({
-            Name = "Flee Killer", Default = false,
-            Callback = function(v) VD.SURV_FleeKiller = v end,
-        })
+        genSection:AddToggle({ Default = false, Name = "Flee Killer", Flag = "Flee Killer", Callback = function(v) VD.SURV_FleeKiller = v end })
         genSection:AddSlider({
-            Name = "Flee Distance", Min = 15, Max = 80, Default = 40, Increment = 1,
-            Callback = function(v) VD.SURV_FleeDistance = v end,
+            Name = "Flee Distance", Flag = "Flee Distance",
+            Min = 15, Max = 80, Default = 40,
+            Callback = function(v) VD.SURV_FleeDistance = v end
         })
         local antiKnockConnection = nil
         genSection:AddToggle({
-            Name = "Anti Knock", Default = false,
+            Default = false,
+            Name = "Anti Knock",
+            Flag = "Anti Knock",
             Callback = function(v)
                 VD.SURV_AntiKnock = v
-                if antiKnockConnection then
-                    antiKnockConnection:Disconnect()
-                    antiKnockConnection = nil
-                end
                 if v then
+                    if antiKnockConnection then
+                        antiKnockConnection:Disconnect()
+                        antiKnockConnection = nil
+                    end
                     local char = LocalPlayer.Character
                     if char then
                         local hum = char:FindFirstChildOfClass("Humanoid")
@@ -3873,444 +4479,144 @@ local function __NM_Init_Main__()
                             end)
                         end
                     end
+                else
+                    if antiKnockConnection then
+                        antiKnockConnection:Disconnect()
+                        antiKnockConnection = nil
+                    end
                 end
-            end,
+            end
         })
-        genSection:AddToggle({
-            Name = "First Person Camera (Survivor)", Default = false,
+        genSection:AddToggle({ Default = false, Name = "First Person Camera (Survivor)", Flag = "First Person Camera (Survivor)", Callback = function(v)
+            VD.SURV_FirstPerson = v
+            if not v then
+                pcall(RestoreFirstPersonCamera)
+            end
+        end })
+
+        -- Healing
+        local HealingTab = SurvivorTabbox1.Healing
+        local healSection = HealingTab:AddSection({
+            Position = "Center",
+            Name = "Healing",
+            Icon = "solar:heart-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+        healSection:AddToggle({ Default = false, Name = "Auto Heal Self", Flag = "Instant Heal (Self)", Callback = function(v) setInstantHealSelf(v) end })
+        healSection:AddToggle({ Default = false, Name = "Auto Heal All", Flag = "Auto Heal All", Callback = function(v) setAutoHealAll(v) end })
+
+        -- Offensive (ToF)
+        local OffensiveTab = SurvivorTabbox1.Offensive
+        local offSection = OffensiveTab:AddSection({
+            Position = "Center",
+            Name = "Silent Aim Twist Of Fate",
+            Icon = "solar:target-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+        offSection:AddToggle({ Default = false, Name = "Silent Aim Twist Of Fate", Flag = "Silent Aim Twist Of Fate", Callback = function(v) VD.AUTO_ToFAim = v end })
+        offSection:AddDropdown({
+            Name = "ToF Target Mode",
+            Flag = "ToF Target Mode",
+            Values = { "Killer", "Survivor", "SCP" },
+            Default = VD.AUTO_ToFTargetMode or "Killer",
+            Multi = false,
             Callback = function(v)
-                VD.SURV_FirstPerson = v
-                if not v then pcall(RestoreFirstPersonCamera) end
-            end,
-        })
-
-        -- ===================== SURVIVOR: HEALING =====================
-        local healSection = Tabs.Survivor:AddSection({ Name = "Healing" })
-        healSection:AddToggle({
-            Name = "Auto Heal Self", Default = false,
-            Callback = function(v) setInstantHealSelf(v) end,
-        })
-        healSection:AddToggle({
-            Name = "Auto Heal All", Default = false,
-            Callback = function(v) setAutoHealAll(v) end,
-        })
-
-        -- ===================== SURVIVOR: OFFENSIVE (ToF) =====================
-        local offSection = Tabs.Survivor:AddSection({ Name = "Silent Aim Twist Of Fate" })
-        offSection:AddToggle({
-            Name = "Silent Aim Twist Of Fate", Default = false,
-            Callback = function(v) VD.AUTO_ToFAim = v end,
+                if type(v) == "table" then v = v[1] end
+                VD.AUTO_ToFTargetMode = v or "Killer"
+            end
         })
         offSection:AddDropdown({
-            Name = "ToF Target Mode", Default = VD.AUTO_ToFTargetMode or "Killer",
-            Options = { "Killer", "Survivor", "SCP" },
+            Name = "ToF Aim Part",
+            Flag = "ToF Aim Part",
+            Values = { "HumanoidRootPart", "Head", "Torso" },
+            Default = VD.AUTO_ToFAimPart or "HumanoidRootPart",
+            Multi = false,
             Callback = function(v)
-                VD.AUTO_ToFTargetMode = opt(v) or "Killer"
-            end,
-        })
-        offSection:AddDropdown({
-            Name = "ToF Aim Part", Default = VD.AUTO_ToFAimPart or "HumanoidRootPart",
-            Options = { "HumanoidRootPart", "Head", "Torso" },
-            Callback = function(v)
-                VD.AUTO_ToFAimPart = opt(v) or "HumanoidRootPart"
-            end,
+                if type(v) == "table" then v = v[1] end
+                VD.AUTO_ToFAimPart = v or "HumanoidRootPart"
+            end
         })
         offSection:AddToggle({
-            Name = "ToF Prediction", Default = true,
-            Callback = function(v) VD.AUTO_ToFPredict = v end,
+            Default = true,
+            Name = "ToF Prediction",
+            Flag = "ToF Prediction",
+            Callback = function(v) VD.AUTO_ToFPredict = v end
         })
         offSection:AddSlider({
-            Name = "ToF Bullet Speed", Min = 50, Max = 1000, Default = 200, Increment = 10,
-            Callback = function(v) VD.AUTO_ToFBulletSpeed = v end,
+            Name = "ToF Bullet Speed",
+            Flag = "ToF Bullet Speed",
+            Min = 50, Max = 1000, Default = 200,
+            Callback = function(v) VD.AUTO_ToFBulletSpeed = v end
         })
         offSection:AddSlider({
-            Name = "ToF Aim Range (studs)", Min = 10, Max = 300, Default = 90, Increment = 5,
-            Callback = function(v) VD.AUTO_ToFAimRange = v end,
+            Name = "ToF Aim Range (studs)", Flag = "ToF Aim Range (studs)",
+            Min = 10, Max = 300, Default = 90,
+            Callback = function(v) VD.AUTO_ToFAimRange = v end
         })
         offSection:AddSlider({
-            Name = "Safe FOV (Dot Threshold)", Min = -1, Max = 1, Default = 0.5, Increment = 0.05,
-            Callback = function(v) VD.AUTO_ToFDotThreshold = v end,
+            Name = "Safe FOV (Dot Threshold)", Flag = "Aim Strictness",
+            Min = -1, Max = 1, Default = 0.5, Increment = 0.05,
+            Callback = function(v) VD.AUTO_ToFDotThreshold = v end
         })
 
-        -- ===================== SURVIVOR: GEN BOOST =====================
-        local genBoostSection = Tabs.Survivor:AddSection({ Name = "Generator Boost" })
-        genBoostSection:AddToggle({
-            Name = "Gen Boost (BEST)", Default = false,
-            Callback = function(v)
-                VD.SURV_GenBoost = v
-                if v then startGenBoost() else stopGenBoost() end
-            end,
+        -- Parry tab (dedicated menu, own icon)
+        local ParryTabbox = addCenterFeatureTabbox(Tabs.Parry, "Parry", {
+            { Key = "AutoParry", Name = "Auto Parry", Icon = "solar:sword-bold" },
         })
-        genBoostSection:AddToggle({
-            Name = "Draggable Mode (Gen Bypass Button)", Default = false,
-            Callback = function(v) VD.SURV_DraggableGenBypass = v end,
-        })
-
-        -- ===================== SURVIVOR: AUTO DROP PALLET =====================
-        local palletSection = Tabs.Survivor:AddSection({ Name = "Auto Drop Pallet" })
-        palletSection:AddToggle({
-            Name = "Auto Drop Pallet", Default = false,
-            Callback = function(v)
-                VD.SURV_AutoDropPallet = v
-                NM_Notify("Auto Drop Pallet", v and ("Enabled (" .. (VD.SURV_AutoDropPalletMode or "Aggressive") .. " Mode)") or "Disabled", 2)
-            end,
-        })
-        palletSection:AddSlider({
-            Name = "Killer Detection Range (studs)", Min = 5, Max = 50, Default = 20, Increment = 1,
-            Callback = function(v) VD.SURV_AutoDropPalletDist = v end,
-        })
-        palletSection:AddDropdown({
-            Name = "Mode", Default = "Aggressive", Options = { "Aggressive", "Safe" },
-            Callback = function(value)
-                local v = opt(value)
-                VD.SURV_AutoDropPalletMode = v
-                NM_Notify("Auto Drop Pallet", "Mode set to " .. tostring(v), 2)
-            end,
+        local ParryTab = ParryTabbox.AutoParry
+        local parrySection = ParryTab:AddSection({
+            Position = "Center",
+            Name = "Auto Parry",
+            Icon = "solar:sword-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
         })
 
-        -- ===================== SURVIVOR: MOVEMENT =====================
-        local movementSection = Tabs.Survivor:AddSection({ Name = "Movement" })
-        movementSection:AddToggle({
-            Name = "Auto Vault", Default = false,
-            Callback = function(v) VD.SURV_AutoVault = v; NM_Notify("Auto Vault", v and "Enabled" or "Disabled", 2) end,
-        })
-        movementSection:AddToggle({
-            Name = "Auto Pallet (Slide)", Default = false,
-            Callback = function(v) VD.SURV_AutoPalletSlide = v; NM_Notify("Auto Pallet Slide", v and "Enabled" or "Disabled", 2) end,
-        })
-
-        -- ===================== KILLER: GENERAL =====================
-        local kgSection = Tabs.Killer:AddSection({ Name = "General Killer" })
-        kgSection:AddToggle({
-            Name = "Auto Attack", Default = false,
-            Callback = function(v) VD.AUTO_Attack = v end,
-        })
-        kgSection:AddSlider({
-            Name = "Attack Range", Min = 5, Max = 20, Default = 12, Increment = 1,
-            Callback = function(v) VD.AUTO_AttackRange = v end,
-        })
-        kgSection:AddToggle({
-            Name = "Double Tap", Default = false,
-            Callback = function(v) VD.KILLER_DoubleTap = v end,
-        })
-        kgSection:AddToggle({
-            Name = "Auto Kick Pallet", Default = false,
-            Callback = function(v) VD.KILLER_DestroyPallets = v end,
-        })
-        kgSection:AddToggle({
-            Name = "Auto Kick Generator", Default = false,
-            Callback = function(v) VD.KILLER_AutoBreakGene = v end,
-        })
-        kgSection:AddToggle({
-            Name = "Block All Vaults", Default = false,
-            Callback = function(v) VD.KILLER_BlockVaults = v end,
-        })
-        kgSection:AddToggle({
-            Name = "Anti Blind (Flashlight)", Default = false,
-            Callback = function(v) VD.KILLER_AntiBlind = v; pcall(SetupAntiBlind) end,
-        })
-
-        -- ===================== KILLER: SILENT AIM (Veil) =====================
-        local saSection = Tabs.Killer:AddSection({ Name = "Silent Aim Veil" })
-        saSection:AddToggle({
-            Name = "Silent Aim Veil", Default = false,
-            Callback = function(v) VeilConfig.Enabled = v end,
-        })
-        saSection:AddToggle({
-            Name = "Show FOV Circle", Default = true,
-            Callback = function(v) VeilConfig.ShowFOV = v end,
-        })
-        saSection:AddSlider({
-            Name = "FOV Radius", Min = 50, Max = 500, Default = 150, Increment = 5,
-            Callback = function(v) VeilConfig.FOV = v end,
-        })
-        saSection:AddToggle({
-            Name = "Auto Predict", Default = false,
-            Callback = function(v) VeilConfig.AutoPredict = v end,
-        })
-        saSection:AddSlider({
-            Name = "Spear Speed", Min = 50, Max = 300, Default = 165, Increment = 5,
-            Callback = function(v) VeilConfig.SpearSpeed = v end,
-        })
-        saSection:AddSlider({
-            Name = "Gravity", Min = 0, Max = 300, Default = math.floor(workspace.Gravity * 0.5), Increment = 5,
-            Callback = function(v) VeilConfig.Gravity = v end,
-        })
-        saSection:AddSlider({
-            Name = "Horizontal Vector", Min = 0, Max = 10, Default = 2.8, Increment = 0.1,
-            Callback = function(v) VeilConfig.HorizontalPredictFactor = v end,
-        })
-        saSection:AddDropdown({
-            Name = "Target Part", Default = "Torso", Options = { "Torso", "Head", "Root" },
-            Callback = function(v)
-                VeilConfig.TargetPart = opt(v)
-            end,
-        })
-
-        -- ===================== KILLER: CUSTOMIZATION =====================
-        local custSection = Tabs.Killer:AddSection({ Name = "Custom Masked" })
-        local customMaskedMasks = { "Richard", "Tony", "Brandon", "Jake", "Richter", "Graham", "Alex" }
-        custSection:AddDropdown({
-            Name = "Custom Masked", Default = VD.KILLER_CustomMasked or "Richard",
-            Options = customMaskedMasks,
-            Callback = function(v)
-                VD.KILLER_CustomMasked = opt(v) or "Richard"
-            end,
-        })
-        custSection:AddButton({
-            Name = "Apply Custom Masked",
-            Callback = function() pcall(IYAN_ApplyCustomMasked, VD.KILLER_CustomMasked) end,
-        })
-        custSection:AddButton({
-            Name = "Random Custom Masked",
-            Callback = function()
-                local mask = customMaskedMasks[math.random(1, #customMaskedMasks)]
-                VD.KILLER_CustomMasked = mask
-                pcall(IYAN_ApplyCustomMasked, mask)
-            end,
-        })
-
-        -- ===================== VISUAL: ESP (Drawing) =====================
-        local espSection = Tabs.Visual:AddSection({ Name = "Drawing ESP (PC Only)" })
-
-        -- Reference elemen ESP untuk sync low-performance mode (closure, native).
-        local espSkelToggle, espVelToggle, espOffToggle
-
-        espSection:AddToggle({
-            Name = "Master Turn On Drawing ESP", Default = false,
-            Callback = function(v) VD.DRAWING_ESP = v end,
-        })
-        espSection:AddToggle({
-            Name = "Low Performance Mode (disable skeleton & velocity)", Default = false,
-            Callback = function(v)
-                VD.ESP_LowPerformance = v
-                if v then
-                    VD.ESP_Skeleton = false
-                    VD.ESP_Velocity = false
-                    VD.ESP_Offscreen = false
-                    pcall(function()
-                        if espSkelToggle and espSkelToggle.Set then espSkelToggle:Set(false) end
-                        if espVelToggle and espVelToggle.Set then espVelToggle:Set(false) end
-                        if espOffToggle and espOffToggle.Set then espOffToggle:Set(false) end
-                    end)
-                end
-            end,
-        })
-        espSection:AddSlider({
-            Name = "Max ESP Distance", Min = 500, Max = 5000, Default = 2000, Increment = 100,
-            Callback = function(v) VD.MaxDistance = v end,
-        })
-        espSkelToggle = espSection:AddToggle({
-            Name = "ESP Skeleton (PC Only!)", Default = false,
-            Callback = function(v)
-                if VD.ESP_LowPerformance and v then
-                    NM_Notify("ESP", "Skeleton disabled in Low Performance mode", 2)
-                    return
-                end
-                VD.ESP_Skeleton = v
-            end,
-        })
-        espVelToggle = espSection:AddToggle({
-            Name = "ESP Velocity Arrows (PC Only!)", Default = false,
-            Callback = function(v)
-                if VD.ESP_LowPerformance and v then
-                    NM_Notify("ESP", "Velocity disabled in Low Performance mode", 2)
-                    return
-                end
-                VD.ESP_Velocity = v
-            end,
-        })
-        espOffToggle = espSection:AddToggle({
-            Name = "ESP Offscreen Arrows (PC Only!)", Default = false,
-            Callback = function(v)
-                if VD.ESP_LowPerformance and v then
-                    NM_Notify("ESP", "Offscreen disabled in Low Performance mode", 2)
-                    return
-                end
-                VD.ESP_Offscreen = v
-            end,
-        })
-
-        -- ===================== VISUAL: HIGHLIGHT ESP (native Orion) =====================
-        -- Dibangun langsung native. Multi-dropdown IYAN_AddVisualESPControls
-        -- dikonversi jadi toggle-per-option. ColorPicker pakai AddColorpicker
-        -- native Orion. AddDivider -> AddLabel separator.
-        do
-            local hlSec = Tabs.Visual:AddSection({ Name = "Highlight ESP Settings" })
-            hlSec:AddSlider({
-                Name = "ESP Fill Transparency", Min = 0, Max = 1, Default = IYAN_ESPState.ESPFillTransparency, Increment = 0.01,
-                Callback = function(value) IYAN_ESPState.ESPFillTransparency = value; IYAN_RefreshAllPlayers() end,
-            })
-            hlSec:AddSlider({
-                Name = "ESP Outline Transparency", Min = 0, Max = 1, Default = IYAN_ESPState.ESPOutlineTransparency, Increment = 0.01,
-                Callback = function(value) IYAN_ESPState.ESPOutlineTransparency = value; IYAN_RefreshAllPlayers() end,
-            })
-            hlSec:AddSlider({
-                Name = "ESP Text Size", Min = 8, Max = 22, Default = IYAN_ESPState.ESPTextSize, Increment = 1,
-                Callback = function(value) IYAN_ESPState.ESPTextSize = value; IYAN_RefreshAllPlayers() end,
-            })
-
-            -- Player Highlight ESP
-            local pSec = Tabs.Visual:AddSection({ Name = "Player Highlight ESP" })
-            pSec:AddToggle({
-                Name = "Enable Player ESP", Default = false,
-                Callback = function(state)
-                    IYAN_ESPState.PlayerMasterESP = state
-                    if state then
-                        IYAN_StartPlayerLoop()
-                        IYAN_RefreshAllPlayers()
-                    else
-                        IYAN_ClearAllPlayerESP()
-                    end
-                end,
-            })
-            -- "Select Player ESP" (Multi) -> toggle-per-option
-            pSec:AddLabel("-- Select Player ESP --")
-            local function playerEspToggle(optName, stateKey)
-                pSec:AddToggle({
-                    Name = optName, Default = false,
-                    Callback = function(state)
-                        IYAN_ESPState[stateKey] = state
-                        if IYAN_ESPState.PlayerMasterESP then
-                            IYAN_StartPlayerLoop()
-                            IYAN_RefreshAllPlayers()
-                        else
-                            IYAN_ClearAllPlayerESP()
-                        end
-                    end,
-                })
-            end
-            playerEspToggle("Survivor ESP",        "SurvivorESP")
-            playerEspToggle("Killer ESP",          "KillerESP")
-            playerEspToggle("Spectator ESP",       "SpectatorESP")
-            playerEspToggle("Survivor Items ESP",  "SurvivorItemsESP")
-            pSec:AddToggle({
-                Name = "Player Nametags", Default = false,
-                Callback = function(state)
-                    IYAN_ESPState.Nametags = state
-                    if IYAN_ESPState.PlayerMasterESP then
-                        IYAN_StartPlayerLoop()
-                        IYAN_RefreshAllPlayers()
-                    else
-                        IYAN_ClearAllPlayerESP()
-                    end
-                end,
-            })
-            pSec:AddToggle({
-                Name = "Player Distance ESP", Default = false,
-                Callback = function(state)
-                    IYAN_ESPState.DistanceESP = state
-                    if IYAN_ESPState.PlayerMasterESP then
-                        IYAN_StartPlayerLoop()
-                        IYAN_RefreshAllPlayers()
-                    else
-                        IYAN_ClearAllPlayerESP()
-                    end
-                end,
-            })
-            pSec:AddLabel("-- Colors --")
-            pSec:AddColorpicker({ Name = "Survivor Color",  Default = IYAN_ESPState.SurvivorColor,  Callback = function(c) IYAN_ESPState.SurvivorColor = c;  IYAN_RefreshAllPlayers() end })
-            pSec:AddColorpicker({ Name = "Killer Color",    Default = IYAN_ESPState.KillerColor,    Callback = function(c) IYAN_ESPState.KillerColor = c;    IYAN_RefreshAllPlayers() end })
-            pSec:AddColorpicker({ Name = "Spectator Color", Default = IYAN_ESPState.SpectatorColor, Callback = function(c) IYAN_ESPState.SpectatorColor = c; IYAN_RefreshAllPlayers() end })
-
-            -- World Highlight ESP
-            local wSec = Tabs.Visual:AddSection({ Name = "World Highlight ESP" })
-            wSec:AddToggle({
-                Name = "Enable World ESP", Default = false,
-                Callback = function(state)
-                    IYAN_ESPState.WorldMasterESP = state
-                    if state then
-                        IYAN_RefreshESPRoots()
-                        if IYAN_AnyWorldEnabled() then IYAN_StartWorldLoop() end
-                    else
-                        IYAN_ClearAllWorldESP()
-                    end
-                end,
-            })
-            -- "Select World Objects" (Multi) -> toggle-per-option
-            wSec:AddLabel("-- Select World Objects --")
-            local function worldEspToggle(optName, stateKey)
-                wSec:AddToggle({
-                    Name = optName, Default = false,
-                    Callback = function(state)
-                        IYAN_ESPState[stateKey] = state
-                        if IYAN_ESPState.WorldMasterESP and IYAN_AnyWorldEnabled() then
-                            IYAN_RefreshESPRoots()
-                            IYAN_StartWorldLoop()
-                        else
-                            IYAN_ClearAllWorldESP()
-                        end
-                    end,
-                })
-            end
-            worldEspToggle("Generators",   "GeneratorESP")
-            worldEspToggle("Hooks",        "HookESP")
-            worldEspToggle("Gates",        "GateESP")
-            worldEspToggle("Windows",      "WindowESP")
-            worldEspToggle("Pallets",      "PalletESP")
-            worldEspToggle("SCP / Zombie", "SCPZombieESP")
-            wSec:AddToggle({
-                Name = "World Nametags", Default = false,
-                Callback = function(state)
-                    IYAN_ESPState.WorldNametags = state
-                    if IYAN_ESPState.WorldMasterESP and IYAN_AnyWorldEnabled() then IYAN_StartWorldLoop() else IYAN_ClearAllWorldESP() end
-                end,
-            })
-            wSec:AddToggle({
-                Name = "World Distance ESP", Default = false,
-                Callback = function(state)
-                    IYAN_ESPState.WorldDistanceESP = state
-                    if IYAN_ESPState.WorldMasterESP and IYAN_AnyWorldEnabled() then IYAN_StartWorldLoop() else IYAN_ClearAllWorldESP() end
-                end,
-            })
-            wSec:AddLabel("-- Colors --")
-            wSec:AddColorpicker({ Name = "Generator Color",  Default = IYAN_ESPState.GeneratorColor,  Callback = function(c) IYAN_ESPState.GeneratorColor = c end })
-            wSec:AddColorpicker({ Name = "Hook Color",       Default = IYAN_ESPState.HookColor,       Callback = function(c) IYAN_ESPState.HookColor = c end })
-            wSec:AddColorpicker({ Name = "Gate Color",       Default = IYAN_ESPState.GateColor,       Callback = function(c) IYAN_ESPState.GateColor = c end })
-            wSec:AddColorpicker({ Name = "Window Color",     Default = IYAN_ESPState.WindowColor,     Callback = function(c) IYAN_ESPState.WindowColor = c end })
-            wSec:AddColorpicker({ Name = "Pallet Color",     Default = IYAN_ESPState.PalletColor,     Callback = function(c) IYAN_ESPState.PalletColor = c end })
-            wSec:AddColorpicker({ Name = "SCP / Zombie Color", Default = IYAN_ESPState.SCPZombieColor, Callback = function(c) IYAN_ESPState.SCPZombieColor = c end })
-
-            -- Tandai controls sudah ditambah supaya IYAN_AddVisualESPControls
-            -- (jika dipanggil ulang) tidak menambah dobel.
-            IYAN_ControlsAdded = true
-        end
-
-        -- ===================== VISUAL: LIGHTING =====================
-        local lightSection = Tabs.Visual:AddSection({ Name = "Lighting Controls" })
-        lightSection:AddToggle({
-            Name = "Fullbright", Default = false,
-            Callback = function(state) VD.Fullbright = state; applyFullbright(state) end,
-        })
-        lightSection:AddToggle({
-            Name = "No Fog", Default = false,
-            Callback = function(state) VD.NoFog = state; applyNoFog(state) end,
-        })
-
-        -- ===================== PARRY =====================
-        local parrySection = Tabs.Parry:AddSection({ Name = "Auto Parry" })
-        local parryToggleEl = parrySection:AddToggle({
-            Name = "Enable Auto Parry", Default = VD.SURV_AutoParry,
+        parrySection:AddToggle({
+            Name = "Enable Auto Parry",
+            Flag = "Auto Parry",
+            Default = VD.SURV_AutoParry,
             Callback = function(v)
                 VD.SURV_AutoParry = v
                 if not v then
                     VD_ParryRange.Transparency = 1
                     ResetCooldown()
                 end
-            end,
+            end
         })
+
         parrySection:AddDropdown({
-            Name = "Parry Mode", Default = VD.SURV_ParryMode or "Legit",
-            Options = { "Legit", "Aggressive" },
+            Name = "Parry Mode",
+            Flag = "Parry Mode",
+            Values = { "Legit", "Aggressive" },
+            Default = VD.SURV_ParryMode or "Legit",
+            Multi = false,
             Callback = function(v)
-                VD.SURV_ParryMode = opt(v) or "Legit"
-            end,
+                if type(v) == "table" then v = v[1] end
+                VD.SURV_ParryMode = v or "Legit"
+            end
         })
+
         parrySection:AddDropdown({
-            Name = "Parry Animation", Default = "Default",
-            Options = { "Default", "Shield", "Robot", "Katana", "Fish", "Watcher" },
+            Name = "Parry Animation",
+            Flag = "Parry Animation",
+            Values = {
+                "Default",
+                "Shield",
+                "Robot",
+                "Katana",
+                "Fish",
+                "Watcher"
+            },
+            Default = "Default",
+            Multi = false,
             Callback = function(v)
-                local v2 = opt(v)
+                if type(v) == "table" then v = v[1] end
                 local animMap = {
                     Default = "rbxassetid://109133187196613",
                     Shield  = "rbxassetid://75939529748815",
@@ -4319,19 +4625,28 @@ local function __NM_Init_Main__()
                     Fish    = "rbxassetid://123307242865945",
                     Watcher = "rbxassetid://81793464499285",
                 }
-                VD.SURV_ParryAnimId = animMap[v2] or animMap.Default
-            end,
+                VD.SURV_ParryAnimId = animMap[v] or animMap.Default
+            end
         })
+
         parrySection:AddSlider({
-            Name = "Parry Range", Min = 2, Max = 20, Default = VD.SURV_ParryRange or 12, Increment = 0.5,
+            Name = "Parry Range",
+            Flag = "Parry Range",
+            Min = 2,
+            Max = 20,
+            Default = VD.SURV_ParryRange or 12,
+            Increment = 0.5,
             Callback = function(v)
                 VD.SURV_ParryRange = v
                 VD_ParryRange.Radius = v
                 VD_ParryRange.InnerRadius = math.max(0.1, v - 0.15)
-            end,
+            end
         })
-        parrySection:AddBind({
-            Name = "Toggle Keybind", Default = NM_KeyCodeFromString(VD.Parry_Keybind or "F3"), Hold = false,
+
+        parrySection:AddKeybind({
+            Name = "Toggle Keybind",
+            Flag = "Parry Keybind",
+            Default = VD.Parry_Keybind or "F3",
             Callback = function()
                 VD.SURV_AutoParry = not VD.SURV_AutoParry
                 if not VD.SURV_AutoParry then
@@ -4339,16 +4654,331 @@ local function __NM_Init_Main__()
                     ResetCooldown()
                 end
                 pcall(function()
-                    if parryToggleEl and parryToggleEl.Set then parryToggleEl:Set(VD.SURV_AutoParry) end
+                    if Window and Window.ConfigElements and Window.ConfigElements["Auto Parry"] then
+                        Window.ConfigElements["Auto Parry"]:Set(VD.SURV_AutoParry)
+                    end
                 end)
-            end,
+            end
         })
+
         parrySection:AddToggle({
-            Name = "Show Parry Range Circle", Default = VD.SURV_ShowParryCircle,
+            Name = "Show Parry Range Circle",
+            Flag = "Show Parry Circle",
+            Default = VD.SURV_ShowParryCircle,
             Callback = function(v)
                 VD.SURV_ShowParryCircle = v
                 if not v then VD_ParryRange.Transparency = 1 end
-            end,
+            end
+        })
+
+        -- Gen Boost subtab
+        local GenBoostTab = SurvivorTabbox2.GenBoost
+        local genBoostSection = GenBoostTab:AddSection({
+            Position = "Center",
+            Name = "Generator Boost",
+            Icon = "solar:plug-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+
+        genBoostSection:AddToggle({
+            Name = "Gen Boost (BEST)",
+            Flag = "Gen_Boost",
+            Callback = function(v)
+                VD.SURV_GenBoost = v
+                if v then
+                    startGenBoost()
+                else
+                    stopGenBoost()
+                end
+            end
+        })
+
+        genBoostSection:AddToggle({
+            Name = "Draggable Mode (Gen Bypass Button)",
+            Flag = "Draggable_Gen_Bypass",
+            Callback = function(v)
+                VD.SURV_DraggableGenBypass = v
+            end
+        })
+
+        -- Auto Drop Pallet subtab
+        local PalletTab = SurvivorTabbox2.Pallet
+        local palletSection = PalletTab:AddSection({
+            Position = "Center",
+            Name = "Auto Drop Pallet",
+            Icon = "solar:box-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+
+        palletSection:AddToggle({
+            Name = "Auto Drop Pallet",
+            Flag = "Auto_Drop_Pallet",
+            Default = false,
+            Callback = function(v)
+                VD.SURV_AutoDropPallet = v
+                if v then
+                    VD_Notify("Auto Drop Pallet", "Enabled (" .. (VD.SURV_AutoDropPalletMode or "Aggressive") .. " Mode)", 2)
+                else
+                    VD_Notify("Auto Drop Pallet", "Disabled", 2)
+                end
+            end
+        })
+
+        palletSection:AddSlider({
+            Name = "Killer Detection Range (studs)",
+            Flag = "Pallet_Trigger_Range",
+            Min = 5,
+            Max = 50,
+            Default = 20,
+            Increment = 1,
+            Callback = function(v)
+                VD.SURV_AutoDropPalletDist = v
+            end
+        })
+
+        palletSection:AddDropdown({
+            Name = "Mode",
+            Flag = "Auto_Drop_Pallet_Mode",
+            Values = { "Aggressive", "Safe" },
+            Default = "Aggressive",
+            Multi = false,
+            Callback = function(value)
+                if type(value) == "table" then value = value[1] end
+                VD.SURV_AutoDropPalletMode = value
+                VD_Notify("Auto Drop Pallet", "Mode set to " .. value, 2)
+            end
+        })
+
+        -- ============================================================
+        -- NEW: Movement subtab (Auto Vault & Auto Pallet Slide)
+        -- ============================================================
+        local MovementTab = SurvivorTabbox2.Movement
+        local movementSection = MovementTab:AddSection({
+            Position = "Center",
+            Name = "Movement",
+            Icon = "solar:walk-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+
+        movementSection:AddToggle({
+            Name = "Auto Vault",
+            Flag = "Auto_Vault",
+            Default = false,
+            Callback = function(v)
+                VD.SURV_AutoVault = v
+                VD_Notify("Auto Vault", v and "Enabled" or "Disabled", 2)
+            end
+        })
+
+        movementSection:AddToggle({
+            Name = "Auto Pallet (Slide)",
+            Flag = "Auto_Pallet_Slide",
+            Default = false,
+            Callback = function(v)
+                VD.SURV_AutoPalletSlide = v
+                VD_Notify("Auto Pallet Slide", v and "Enabled" or "Disabled", 2)
+            end
+        })
+
+        -- Killer General
+        local KillerGeneralTab = KillerTabbox1.General
+        local kgSection = KillerGeneralTab:AddSection({
+            Position = "Center",
+            Name = "General Killer",
+            Icon = "solar:danger-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+        kgSection:AddToggle({ Default = false, Name = "Auto Attack", Flag = "Auto Attack", Callback = function(v) VD.AUTO_Attack = v end })
+        kgSection:AddSlider({
+            Name = "Attack Range", Flag = "Attack Range",
+            Min = 5, Max = 20, Default = 12,
+            Callback = function(v) VD.AUTO_AttackRange = v end
+        })
+        kgSection:AddToggle({ Default = false, Name = "Double Tap", Flag = "Double Tap", Callback = function(v) VD.KILLER_DoubleTap = v end })
+        kgSection:AddToggle({ Default = false, Name = "Auto Kick Pallet", Flag = "Destroy Pallets", Callback = function(v) VD.KILLER_DestroyPallets = v end })
+        kgSection:AddToggle({ Default = false, Name = "Auto Kick Generator", Flag = "Auto Kick Generator", Callback = function(v) VD.KILLER_AutoBreakGene = v end })
+        kgSection:AddToggle({ Default = false, Name = "Block All Vaults", Flag = "Block All Vaults", Callback = function(v) VD.KILLER_BlockVaults = v end })
+        kgSection:AddToggle({ Default = false, Name = "Anti Blind (Flashlight)", Flag = "Anti Blind (Flashlight)", Callback = function(v)
+            VD.KILLER_AntiBlind = v; pcall(SetupAntiBlind)
+        end })
+
+        -- Silent Aim (Veil)
+        local SilentAimTab = KillerTabbox1.SilentAim
+        local saSection = SilentAimTab:AddSection({
+            Position = "Center",
+            Name = "Silent Aim Veil",
+            Icon = "solar:crosshair-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+        saSection:AddToggle({ Default = false, Name = "Silent Aim Veil", Flag = "Silent Aim Veil", Callback = function(v) VeilConfig.Enabled = v end })
+        saSection:AddToggle({ Default = true, Name = "Show FOV Circle", Flag = "Show FOV Circle", Callback = function(v) VeilConfig.ShowFOV = v end })
+        saSection:AddSlider({ Name = "FOV Radius", Flag = "FOV Radius", Min = 50, Max = 500, Default = 150, Callback = function(v) VeilConfig.FOV = v end })
+        saSection:AddToggle({ Default = false, Name = "Auto Predict", Flag = "Auto Predict", Callback = function(v) VeilConfig.AutoPredict = v end })
+        saSection:AddSlider({ Name = "Spear Speed", Flag = "Spear Speed", Min = 50, Max = 300, Default = 165, Callback = function(v) VeilConfig.SpearSpeed = v end })
+        saSection:AddSlider({ Name = "Gravity", Flag = "Gravity", Min = 0, Max = 300, Default = math.floor(workspace.Gravity * 0.5), Callback = function(v) VeilConfig.Gravity = v end })
+        saSection:AddSlider({ Name = "Horizontal Vector", Flag = "Horizontal Vector", Min = 0, Max = 10, Default = 2.8, Decimals = 1, Callback = function(v) VeilConfig.HorizontalPredictFactor = v end })
+        saSection:AddDropdown({ Name = "Target Part", Flag = "Target Part", Values = {"Torso", "Head", "Root"}, Default = "Torso", Multi = false, Callback = function(v)
+            if type(v) == "table" then v = v[1] end
+            VeilConfig.TargetPart = v
+        end })
+
+        -- Customization
+        local CustomizationTab = KillerTabbox2.Customization
+        local custSection = CustomizationTab:AddSection({
+            Position = "Center",
+            Name = "Custom Masked",
+            Icon = "solar:palette-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+        local customMaskedMasks = {"Richard", "Tony", "Brandon", "Jake", "Richter", "Graham", "Alex"}
+        custSection:AddDropdown({
+            Name = "Custom Masked",
+            Flag = "Custom Masked",
+            Values = customMaskedMasks,
+            Multi = false,
+            Default = VD.KILLER_CustomMasked or "Richard",
+            Callback = function(v)
+                if type(v) == "table" then v = v[1] end
+                VD.KILLER_CustomMasked = v or "Richard"
+            end
+        })
+        custSection:AddButton({
+            Name = "Apply Custom Masked",
+            Callback = function()
+                pcall(IYAN_ApplyCustomMasked, VD.KILLER_CustomMasked)
+            end
+        })
+        custSection:AddButton({
+            Name = "Random Custom Masked",
+            Callback = function()
+                local mask = customMaskedMasks[math.random(1, #customMaskedMasks)]
+                VD.KILLER_CustomMasked = mask
+                pcall(IYAN_ApplyCustomMasked, mask)
+            end
+        })
+
+        -- Visual: ESP subtab
+        local ESPTab = VisualTabbox.ESP
+        local espSection = ESPTab:AddSection({
+            Position = "Center",
+            Name = "Drawing ESP (PC Only)",
+            Icon = "lucide:eye",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+        espSection:AddToggle({ Default = false, Name = "Master Turn On Drawing ESP", Flag = "Master Turn On Drawing ESP", Callback = function(v) VD.DRAWING_ESP = v end })
+        espSection:AddToggle({ Default = isMobile, Name = "Mobile Lite Mode (ESP ringan)", Flag = "Low Performance Mode", Callback = function(v)
+            VD.ESP_LowPerformance = v
+            local visualState = getgenv().IYAN_VD_VisualESP_State
+            if visualState then
+                visualState.MobileLite = v
+                visualState.MaxActiveWorldTags = v and 28 or 80
+            end
+            if v then
+                VD.ESP_Skeleton = false
+                VD.ESP_Velocity = false
+                VD.ESP_Offscreen = false
+                pcall(function()
+                    if Window and Window.ConfigElements then
+                        local skelElem = Window.ConfigElements["ESP Skeleton"]
+                        if skelElem and skelElem.Set then skelElem:Set(false) end
+                        local velElem = Window.ConfigElements["ESP Velocity Arrows"]
+                        if velElem and velElem.Set then velElem:Set(false) end
+                        local offElem = Window.ConfigElements["ESP Offscreen Arrows"]
+                        if offElem and offElem.Set then offElem:Set(false) end
+                    end
+                end)
+            end
+        end })
+        espSection:AddSlider({
+            Name = "Max ESP Distance", Flag = "Max ESP Distance",
+            Min = 500, Max = 5000, Default = 2000,
+            Callback = function(v) VD.MaxDistance = v end
+        })
+        espSection:AddToggle({ Default = false, Name = "ESP Skeleton (PC Only!)", Flag = "ESP Skeleton", Callback = function(v)
+            if VD.ESP_LowPerformance and v then
+                pcall(function()
+                    if Window and Window.Notify then
+                        Window:Notify({ Title = "ESP", Content = "Skeleton disabled in Low Performance mode", Duration = 2 })
+                    end
+                end)
+                return
+            end
+            VD.ESP_Skeleton = v
+        end })
+        espSection:AddToggle({ Default = false, Name = "ESP Velocity Arrows (PC Only!)", Flag = "ESP Velocity Arrows", Callback = function(v)
+            if VD.ESP_LowPerformance and v then
+                pcall(function()
+                    if Window and Window.Notify then
+                        Window:Notify({ Title = "ESP", Content = "Velocity disabled in Low Performance mode", Duration = 2 })
+                    end
+                end)
+                return
+            end
+            VD.ESP_Velocity = v
+        end })
+        espSection:AddToggle({ Default = false, Name = "ESP Offscreen Arrows (PC Only!)", Flag = "ESP Offscreen Arrows", Callback = function(v)
+            if VD.ESP_LowPerformance and v then
+                pcall(function()
+                    if Window and Window.Notify then
+                        Window:Notify({ Title = "ESP", Content = "Offscreen disabled in Low Performance mode", Duration = 2 })
+                    end
+                end)
+                return
+            end
+            VD.ESP_Offscreen = v
+        end })
+
+        -- Highlight ESP subtab
+        local HighlightTab = VisualTabbox.Highlight
+        pcall(function()
+            if getgenv().IYAN_AddVisualESPControls then
+                getgenv().IYAN_AddVisualESPControls(HighlightTab)
+            end
+        end)
+
+        -- Lighting subtab
+        local LightingTab = VisualTabbox.Lighting
+        local lightSection = LightingTab:AddSection({
+            Position = "Center",
+            Name = "Lighting Controls",
+            Icon = "lucide:sun",
+            Box = true,
+            BoxBorder = true,
+            Opened = false,
+        })
+
+        lightSection:AddToggle({
+            Name = "Fullbright",
+            Flag = "Fullbright (lighting preset)",
+            Default = false,
+            Callback = function(state)
+                VD.Fullbright = state
+                applyFullbright(state)
+            end
+        })
+
+        lightSection:AddToggle({
+            Name = "No Fog",
+            Flag = "No Fog",
+            Default = false,
+            Callback = function(state)
+                VD.NoFog = state
+                applyNoFog(state)
+            end
         })
     end
 
@@ -4366,7 +4996,7 @@ local function __NM_Init_Main__()
     }
 
     local function IYAN_ScanMap()
-        local map = Workspace:FindFirstChild("Map")
+        local map = Workspace:FindFirstChild("Map") or Workspace:FindFirstChild("Map1")
         if not map then
             IYAN_Cache = {
                 Generators = {}, Zombies = {}, Gates = {}, Hooks = {}, Pallets = {}, Windows = {}, ClosestHook = nil, ExitPos = nil, ExitPart = nil
@@ -4413,7 +5043,11 @@ local function __NM_Init_Main__()
                     end
                 end
             elseif obj:IsA("BasePart") then
-                if not exitPos and obj.Name:lower():find("finish") then
+                local partName = obj.Name:lower()
+                if partName:find("gate") or partName:find("exitlever") or partName:find("exitdoor") then
+                    table.insert(newGates, { model = obj.Parent or obj, part = obj })
+                end
+                if not exitPos and (partName:find("finish") or partName:find("exit") or partName:find("escape")) then
                     exitPos = obj.Position
                     exitPart = obj
                 end
@@ -5577,7 +6211,7 @@ local function __NM_Init_Main__()
     -- CLEANUP ON DESTROY
 end
 
-__NM_Init_Main__()
+__ZiaanHub_Init_Main__()
 -- ============================================================
 --  SPEED TAB (mobile friendly)
 -- ============================================================
