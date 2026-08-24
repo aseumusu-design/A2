@@ -1,5 +1,5 @@
 --[[
-  NO MERCY — VIOLENCE DISTRICT A2 (Mobile Lite + Generator Progress)
+  ZiaanHub X - Violence District v1.4.7 (Optimized ESP + Fullbright/No Fog)
   Updated for smooth & low-lag ESP
   FIX: Drawing ESP performance improvements
   AUTO PARRY REPLACED with new improved version (WalkSpeed sequence, Legit/Aggressive, animations)
@@ -58,7 +58,6 @@ getgenv().VD = getgenv().VD or {
     SURV_DraggableGenBypass = false,
     -- Performance
     ESP_LowPerformance   = false,
-    GeneratorProgressESP = false,
     -- Lighting
     Fullbright           = false,
     NoFog                = false,
@@ -86,8 +85,8 @@ local ICON = {
     Eye      = "rbxassetid://7733774602",
     Zap      = "rbxassetid://7733771628",
     Settings = "rbxassetid://7734053495",
-    Logo     = "rbxassetid://113381647185328",
-    Banner   = "rbxassetid://117118608066997",
+    Logo     = "rbxassetid://102609928046926",
+    Banner   = "rbxassetid://138968189462646",
 }
 
 local TweenService = game:GetService("TweenService")
@@ -185,26 +184,17 @@ local function ShowWelcomeIntro()
     gui:Destroy()
 end
 
-local introLoaded = pcall(function()
-    local introSource = game:HttpGet("https://raw.githubusercontent.com/aseumusu-design/NoMercy_BladeBal/refs/heads/main/intro.lua")
-    local introFn = loadstring(introSource)
-    if introFn then introFn() end
-end)
-if introLoaded then
-    task.wait(6.5)
-else
-    ShowWelcomeIntro()
-end
+ShowWelcomeIntro()
 
 local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Marpiii/UiLib/refs/heads/main/source.lua"))()
 
 local onCloseRequest
 
 local OrionWindow = OrionLib:MakeWindow({
-    Name = "NO MERCY — A2 VIOLENCE DISTRICT",
+    Name = "NO MERCY — VIOLENCE DISTRICT",
     HidePremium = false,
     SaveConfig = true,
-    ConfigFolder = "NoMercyViolenceFullZiaan",
+    ConfigFolder = "NoMercyViolence",
     IntroEnabled = false,
     Icon = ICON.Logo,
     CloseCallback = function()
@@ -407,8 +397,8 @@ end
 local InfoTab = OrionWindow:MakeTab({ Name = "Info", Icon = ICON.Info, PremiumOnly = false })
 local InfoSec = InfoTab:AddSection({ Name = "Tentang" })
 
-InfoSec:AddLabel("A2 — Violence District")
-InfoSec:AddLabel("A2 Official Script — Full Mobile Build (All Features)")
+InfoSec:AddLabel("NO MERCY — Violence District")
+InfoSec:AddLabel("Fitur: ZiaanHub X v1.4.7 (full port)")
 InfoSec:AddLabel("Survivor • Killer • Visual • Player • Parry")
 InfoSec:AddButton({
     Name = "Copy Discord",
@@ -462,70 +452,6 @@ task.spawn(function()
         end
     end
 end)
-
--- ============================================================
---  EFEK TEKS BERCAHAYA (GLOBAL TEXT GLOW + STROKE PULSE)
---  Berlaku untuk SEMUA teks UI: judul, tab, toggle, slider,
---  dropdown, label, textbox — termasuk yang muncul belakangan.
--- ============================================================
-do
-    local RunServiceGlow = game:GetService("RunService")
-    local GLOW_BASE   = Color3.fromRGB(240, 240, 240)
-    local GLOW_ACCENT = Color3.fromRGB(100, 210, 255)
-    local tracked = {}
-
-    local function applyGlow(obj)
-        if not (obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox")) then return end
-        if obj:GetAttribute("VD_Glow") then return end
-        obj:SetAttribute("VD_Glow", true)
-        local stroke = obj:FindFirstChild("VD_TextStroke")
-        if not stroke then
-            stroke = Instance.new("UIStroke")
-            stroke.Name = "VD_TextStroke"
-            stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
-            stroke.Color = GLOW_ACCENT
-            stroke.Thickness = 1
-            stroke.Transparency = 0.5
-            stroke.Parent = obj
-        end
-        tracked[obj] = stroke
-        obj.Destroying:Connect(function() tracked[obj] = nil end)
-    end
-
-    local hooked = {}
-    local function hookGlow(root)
-        if not root or hooked[root] then return end
-        hooked[root] = true
-        for _, v in ipairs(root:GetDescendants()) do applyGlow(v) end
-        root.DescendantAdded:Connect(applyGlow)
-    end
-
-    task.spawn(function()
-        while not VD.Destroyed do
-            pcall(function()
-                hookGlow(GetHolder())
-                hookGlow(FindMainWindow())
-            end)
-            task.wait(1)
-        end
-    end)
-
-    RunServiceGlow.RenderStepped:Connect(function()
-        local alpha = (math.sin(os.clock() * 3) + 1) / 2
-        local color = GLOW_BASE:Lerp(GLOW_ACCENT, alpha)
-        for obj, st in pairs(tracked) do
-            if obj.Parent then
-                obj.TextColor3 = color
-                if st and st.Parent then
-                    st.Thickness = 1 + alpha
-                    st.Transparency = 0.75 - (alpha * 0.35)
-                end
-            else
-                tracked[obj] = nil
-            end
-        end
-    end)
-end
 
 -- ============================================================
 --  ADAPTER: API ZiaanHub (ModernV2) -> OrionLib
@@ -841,10 +767,6 @@ local function __ZiaanHub_Init_Main__()
     local Camera            = Workspace.CurrentCamera
 
     local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-    if isMobile then
-        VD.ESP_LowPerformance = true
-        VD.MaxDistance = math.min(tonumber(VD.MaxDistance) or 900, 900)
-    end
 
     local UI = {}
 
@@ -1391,8 +1313,6 @@ local function __ZiaanHub_Init_Main__()
             WindowColor = Color3.fromRGB(255, 255, 255),
             PalletColor = Color3.fromRGB(255, 140, 0),
             SCPZombieColor = Color3.fromRGB(128, 0, 128),
-            MobileLite = isMobile or VD.ESP_LowPerformance,
-            MaxActiveWorldTags = isMobile and 28 or 80,
         }
 
         getgenv().IYAN_VD_VisualESP_State = IYAN_ESPState
@@ -1806,7 +1726,7 @@ local function __ZiaanHub_Init_Main__()
             IYAN_PlayerLoopThread = task.spawn(function()
                 while not IYAN_Dead and IYAN_ESPState.PlayerMasterESP do
                     IYAN_RefreshAllPlayers()
-                    task.wait(IYAN_ESPState.MobileLite and 0.65 or 0.3)
+                    task.wait(0.25)
                 end
                 IYAN_PlayerLoopThread = nil
             end)
@@ -1982,12 +1902,7 @@ local function __ZiaanHub_Init_Main__()
             if cat == "Palletwrong" and IYAN_IsPalletGone(model) then return end
             local part = IYAN_PickWorldPart(model, cat)
             if not IYAN_ValidPart(part) then return end
-            local centerOffset = Vector3.zero
-            if model:IsA("Model") then
-                local ok, cf = pcall(function() return model:GetBoundingBox() end)
-                if ok and cf then centerOffset = cf.Position - part.Position end
-            end
-            IYAN_WorldReg[cat][model] = { part = part, centerOffset = centerOffset }
+            IYAN_WorldReg[cat][model] = { part = part }
         end
 
         local function IYAN_RegisterWorldDescendant(obj)
@@ -2129,8 +2044,20 @@ local function __ZiaanHub_Init_Main__()
                 return
             end
 
-            local entry = IYAN_WorldReg[cat] and IYAN_WorldReg[cat][model]
-            local centerOffset = (entry and entry.centerOffset) or Vector3.zero
+            local totalPos = Vector3.zero
+            local count = 0
+            for _, child in ipairs(model:GetDescendants()) do
+                if child:IsA("BasePart") and IYAN_Alive(child) then
+                    totalPos = totalPos + child.Position
+                    count = count + 1
+                end
+            end
+
+            local centerOffset = Vector3.zero
+            if count > 0 then
+                local center = totalPos / count
+                centerOffset = center - part.Position
+            end
 
             local lines = {}
             local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
@@ -2233,17 +2160,9 @@ local function __ZiaanHub_Init_Main__()
                                     end
 
                                     if IYAN_ValidPart(part) then
-                                        local localRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-                                        local maxDistance = IYAN_ESPState.MobileLite and 900 or math.max(900, tonumber(VD.MaxDistance) or 2000)
-                                        local inRange = not localRoot or (part.Position - localRoot.Position).Magnitude <= maxDistance
-                                        local withinLimit = n < IYAN_ESPState.MaxActiveWorldTags
-                                        if inRange and withinLimit then
-                                            local key = IYAN_WorldKey(cat, model)
-                                            IYAN_EnsureHighlight(key .. "_HL", model, color, false)
-                                            IYAN_UpdateWorldTag(cat, model, part, color)
-                                        else
-                                            IYAN_ClearWorldVisual(cat, model)
-                                        end
+                                        local key = IYAN_WorldKey(cat, model)
+                                        IYAN_EnsureHighlight(key .. "_HL", model, color, false)
+                                        IYAN_UpdateWorldTag(cat, model, part, color)
                                     else
                                         IYAN_RemoveWorldEntry(cat, model)
                                     end
@@ -2260,7 +2179,7 @@ local function __ZiaanHub_Init_Main__()
                             end
                         end
                     end
-                    task.wait(IYAN_ESPState.MobileLite and 0.65 or 0.35)
+                    task.wait(0.25)
                 end
                 IYAN_WorldLoopThread = nil
             end)
@@ -2273,22 +2192,6 @@ local function __ZiaanHub_Init_Main__()
                 if value == name then return true end
             end
             return false
-        end
-
-        getgenv().IYAN_SetGeneratorProgressESP = function(state)
-            VD.GeneratorProgressESP = state == true
-            IYAN_ESPState.GeneratorESP = state == true
-            IYAN_ESPState.WorldMasterESP = state == true or IYAN_ESPState.WorldMasterESP
-            IYAN_ESPState.WorldNametags = state == true or IYAN_ESPState.WorldNametags
-            if state then
-                IYAN_RefreshESPRoots()
-                IYAN_StartWorldLoop()
-                NM_Notify("Generator Progress", "Progress generator aktif", 2)
-            else
-                for model in pairs(IYAN_WorldReg.Generator) do
-                    IYAN_ClearWorldVisual("Generator", model)
-                end
-            end
         end
 
         getgenv().IYAN_AddVisualESPControls = function(VisualTabRef)
@@ -4489,17 +4392,6 @@ local function __ZiaanHub_Init_Main__()
             Opened = false,
         })
         genSection:AddToggle({ Default = false, Name = "Auto Skillcheck", Flag = "Auto Skillcheck", Callback = function(v) VD_SetAutoSkillcheck(v) end })
-        genSection:AddToggle({
-            Default = false,
-            Name = "Check Generator Progress",
-            Flag = "Check Generator Progress",
-            Callback = function(v)
-                VD.GeneratorProgressESP = v
-                if getgenv().IYAN_SetGeneratorProgressESP then
-                    getgenv().IYAN_SetGeneratorProgressESP(v)
-                end
-            end
-        })
         genSection:AddDropdown({
             Name = "Skillcheck Mode",
             Flag = "Skillcheck Mode",
@@ -4944,13 +4836,8 @@ local function __ZiaanHub_Init_Main__()
             Opened = false,
         })
         espSection:AddToggle({ Default = false, Name = "Master Turn On Drawing ESP", Flag = "Master Turn On Drawing ESP", Callback = function(v) VD.DRAWING_ESP = v end })
-        espSection:AddToggle({ Default = isMobile, Name = "Mobile Lite Mode (ESP ringan)", Flag = "Low Performance Mode", Callback = function(v)
+        espSection:AddToggle({ Default = false, Name = "Low Performance Mode (disable skeleton & velocity)", Flag = "Low Performance Mode", Callback = function(v)
             VD.ESP_LowPerformance = v
-            local visualState = getgenv().IYAN_VD_VisualESP_State
-            if visualState then
-                visualState.MobileLite = v
-                visualState.MaxActiveWorldTags = v and 28 or 80
-            end
             if v then
                 VD.ESP_Skeleton = false
                 VD.ESP_Velocity = false
@@ -5060,7 +4947,7 @@ local function __ZiaanHub_Init_Main__()
     }
 
     local function IYAN_ScanMap()
-        local map = Workspace:FindFirstChild("Map") or Workspace:FindFirstChild("Map1")
+        local map = Workspace:FindFirstChild("Map")
         if not map then
             IYAN_Cache = {
                 Generators = {}, Zombies = {}, Gates = {}, Hooks = {}, Pallets = {}, Windows = {}, ClosestHook = nil, ExitPos = nil, ExitPart = nil
@@ -5107,11 +4994,7 @@ local function __ZiaanHub_Init_Main__()
                     end
                 end
             elseif obj:IsA("BasePart") then
-                local partName = obj.Name:lower()
-                if partName:find("gate") or partName:find("exitlever") or partName:find("exitdoor") then
-                    table.insert(newGates, { model = obj.Parent or obj, part = obj })
-                end
-                if not exitPos and (partName:find("finish") or partName:find("exit") or partName:find("escape")) then
+                if not exitPos and obj.Name:lower():find("finish") then
                     exitPos = obj.Position
                     exitPart = obj
                 end
