@@ -1,5 +1,5 @@
 --[[
-  ZiaanHub X - Violence District v1.4.7 (Optimized ESP + Fullbright/No Fog)
+  A2 — VIOLENCE DISTRICT (Mobile Lite | UI Modern | Aim Bot Old+Beta | Moonwalk)
   Updated for smooth & low-lag ESP
   FIX: Drawing ESP performance improvements
   AUTO PARRY REPLACED with new improved version (WalkSpeed sequence, Legit/Aggressive, animations)
@@ -71,7 +71,7 @@ getgenv().VD = getgenv().VD or {
 }
 
 -- ============================================================
---  NO MERCY — "VIOLENCE DISTRICT"
+--  A2 — "VIOLENCE DISTRICT"
 --  UI: Orion (MarV) — full ZiaanHub X feature set
 -- ============================================================
 
@@ -85,8 +85,8 @@ local ICON = {
     Eye      = "rbxassetid://7733774602",
     Zap      = "rbxassetid://7733771628",
     Settings = "rbxassetid://7734053495",
-    Logo     = "rbxassetid://102609928046926",
-    Banner   = "rbxassetid://138968189462646",
+    Logo     = "rbxassetid://113381647185328",
+    Banner   = "rbxassetid://117118608066997",
 }
 
 local TweenService = game:GetService("TweenService")
@@ -141,7 +141,7 @@ local function ShowWelcomeIntro()
     introText.Position = UDim2.new(0.5, 0, 0.75, 0)
     introText.AnchorPoint = Vector2.new(0.5, 0)
     introText.BackgroundTransparency = 1
-    introText.Text = "WELCOME NO MERCY"
+    introText.Text = "WELCOME A2"
     introText.TextColor3 = Color3.fromRGB(255, 255, 255)
     introText.TextSize = 18
     introText.Font = Enum.Font.GothamBold
@@ -184,17 +184,26 @@ local function ShowWelcomeIntro()
     gui:Destroy()
 end
 
-ShowWelcomeIntro()
+local introLoaded = pcall(function()
+    local introSource = game:HttpGet("https://raw.githubusercontent.com/aseumusu-design/NoMercy_BladeBal/refs/heads/main/intro.lua")
+    local introFn = loadstring(introSource)
+    if introFn then introFn() end
+end)
+if introLoaded then
+    task.wait(6.5)
+else
+    ShowWelcomeIntro()
+end
 
 local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Marpiii/UiLib/refs/heads/main/source.lua"))()
 
 local onCloseRequest
 
 local OrionWindow = OrionLib:MakeWindow({
-    Name = "NO MERCY — VIOLENCE DISTRICT",
+    Name = "A2 — VIOLENCE DISTRICT",
     HidePremium = false,
     SaveConfig = true,
-    ConfigFolder = "NoMercyViolence",
+    ConfigFolder = "NoMercyViolenceFullZiaan",
     IntroEnabled = false,
     Icon = ICON.Logo,
     CloseCallback = function()
@@ -321,7 +330,7 @@ local function confirmClose(fromCloseBtn)
     title.Size = UDim2.new(1, -40, 0, 30)
     title.Position = UDim2.new(0, 20, 0, 15)
     title.BackgroundTransparency = 1
-    title.Text = "Tutup NO MERCY?"
+    title.Text = "Tutup A2?"
     title.TextColor3 = Color3.fromRGB(240, 240, 240)
     title.TextSize = 18
     title.Font = Enum.Font.GothamBold
@@ -397,14 +406,14 @@ end
 local InfoTab = OrionWindow:MakeTab({ Name = "Info", Icon = ICON.Info, PremiumOnly = false })
 local InfoSec = InfoTab:AddSection({ Name = "Tentang" })
 
-InfoSec:AddLabel("NO MERCY — Violence District")
-InfoSec:AddLabel("Fitur: ZiaanHub X v1.4.7 (full port)")
+InfoSec:AddLabel("A2 — Violence District")
+InfoSec:AddLabel("A2 Official Script — Full Mobile Build (All Features)")
 InfoSec:AddLabel("Survivor • Killer • Visual • Player • Parry")
 InfoSec:AddButton({
     Name = "Copy Discord",
     Callback = function()
         if setclipboard then setclipboard("https://discord.gg/pbg6g79Hp") end
-        OrionLib:MakeNotification({ Name = "NO MERCY", Content = "Link Discord di-copy!", Image = ICON.Logo, Time = 3 })
+        OrionLib:MakeNotification({ Name = "A2", Content = "Link Discord di-copy!", Image = ICON.Logo, Time = 3 })
     end,
 })
 InfoSec:AddButton({
@@ -454,6 +463,47 @@ task.spawn(function()
 end)
 
 -- ============================================================
+--  TEXT POLISH (MODERN, SUBTLE)
+--  Hanya outline halus tipis, tanpa pulse biru tebal.
+--  Warna teks asli library tetap dipakai -> lebih enak dilihat
+--  dan jauh lebih ringan untuk HP Android.
+-- ============================================================
+do
+    local STROKE_COLOR = Color3.fromRGB(16, 18, 26)
+
+    local function applyPolish(obj)
+        if not (obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox")) then return end
+        if obj:GetAttribute("VD_Glow") then return end
+        obj:SetAttribute("VD_Glow", true)
+        if obj:FindFirstChild("VD_TextStroke") then return end
+        local stroke = Instance.new("UIStroke")
+        stroke.Name = "VD_TextStroke"
+        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+        stroke.Color = STROKE_COLOR
+        stroke.Thickness = 0.7
+        stroke.Transparency = 0.55
+        stroke.Parent = obj
+    end
+
+    local hooked = {}
+    local function hookPolish(root)
+        if not root or hooked[root] then return end
+        hooked[root] = true
+        for _, v in ipairs(root:GetDescendants()) do pcall(applyPolish, v) end
+        root.DescendantAdded:Connect(function(v) pcall(applyPolish, v) end)
+    end
+
+    task.spawn(function()
+        while not VD.Destroyed do
+            pcall(function()
+                hookPolish(GetHolder())
+                hookPolish(FindMainWindow())
+            end)
+            task.wait(2)
+        end
+    end)
+end
+-- ============================================================
 --  ADAPTER: API ZiaanHub (ModernV2) -> OrionLib
 -- ============================================================
 local NM_TabIcons = {
@@ -462,6 +512,7 @@ local NM_TabIcons = {
     Killer = ICON.Axe,
     Visual = ICON.Eye,
     Parry = ICON.Swords,
+    ["Aim Bot"] = ICON.Crosshair,
 }
 
 local NM_Window
@@ -469,7 +520,7 @@ local NM_ConfigElements = {}
 
 local function NM_Notify(title, content, duration)
     OrionLib:MakeNotification({
-        Name = title or "NO MERCY",
+        Name = title or "A2",
         Content = content or "",
         Image = ICON.Logo,
         Time = duration or 3,
@@ -767,8 +818,45 @@ local function __ZiaanHub_Init_Main__()
     local Camera            = Workspace.CurrentCamera
 
     local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+    if isMobile then
+        VD.ESP_LowPerformance = true
+        VD.MaxDistance = math.min(tonumber(VD.MaxDistance) or 900, 900)
+    end
 
     local UI = {}
+
+    -- ============================================================
+    --  AUTO-SAVE RINGAN (warna ESP, aim bot, moonwalk)
+    -- ============================================================
+    local A2_STORE_FILE = "A2_ViolenceDistrict_prefs.json"
+    local A2_Prefs = {}
+    pcall(function()
+        if readfile and isfile and isfile(A2_STORE_FILE) then
+            local data = HttpService:JSONDecode(readfile(A2_STORE_FILE))
+            if type(data) == "table" then A2_Prefs = data end
+        end
+    end)
+    local A2_SaveQueued = false
+    local function A2_Save()
+        if A2_SaveQueued then return end
+        A2_SaveQueued = true
+        task.delay(0.35, function()
+            A2_SaveQueued = false
+            pcall(function()
+                if writefile then writefile(A2_STORE_FILE, HttpService:JSONEncode(A2_Prefs)) end
+            end)
+        end)
+    end
+    local function A2_Set(key, value)
+        A2_Prefs[key] = value
+        A2_Save()
+    end
+    local function A2_Get(key, fallback)
+        local v = A2_Prefs[key]
+        if v == nil then return fallback end
+        return v
+    end
+
 
     -- ============================================================
     -- FIX: Define VD_Notify EARLY so it's available in all callbacks
@@ -784,7 +872,7 @@ local function __ZiaanHub_Init_Main__()
     end
 
     -- ============================================================
-    --  UI: memakai library Orion (NO MERCY) via adapter
+    --  UI: memakai library Orion (A2) via adapter
     -- ============================================================
     local ModernV2 = nil
     local MenuIcon = nil
@@ -1313,6 +1401,8 @@ local function __ZiaanHub_Init_Main__()
             WindowColor = Color3.fromRGB(255, 255, 255),
             PalletColor = Color3.fromRGB(255, 140, 0),
             SCPZombieColor = Color3.fromRGB(128, 0, 128),
+            MobileLite = isMobile or VD.ESP_LowPerformance,
+            MaxActiveWorldTags = isMobile and 28 or 80,
         }
 
         getgenv().IYAN_VD_VisualESP_State = IYAN_ESPState
@@ -1726,7 +1816,7 @@ local function __ZiaanHub_Init_Main__()
             IYAN_PlayerLoopThread = task.spawn(function()
                 while not IYAN_Dead and IYAN_ESPState.PlayerMasterESP do
                     IYAN_RefreshAllPlayers()
-                    task.wait(0.25)
+                    task.wait(IYAN_ESPState.MobileLite and 0.65 or 0.3)
                 end
                 IYAN_PlayerLoopThread = nil
             end)
@@ -1902,7 +1992,12 @@ local function __ZiaanHub_Init_Main__()
             if cat == "Palletwrong" and IYAN_IsPalletGone(model) then return end
             local part = IYAN_PickWorldPart(model, cat)
             if not IYAN_ValidPart(part) then return end
-            IYAN_WorldReg[cat][model] = { part = part }
+            local centerOffset = Vector3.zero
+            if model:IsA("Model") then
+                local ok, cf = pcall(function() return model:GetBoundingBox() end)
+                if ok and cf then centerOffset = cf.Position - part.Position end
+            end
+            IYAN_WorldReg[cat][model] = { part = part, centerOffset = centerOffset }
         end
 
         local function IYAN_RegisterWorldDescendant(obj)
@@ -2044,20 +2139,8 @@ local function __ZiaanHub_Init_Main__()
                 return
             end
 
-            local totalPos = Vector3.zero
-            local count = 0
-            for _, child in ipairs(model:GetDescendants()) do
-                if child:IsA("BasePart") and IYAN_Alive(child) then
-                    totalPos = totalPos + child.Position
-                    count = count + 1
-                end
-            end
-
-            local centerOffset = Vector3.zero
-            if count > 0 then
-                local center = totalPos / count
-                centerOffset = center - part.Position
-            end
+            local entry = IYAN_WorldReg[cat] and IYAN_WorldReg[cat][model]
+            local centerOffset = (entry and entry.centerOffset) or Vector3.zero
 
             local lines = {}
             local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
@@ -2160,9 +2243,17 @@ local function __ZiaanHub_Init_Main__()
                                     end
 
                                     if IYAN_ValidPart(part) then
-                                        local key = IYAN_WorldKey(cat, model)
-                                        IYAN_EnsureHighlight(key .. "_HL", model, color, false)
-                                        IYAN_UpdateWorldTag(cat, model, part, color)
+                                        local localRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+                                        local maxDistance = IYAN_ESPState.MobileLite and 900 or math.max(900, tonumber(VD.MaxDistance) or 2000)
+                                        local inRange = not localRoot or (part.Position - localRoot.Position).Magnitude <= maxDistance
+                                        local withinLimit = n < IYAN_ESPState.MaxActiveWorldTags
+                                        if inRange and withinLimit then
+                                            local key = IYAN_WorldKey(cat, model)
+                                            IYAN_EnsureHighlight(key .. "_HL", model, color, false)
+                                            IYAN_UpdateWorldTag(cat, model, part, color)
+                                        else
+                                            IYAN_ClearWorldVisual(cat, model)
+                                        end
                                     else
                                         IYAN_RemoveWorldEntry(cat, model)
                                     end
@@ -2179,7 +2270,7 @@ local function __ZiaanHub_Init_Main__()
                             end
                         end
                     end
-                    task.wait(0.25)
+                    task.wait(IYAN_ESPState.MobileLite and 0.65 or 0.35)
                 end
                 IYAN_WorldLoopThread = nil
             end)
@@ -2192,6 +2283,12 @@ local function __ZiaanHub_Init_Main__()
                 if value == name then return true end
             end
             return false
+        end
+
+        -- Generator memakai perilaku A2 lama (tanpa progress-scan realtime)
+        -- karena progress ESP baru bikin karakter nyangkut saat repair.
+        getgenv().IYAN_SetGeneratorProgressESP = function(state)
+            VD.GeneratorProgressESP = false
         end
 
         getgenv().IYAN_AddVisualESPControls = function(VisualTabRef)
@@ -2392,6 +2489,99 @@ local function __ZiaanHub_Init_Main__()
                 Callback = function(state)
                     IYAN_ESPState.WorldDistanceESP = state
                     if IYAN_ESPState.WorldMasterESP and IYAN_AnyWorldEnabled() then IYAN_StartWorldLoop() else IYAN_ClearAllWorldESP() end
+                end,
+            })
+
+            -- ============================================================
+            --  WARNA ESP VIA DROPDOWN (auto-save)
+            --  Dropdown target + dropdown warna, setiap ubah langsung tersimpan.
+            -- ============================================================
+            local colorSection = VisualTabRef:AddSection({
+                Position = "Center",
+                Name = "ESP Color Picker (Dropdown)",
+                Icon = "solar:palette-bold",
+                Box = true,
+                BoxBorder = true,
+                Opened = false,
+            })
+
+            local ESP_COLOR_NAMES = {
+                "White", "Red", "Orange", "Yellow", "Green", "Lime",
+                "Cyan", "Blue", "Purple", "Pink", "Black",
+            }
+            local ESP_COLOR_MAP = {
+                White  = Color3.fromRGB(245, 245, 245),
+                Red    = Color3.fromRGB(235, 70, 70),
+                Orange = Color3.fromRGB(245, 150, 60),
+                Yellow = Color3.fromRGB(240, 215, 80),
+                Green  = Color3.fromRGB(70, 190, 120),
+                Lime   = Color3.fromRGB(150, 235, 90),
+                Cyan   = Color3.fromRGB(90, 220, 230),
+                Blue   = Color3.fromRGB(80, 150, 235),
+                Purple = Color3.fromRGB(160, 110, 235),
+                Pink   = Color3.fromRGB(240, 120, 190),
+                Black  = Color3.fromRGB(25, 25, 30),
+            }
+            local ESP_TARGETS = {
+                { Name = "Killer",      Key = "KillerColor",     Player = true },
+                { Name = "Survivor",    Key = "SurvivorColor",   Player = true },
+                { Name = "Spectator",   Key = "SpectatorColor",  Player = true },
+                { Name = "Generator",   Key = "GeneratorColor" },
+                { Name = "Hook",        Key = "HookColor" },
+                { Name = "Gate",        Key = "GateColor" },
+                { Name = "Window",      Key = "WindowColor" },
+                { Name = "Pallet",      Key = "PalletColor" },
+                { Name = "SCP / Zombie",Key = "SCPZombieColor" },
+            }
+            local ESP_TARGET_NAMES = {}
+            local ESP_TARGET_BY_NAME = {}
+            for _, t in ipairs(ESP_TARGETS) do
+                table.insert(ESP_TARGET_NAMES, t.Name)
+                ESP_TARGET_BY_NAME[t.Name] = t
+            end
+
+            -- restore warna tersimpan
+            local savedColors = A2_Get("ESPColors", {})
+            if type(savedColors) == "table" then
+                for _, t in ipairs(ESP_TARGETS) do
+                    local cname = savedColors[t.Name]
+                    if cname and ESP_COLOR_MAP[cname] then
+                        IYAN_ESPState[t.Key] = ESP_COLOR_MAP[cname]
+                    end
+                end
+                pcall(IYAN_RefreshAllPlayers)
+            end
+
+            local selectedTargetName = ESP_TARGET_NAMES[1]
+
+            colorSection:AddDropdown({
+                Name = "ESP Target",
+                Flag = "IYAN ESP Color Target",
+                Values = ESP_TARGET_NAMES,
+                Default = selectedTargetName,
+                Callback = function(v)
+                    if type(v) == "table" then v = v[1] end
+                    selectedTargetName = v or ESP_TARGET_NAMES[1]
+                end,
+            })
+
+            colorSection:AddDropdown({
+                Name = "ESP Color",
+                Flag = "IYAN ESP Color Value",
+                Values = ESP_COLOR_NAMES,
+                Default = "White",
+                Callback = function(v)
+                    if type(v) == "table" then v = v[1] end
+                    local color = ESP_COLOR_MAP[v]
+                    local target = ESP_TARGET_BY_NAME[selectedTargetName]
+                    if not (color and target) then return end
+                    IYAN_ESPState[target.Key] = color
+                    if target.Player then pcall(IYAN_RefreshAllPlayers) end
+
+                    local store = A2_Get("ESPColors", {})
+                    if type(store) ~= "table" then store = {} end
+                    store[selectedTargetName] = v
+                    A2_Set("ESPColors", store)
                 end,
             })
 
@@ -4139,6 +4329,309 @@ local function __ZiaanHub_Init_Main__()
         return adapter
     end
 
+    -- ============================================================
+    --  AIM BOT BETA — engine (POV aware)
+    -- ============================================================
+    local BetaAim = {
+        Enabled     = false,
+        TargetType  = A2_Get("BetaTargetType", "Killer"),
+        SpecificName= A2_Get("BetaSpecific", ""),
+        Method      = A2_Get("BetaMethod", "Laser"),
+        MaxDistance = A2_Get("BetaMaxDistance", 800),
+        FOVRadius   = A2_Get("BetaFOV", 180),
+        Prediction  = A2_Get("BetaPredict", true),
+        AutoShoot   = A2_Get("BetaAutoShoot", true),
+        FireDelay   = A2_Get("BetaFireDelay", 0.1),
+        ShowFOV     = A2_Get("BetaShowFOV", true),
+    }
+    local BETA_COLORS = {
+        Killer   = Color3.fromRGB(255, 80, 80),
+        Survivor = Color3.fromRGB(90, 165, 235),
+        Zombie   = Color3.fromRGB(70, 205, 130),
+        All      = Color3.fromRGB(235, 195, 80),
+    }
+    local BetaTarget, BetaLastFire = nil, 0
+    local BetaLaser, BetaGui, BetaFOVFrame
+
+    local function BetaBuildVisuals()
+        if BetaLaser and BetaLaser.Parent then return end
+        BetaLaser = Instance.new("Part")
+        BetaLaser.Name = "A2_BetaLaser"
+        BetaLaser.Anchored, BetaLaser.CanCollide = true, false
+        BetaLaser.CanQuery, BetaLaser.CanTouch = false, false
+        BetaLaser.Material = Enum.Material.Neon
+        BetaLaser.Transparency = 1
+        BetaLaser.Parent = Workspace
+
+        BetaGui = Instance.new("ScreenGui")
+        BetaGui.Name = "A2_BetaAimGui"
+        BetaGui.ResetOnSpawn = false
+        BetaGui.IgnoreGuiInset = true
+        BetaGui.Parent = GetHolder()
+
+        BetaFOVFrame = Instance.new("Frame")
+        BetaFOVFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+        BetaFOVFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+        BetaFOVFrame.BackgroundTransparency = 1
+        BetaFOVFrame.Visible = false
+        BetaFOVFrame.Parent = BetaGui
+        Instance.new("UICorner", BetaFOVFrame).CornerRadius = UDim.new(1, 0)
+        local st = Instance.new("UIStroke", BetaFOVFrame)
+        st.Color = Color3.fromRGB(235, 238, 245)
+        st.Thickness = 1.4
+        st.Transparency = 0.35
+    end
+
+    local function BetaClassify(char, plr)
+        local n = (char and char.Name or ""):lower()
+        local t = (plr and plr.Team and plr.Team.Name or ""):lower()
+        if n:find("kill") or n:find("monster") or n:find("slasher") or n:find("murder") or t:find("kill") then return "Killer" end
+        if n:find("zomb") or n:find("infect") then return "Zombie" end
+        if plr then return "Survivor" end
+        return "Killer"
+    end
+
+    local function BetaAlive(char)
+        if not char or not char.Parent then return false end
+        local h = char:FindFirstChildOfClass("Humanoid")
+        return h and h.Health > 0 and char:FindFirstChild("Head") ~= nil
+    end
+
+    local function BetaMatches(p, char, kind)
+        if BetaAim.SpecificName ~= "" and BetaAim.SpecificName ~= "None" then
+            return p and p.Name:lower() == BetaAim.SpecificName:lower()
+        end
+        if BetaAim.TargetType == "All" then return true end
+        return kind == BetaAim.TargetType
+    end
+
+    -- POV check: target harus tampil di layar & di dalam FOV circle
+    local function BetaInPOV(part)
+        local screenPos, onScreen = Camera:WorldToViewportPoint(part.Position)
+        if not onScreen or screenPos.Z <= 0 then return false, math.huge end
+        local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+        local d = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+        return d <= BetaAim.FOVRadius, d
+    end
+
+    local function BetaFindTarget()
+        local origin = Camera.CFrame.Position
+        local best, bestScore = nil, math.huge
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and BetaAlive(p.Character) then
+                local kind = BetaClassify(p.Character, p)
+                if BetaMatches(p, p.Character, kind) then
+                    local head = p.Character:FindFirstChild("Head")
+                    if head then
+                        local inPov = BetaInPOV(head)
+                        if inPov then
+                            local dist = (head.Position - origin).Magnitude
+                            if dist <= BetaAim.MaxDistance and dist < bestScore then
+                                best, bestScore = { player = p, char = p.Character, kind = kind }, dist
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        return best
+    end
+
+    local function BetaPredictPos(char)
+        local head = char:FindFirstChild("Head")
+        if not head then return nil end
+        if not BetaAim.Prediction then return head.Position end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            local travel = (Camera.CFrame.Position - head.Position).Magnitude / 700
+            return head.Position + hrp.AssemblyLinearVelocity * travel
+        end
+        return head.Position
+    end
+
+    local function BetaGun()
+        local char = LocalPlayer.Character
+        local tof = char and char:FindFirstChild("Twist of Fate")
+        local arm = tof and tof:FindFirstChild("Right Arm")
+        return arm and arm:FindFirstChild("EmperorGun")
+    end
+
+    local function BetaFire(targetPos)
+        local now = tick()
+        if now - BetaLastFire < BetaAim.FireDelay then return end
+        BetaLastFire = now
+        local gun = BetaGun()
+        local remote = ReplicatedStorage:FindFirstChild("Remotes")
+        remote = remote and remote:FindFirstChild("Items")
+        remote = remote and remote:FindFirstChild("Twist of Fate")
+        remote = remote and remote:FindFirstChild("Fire")
+        if gun and remote then
+            local from = gun:IsA("BasePart") and gun.Position or Camera.CFrame.Position
+            local dir = (targetPos - from).Unit
+            pcall(function() remote:FireServer(gun, Vector3.new(dir.X, dir.Y, dir.Z)) end)
+        end
+    end
+
+    local BetaConn
+    local function BetaStop()
+        if BetaConn then BetaConn:Disconnect() BetaConn = nil end
+        if BetaLaser then BetaLaser.Transparency = 1 end
+        if BetaFOVFrame then BetaFOVFrame.Visible = false end
+        BetaTarget = nil
+    end
+
+    local function BetaStart()
+        BetaBuildVisuals()
+        if BetaConn then return end
+        BetaConn = RunService.RenderStepped:Connect(function()
+            if not BetaAim.Enabled or VD.Destroyed then return end
+            if BetaFOVFrame then
+                BetaFOVFrame.Visible = BetaAim.ShowFOV
+                BetaFOVFrame.Size = UDim2.new(0, BetaAim.FOVRadius * 2, 0, BetaAim.FOVRadius * 2)
+            end
+
+            local keep = BetaTarget and BetaAlive(BetaTarget.char)
+                and BetaMatches(BetaTarget.player, BetaTarget.char, BetaTarget.kind)
+            if keep then
+                local head = BetaTarget.char:FindFirstChild("Head")
+                keep = head and BetaInPOV(head) or false
+            end
+            if not keep then BetaTarget = BetaFindTarget() end
+
+            if not BetaTarget then
+                BetaLaser.Transparency = 1
+                return
+            end
+
+            local pos = BetaPredictPos(BetaTarget.char)
+            if not pos then BetaLaser.Transparency = 1 return end
+
+            local useLaser  = BetaAim.Method == "Laser" or BetaAim.Method == "Laser + Lock Cam"
+            local useLock   = BetaAim.Method == "Lock Cam" or BetaAim.Method == "Laser + Lock Cam"
+
+            if useLaser then
+                local gun = BetaGun()
+                local from = (gun and gun.Position) or Camera.CFrame.Position
+                local mag = (pos - from).Magnitude
+                BetaLaser.Transparency = 0.25
+                BetaLaser.Color = BETA_COLORS[BetaTarget.kind] or Color3.fromRGB(255, 255, 255)
+                BetaLaser.CFrame = CFrame.lookAt(from, pos) * CFrame.new(0, 0, -mag / 2)
+                BetaLaser.Size = Vector3.new(0.08, 0.08, mag)
+            else
+                BetaLaser.Transparency = 1
+            end
+
+            if useLock then
+                Camera.CFrame = CFrame.new(Camera.CFrame.Position, pos)
+            end
+
+            if BetaAim.AutoShoot then BetaFire(pos) end
+        end)
+    end
+
+    -- ============================================================
+    --  MOONWALK (dipakai di menu Parry) + jendela mini modern
+    -- ============================================================
+    local Moon = {
+        Active = false,
+        SwaySpeed = A2_Get("MoonSpeed", 15),
+    }
+    local MoonGui, MoonToggleBtn, MoonConn, MoonCounter = nil, nil, nil, 0
+
+    local function MoonSetState(on)
+        Moon.Active = on and true or false
+        if MoonToggleBtn then
+            MoonToggleBtn.Text = Moon.Active and "ON" or "OFF"
+            MoonToggleBtn.BackgroundColor3 = Moon.Active
+                and Color3.fromRGB(64, 196, 138)
+                or Color3.fromRGB(58, 62, 78)
+        end
+    end
+
+    local function MoonBuildWindow()
+        if MoonGui and MoonGui.Parent then MoonGui.Enabled = true return end
+        MoonGui = Instance.new("ScreenGui")
+        MoonGui.Name = "A2_MoonwalkMini"
+        MoonGui.ResetOnSpawn = false
+        MoonGui.Parent = GetHolder()
+
+        local frame = Instance.new("Frame", MoonGui)
+        frame.Size = UDim2.new(0, 176, 0, 62)
+        frame.Position = UDim2.new(0, 18, 0.42, 0)
+        frame.BackgroundColor3 = Color3.fromRGB(20, 22, 30)
+        frame.BackgroundTransparency = 0.06
+        frame.BorderSizePixel = 0
+        frame.Active = true
+        frame.Draggable = true
+        Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 14)
+        local fs = Instance.new("UIStroke", frame)
+        fs.Color = Color3.fromRGB(58, 64, 82)
+        fs.Thickness = 1
+        fs.Transparency = 0.25
+
+        local title = Instance.new("TextLabel", frame)
+        title.Size = UDim2.new(1, -24, 0, 20)
+        title.Position = UDim2.new(0, 14, 0, 9)
+        title.BackgroundTransparency = 1
+        title.Font = Enum.Font.GothamMedium
+        title.TextSize = 12
+        title.TextColor3 = Color3.fromRGB(226, 230, 238)
+        title.TextXAlignment = Enum.TextXAlignment.Left
+        title.Text = "Moonwalk"
+
+        MoonToggleBtn = Instance.new("TextButton", frame)
+        MoonToggleBtn.Size = UDim2.new(0, 62, 0, 24)
+        MoonToggleBtn.Position = UDim2.new(1, -76, 0, 8)
+        MoonToggleBtn.Font = Enum.Font.GothamBold
+        MoonToggleBtn.TextSize = 11
+        MoonToggleBtn.TextColor3 = Color3.fromRGB(240, 243, 250)
+        MoonToggleBtn.AutoButtonColor = false
+        Instance.new("UICorner", MoonToggleBtn).CornerRadius = UDim.new(0, 10)
+        MoonToggleBtn.MouseButton1Click:Connect(function() MoonSetState(not Moon.Active) end)
+
+        local hint = Instance.new("TextLabel", frame)
+        hint.Size = UDim2.new(1, -24, 0, 16)
+        hint.Position = UDim2.new(0, 14, 1, -22)
+        hint.BackgroundTransparency = 1
+        hint.Font = Enum.Font.Gotham
+        hint.TextSize = 10
+        hint.TextColor3 = Color3.fromRGB(140, 148, 166)
+        hint.TextXAlignment = Enum.TextXAlignment.Left
+        hint.Text = "Atur kecepatan di menu Parry"
+
+        MoonSetState(Moon.Active)
+    end
+
+    local function MoonStartLoop()
+        if MoonConn then return end
+        MoonConn = RunService.RenderStepped:Connect(function(dt)
+            if not Moon.Active or VD.Destroyed then return end
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if not (hrp and hum) then return end
+            if hum.MoveDirection.Magnitude <= 0 then return end
+            local camLook = Camera.CFrame.LookVector
+            local flat = Vector3.new(camLook.X, 0, camLook.Z)
+            if flat.Magnitude < 0.01 then return end
+            flat = flat.Unit
+            MoonCounter = MoonCounter + (dt * (Moon.SwaySpeed or 15))
+            local swayOffset = math.sin(MoonCounter) * 0.4
+            hrp.CFrame = CFrame.new(hrp.Position, hrp.Position + flat) * CFrame.Angles(0, swayOffset, 0)
+        end)
+    end
+
+    local function MoonEnableFeature(on)
+        if on then
+            MoonBuildWindow()
+            MoonStartLoop()
+        else
+            MoonSetState(false)
+            if MoonGui then MoonGui:Destroy() MoonGui = nil MoonToggleBtn = nil end
+            if MoonConn then MoonConn:Disconnect() MoonConn = nil end
+        end
+    end
+
     local function addCenterFeatureTabbox(tab, name, entries)
         local tabbox = tab:AddCenterTabbox(name)
         local created = {}
@@ -4160,6 +4653,7 @@ local function __ZiaanHub_Init_Main__()
             Killer = Window:AddTab({ Name = "Killer", Icon = "solar:danger-bold", Type = "Single" }),
             Visual = Window:AddTab({ Name = "Visual", Icon = "lucide:eye", Type = "Single" }),
             Parry = Window:AddTab({ Name = "Parry", Icon = "solar:sword-bold", Type = "Single" }),
+            AimBot = Window:AddTab({ Name = "Aim Bot", Icon = "solar:crosshair-bold", Type = "Single" }),
         }
 
         -- Player Tab
@@ -4519,6 +5013,166 @@ local function __ZiaanHub_Init_Main__()
             Callback = function(v) VD.AUTO_ToFDotThreshold = v end
         })
 
+        -- ============================================================
+        --  AIM BOT TAB (ikon crosshair) : Old + Beta
+        -- ============================================================
+        local AimTabbox = addCenterFeatureTabbox(Tabs.AimBot, "Aim Bot", {
+            { Key = "Old", Name = "Old", Icon = "solar:target-bold" },
+            { Key = "Beta", Name = "Beta", Icon = "solar:crosshair-bold" },
+        })
+
+        -- ---------- OLD (engine ToF asli A2) ----------
+        local oldAimSection = AimTabbox.Old:AddSection({
+            Position = "Center",
+            Name = "Silent Aim Twist Of Fate (Old)",
+            Icon = "solar:target-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = true,
+        })
+        oldAimSection:AddToggle({
+            Default = VD.AUTO_ToFAim, Name = "Enable Aim Bot (Old)", Flag = "AimOld Enable",
+            Callback = function(v) VD.AUTO_ToFAim = v end
+        })
+        oldAimSection:AddDropdown({
+            Name = "Target Mode", Flag = "AimOld Target Mode",
+            Values = { "Killer", "Survivor", "SCP" },
+            Default = VD.AUTO_ToFTargetMode or "Killer",
+            Callback = function(v)
+                if type(v) == "table" then v = v[1] end
+                VD.AUTO_ToFTargetMode = v or "Killer"
+                A2_Set("OldTargetMode", VD.AUTO_ToFTargetMode)
+            end
+        })
+        oldAimSection:AddDropdown({
+            Name = "Aim Part", Flag = "AimOld Aim Part",
+            Values = { "HumanoidRootPart", "Head", "Torso" },
+            Default = VD.AUTO_ToFAimPart or "HumanoidRootPart",
+            Callback = function(v)
+                if type(v) == "table" then v = v[1] end
+                VD.AUTO_ToFAimPart = v or "HumanoidRootPart"
+                A2_Set("OldAimPart", VD.AUTO_ToFAimPart)
+            end
+        })
+        oldAimSection:AddToggle({
+            Default = VD.AUTO_ToFPredict, Name = "Prediction", Flag = "AimOld Prediction",
+            Callback = function(v) VD.AUTO_ToFPredict = v end
+        })
+        oldAimSection:AddSlider({
+            Name = "Bullet Speed", Flag = "AimOld Bullet Speed",
+            Min = 50, Max = 1000, Default = VD.AUTO_ToFBulletSpeed or 200,
+            Callback = function(v) VD.AUTO_ToFBulletSpeed = v end
+        })
+        oldAimSection:AddSlider({
+            Name = "Aim Range (studs)", Flag = "AimOld Aim Range",
+            Min = 10, Max = 300, Default = VD.AUTO_ToFAimRange or 90,
+            Callback = function(v) VD.AUTO_ToFAimRange = v end
+        })
+        oldAimSection:AddSlider({
+            Name = "Safe FOV (Dot Threshold)", Flag = "AimOld Dot",
+            Min = -1, Max = 1, Default = VD.AUTO_ToFDotThreshold or 0.5, Increment = 0.05,
+            Callback = function(v) VD.AUTO_ToFDotThreshold = v end
+        })
+
+        -- ---------- BETA (engine baru, POV aware) ----------
+        local betaSection = AimTabbox.Beta:AddSection({
+            Position = "Center",
+            Name = "Aim Bot Beta",
+            Icon = "solar:crosshair-bold",
+            Box = true,
+            BoxBorder = true,
+            Opened = true,
+        })
+        betaSection:AddToggle({
+            Default = false, Name = "Enable Aim Bot Beta", Flag = "AimBeta Enable",
+            Callback = function(v)
+                BetaAim.Enabled = v
+                if v then BetaStart() else BetaStop() end
+            end
+        })
+        betaSection:AddDropdown({
+            Name = "Target Type", Flag = "AimBeta Target Type",
+            Values = { "Killer", "Survivor", "Zombie", "All" },
+            Default = BetaAim.TargetType,
+            Callback = function(v)
+                if type(v) == "table" then v = v[1] end
+                BetaAim.TargetType = v or "Killer"
+                BetaTarget = nil
+                A2_Set("BetaTargetType", BetaAim.TargetType)
+            end
+        })
+
+        -- pilih target spesifik (pakai dropdown UI library A2)
+        local function betaPlayerList()
+            local list = { "None" }
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer then table.insert(list, p.Name) end
+            end
+            return list
+        end
+        local betaPlayerDrop = betaSection:AddDropdown({
+            Name = "Target Player", Flag = "AimBeta Target Player",
+            Values = betaPlayerList(),
+            Default = (BetaAim.SpecificName ~= "" and BetaAim.SpecificName) or "None",
+            Callback = function(v)
+                if type(v) == "table" then v = v[1] end
+                BetaAim.SpecificName = (v == nil or v == "None") and "" or v
+                BetaTarget = nil
+                A2_Set("BetaSpecific", BetaAim.SpecificName)
+            end
+        })
+        betaSection:AddButton({
+            Name = "Refresh Target List",
+            Callback = function()
+                if betaPlayerDrop and betaPlayerDrop.SetValues then
+                    betaPlayerDrop:SetValues(betaPlayerList())
+                end
+                VD_Notify("Aim Bot Beta", "List player diperbarui", 2)
+            end
+        })
+
+        betaSection:AddDropdown({
+            Name = "Metode (aktif hanya di POV)", Flag = "AimBeta Method",
+            Values = { "Laser", "Lock Cam", "Laser + Lock Cam", "Silent (No Visual)" },
+            Default = BetaAim.Method,
+            Callback = function(v)
+                if type(v) == "table" then v = v[1] end
+                BetaAim.Method = v or "Laser"
+                A2_Set("BetaMethod", BetaAim.Method)
+            end
+        })
+        betaSection:AddSlider({
+            Name = "FOV Radius (POV)", Flag = "AimBeta FOV",
+            Min = 40, Max = 500, Default = BetaAim.FOVRadius, Increment = 5,
+            Callback = function(v) BetaAim.FOVRadius = v A2_Set("BetaFOV", v) end
+        })
+        betaSection:AddToggle({
+            Default = BetaAim.ShowFOV, Name = "Show FOV Circle", Flag = "AimBeta Show FOV",
+            Callback = function(v)
+                BetaAim.ShowFOV = v
+                A2_Set("BetaShowFOV", v)
+                if BetaFOVFrame then BetaFOVFrame.Visible = v and BetaAim.Enabled end
+            end
+        })
+        betaSection:AddSlider({
+            Name = "Max Distance (studs)", Flag = "AimBeta Max Distance",
+            Min = 100, Max = 2000, Default = BetaAim.MaxDistance, Increment = 25,
+            Callback = function(v) BetaAim.MaxDistance = v A2_Set("BetaMaxDistance", v) end
+        })
+        betaSection:AddToggle({
+            Default = BetaAim.Prediction, Name = "Prediction", Flag = "AimBeta Prediction",
+            Callback = function(v) BetaAim.Prediction = v A2_Set("BetaPredict", v) end
+        })
+        betaSection:AddToggle({
+            Default = BetaAim.AutoShoot, Name = "Auto Shoot", Flag = "AimBeta Auto Shoot",
+            Callback = function(v) BetaAim.AutoShoot = v A2_Set("BetaAutoShoot", v) end
+        })
+        betaSection:AddSlider({
+            Name = "Fire Delay (detik)", Flag = "AimBeta Fire Delay",
+            Min = 0.05, Max = 1, Default = BetaAim.FireDelay, Increment = 0.05,
+            Callback = function(v) BetaAim.FireDelay = v A2_Set("BetaFireDelay", v) end
+        })
+
         -- Parry tab (dedicated menu, own icon)
         local ParryTabbox = addCenterFeatureTabbox(Tabs.Parry, "Parry", {
             { Key = "AutoParry", Name = "Auto Parry", Icon = "solar:sword-bold" },
@@ -4614,6 +5268,26 @@ local function __ZiaanHub_Init_Main__()
                         Window.ConfigElements["Auto Parry"]:Set(VD.SURV_AutoParry)
                     end
                 end)
+            end
+        })
+
+        pcall(function() parrySection:AddDivider({ Text = "Moonwalk" }) end)
+        parrySection:AddSlider({
+            Name = "Moonwalk Sway Speed",
+            Flag = "Moonwalk Sway Speed",
+            Min = 1, Max = 60, Default = Moon.SwaySpeed, Increment = 1,
+            Callback = function(v)
+                Moon.SwaySpeed = v
+                A2_Set("MoonSpeed", v)
+            end
+        })
+        parrySection:AddToggle({
+            Name = "Moonwalk (buka panel ON/OFF)",
+            Flag = "Moonwalk Enable",
+            Default = false,
+            Callback = function(v)
+                MoonEnableFeature(v)
+                if v then VD_Notify("Moonwalk", "Panel mini aktif — tekan ON untuk jalan", 2) end
             end
         })
 
@@ -4836,8 +5510,13 @@ local function __ZiaanHub_Init_Main__()
             Opened = false,
         })
         espSection:AddToggle({ Default = false, Name = "Master Turn On Drawing ESP", Flag = "Master Turn On Drawing ESP", Callback = function(v) VD.DRAWING_ESP = v end })
-        espSection:AddToggle({ Default = false, Name = "Low Performance Mode (disable skeleton & velocity)", Flag = "Low Performance Mode", Callback = function(v)
+        espSection:AddToggle({ Default = isMobile, Name = "Mobile Lite Mode (ESP ringan)", Flag = "Low Performance Mode", Callback = function(v)
             VD.ESP_LowPerformance = v
+            local visualState = getgenv().IYAN_VD_VisualESP_State
+            if visualState then
+                visualState.MobileLite = v
+                visualState.MaxActiveWorldTags = v and 28 or 80
+            end
             if v then
                 VD.ESP_Skeleton = false
                 VD.ESP_Velocity = false
@@ -4947,7 +5626,7 @@ local function __ZiaanHub_Init_Main__()
     }
 
     local function IYAN_ScanMap()
-        local map = Workspace:FindFirstChild("Map")
+        local map = Workspace:FindFirstChild("Map") or Workspace:FindFirstChild("Map1")
         if not map then
             IYAN_Cache = {
                 Generators = {}, Zombies = {}, Gates = {}, Hooks = {}, Pallets = {}, Windows = {}, ClosestHook = nil, ExitPos = nil, ExitPart = nil
@@ -4994,7 +5673,11 @@ local function __ZiaanHub_Init_Main__()
                     end
                 end
             elseif obj:IsA("BasePart") then
-                if not exitPos and obj.Name:lower():find("finish") then
+                local partName = obj.Name:lower()
+                if partName:find("gate") or partName:find("exitlever") or partName:find("exitdoor") then
+                    table.insert(newGates, { model = obj.Parent or obj, part = obj })
+                end
+                if not exitPos and (partName:find("finish") or partName:find("exit") or partName:find("escape")) then
                     exitPos = obj.Position
                     exitPart = obj
                 end
@@ -6281,8 +6964,8 @@ do
         local ok = pcall(function()
             if writefile then writefile(profilePath(name), HttpService:JSONEncode(serialize())) end
         end)
-        if ok then notify("NO MERCY", "Config tersimpan: " .. name)
-        else notify("NO MERCY", "Gagal menyimpan config") end
+        if ok then notify("A2", "Config tersimpan: " .. name)
+        else notify("A2", "Gagal menyimpan config") end
     end
 
     local function loadProfile(name)
@@ -6297,9 +6980,9 @@ do
         end)
         if ok then
             getgenv().NM_CurrentProfile = name
-            notify("NO MERCY", "Config dimuat: " .. name .. " (reload UI untuk sinkron penuh)")
+            notify("A2", "Config dimuat: " .. name .. " (reload UI untuk sinkron penuh)")
         else
-            notify("NO MERCY", "Config tidak ditemukan: " .. tostring(name))
+            notify("A2", "Config tidak ditemukan: " .. tostring(name))
         end
     end
 
@@ -6356,7 +7039,7 @@ do
         Callback = function()
             local json = HttpService:JSONEncode(serialize())
             if setclipboard then setclipboard(json) end
-            notify("NO MERCY", "Config JSON di-copy ke clipboard")
+            notify("A2", "Config JSON di-copy ke clipboard")
         end,
     })
 
@@ -6372,7 +7055,7 @@ do
                 local data = HttpService:JSONDecode(importBuffer)
                 for k, v in pairs(data) do VD[k] = v end
             end)
-            notify("NO MERCY", ok and "Config berhasil di-import" or "JSON tidak valid")
+            notify("A2", ok and "Config berhasil di-import" or "JSON tidak valid")
         end,
     })
     ShareSec:AddButton({
@@ -6380,7 +7063,7 @@ do
         Callback = function()
             local json = HttpService:JSONEncode({ hub = "NoMercyViolence", profile = getgenv().NM_CurrentProfile, data = serialize() })
             if setclipboard then setclipboard(json) end
-            notify("NO MERCY", "Share code di-copy")
+            notify("A2", "Share code di-copy")
         end,
     })
     ShareSec:AddButton({
@@ -6390,7 +7073,7 @@ do
                 local tv = typeof(v)
                 if tv == "boolean" then VD[k] = false end
             end
-            notify("NO MERCY", "Config direset — reload script disarankan")
+            notify("A2", "Config direset — reload script disarankan")
         end,
     })
 
